@@ -123,148 +123,194 @@ export default function BubbleSortPage() {
     <>
       <Navbar />
 
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    <style>{`
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
-        html, body { margin:0; padding:0; overflow:hidden; height:100%; }
-        *, *::before, *::after { box-sizing:border-box; }
+  html, body { margin:0; padding:0; overflow:hidden; height:100%; }
+  *, *::before, *::after { box-sizing:border-box; }
 
-        .bs-shell {
-          height: calc(100vh - 52px);
-          background: #02060f;
-          color: white;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          padding: 14px 20px 12px;
-          gap: 10px;
-          position: relative;
-          font-family: 'Syne', sans-serif;
-        }
+  .bs-shell {
+    height: calc(100vh - 52px);
+    background: #02060f;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 14px 20px 12px;
+    gap: 10px;
+    position: relative;
+    font-family: 'Syne', sans-serif;
+  }
 
-        /* dot-grid background */
-        .bs-shell::after {
-          content: '';
-          position: absolute; inset: 0;
-          pointer-events: none; z-index: 0;
-          background-image: radial-gradient(circle, #0ea5e910 1px, transparent 1px);
-          background-size: 26px 26px;
-        }
+  /* dot-grid background */
+  .bs-shell::after {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none; z-index: 0;
+    background-image: radial-gradient(circle, #0ea5e910 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
 
-        /* ambient glow */
-        .bs-shell::before {
-          content: '';
-          position: absolute;
-          top: -100px; left: 50%;
-          transform: translateX(-50%);
-          width: 600px; height: 300px;
-          background: radial-gradient(ellipse, #0ea5e908 0%, transparent 70%);
-          pointer-events: none; z-index: 0;
-        }
+  /* ambient glow */
+  .bs-shell::before {
+    content: '';
+    position: absolute;
+    top: -100px; left: 50%;
+    transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, #0ea5e908 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
 
-        .bs-inner {
-          position: relative; z-index: 1;
-          flex: 1; min-height: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-        }
+  .bs-inner {
+    position: relative; z-index: 1;
+    flex: 1; min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-        /* header */
-        .bs-header {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          flex-shrink: 0;
-        }
+  /* header with wrapping */
+  .bs-header {
+    display: flex;
+    align-items: center;
+    gap: 8px 12px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
 
-        /* bar canvas */
-        .bar-canvas {
-          flex: 1; min-height: 0;
-          background: #040d18;
-          border: 1px solid #0a1f35;
-          border-radius: 14px;
-          padding: 14px 14px 10px;
-          display: flex;
-          align-items: flex-end;
-          gap: 3px;
-          position: relative;
-          overflow: hidden;
-        }
+  .bs-header h1 {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: clamp(1.2rem, 5vw, 1.5rem);
+    color: #e2e8f0;
+    letter-spacing: -0.5px;
+    line-height: 1;
+    margin: 0;
+  }
 
-        .bar-canvas::before {
-          content: '';
-          position: absolute; inset: 0;
-          pointer-events: none;
-          background:
-            linear-gradient(#0a1f3510 1px, transparent 1px),
-            linear-gradient(90deg, #0a1f3510 1px, transparent 1px);
-          background-size: 40px 40px;
-          border-radius: 14px;
-        }
+  /* bar canvas */
+  .bar-canvas {
+    flex: 1;
+    min-height: 0;
+    background: #040d18;
+    border: 1px solid #0a1f35;
+    border-radius: 14px;
+    padding: 14px 14px 10px;
+    display: flex;
+    align-items: flex-end;
+    gap: clamp(1px, 0.5vw, 3px);
+    position: relative;
+    overflow: hidden;
+  }
 
-        /* bottom strip with pseudo + progress + controls */
-        .bs-bottom {
-          display: flex;
-          gap: 10px;
-          flex-shrink: 0;
-          align-items: stretch;
-          height: 148px;
-        }
+  .bar-canvas::before {
+    content: '';
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(#0a1f3510 1px, transparent 1px),
+      linear-gradient(90deg, #0a1f3510 1px, transparent 1px);
+    background-size: 40px 40px;
+    border-radius: 14px;
+  }
 
-        /* left part of bottom: status + progress + controls */
-        .bs-controls-wrap {
-          flex: 1; min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
+  /* bottom strip – flexible on mobile */
+  .bs-bottom {
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+    align-items: stretch;
+    height: 148px;              /* desktop default */
+  }
 
-        /* status bar */
-        .bs-status {
-          background: #040d18;
-          border: 1px solid #0a1f35;
-          border-radius: 9px;
-          padding: 7px 14px;
-          font-family: 'JetBrains Mono', monospace;
-          font-size: 11px;
-          height: 32px;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          flex-shrink: 0;
-        }
+  /* left controls wrapper */
+  .bs-controls-wrap {
+    flex: 1; min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-        /* progress */
-        .bs-progress {
-          background: #040d18;
-          border: 1px solid #0a1f35;
-          border-radius: 9px;
-          padding: 7px 14px;
-          flex-shrink: 0;
-        }
+  /* status bar – no fixed height */
+  .bs-status {
+    background: #040d18;
+    border: 1px solid #0a1f35;
+    border-radius: 9px;
+    padding: 6px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: clamp(10px, 2.5vw, 11px);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: 32px;
+  }
 
-        /* controls row */
-        .bs-ctrl {
-          flex: 1; min-height: 0;
-          background: #040d18;
-          border: 1px solid #0a1f35;
-          border-radius: 9px;
-          padding: 8px 14px;
-          display: flex;
-          align-items: center;
-        }
+  /* progress */
+  .bs-progress {
+    background: #040d18;
+    border: 1px solid #0a1f35;
+    border-radius: 9px;
+    padding: 7px 14px;
+    flex-shrink: 0;
+  }
 
-        /* pseudocode panel */
-        .bs-pseudo {
-          width: 230px;
-          flex-shrink: 0;
-          background: #040d18;
-          border: 1px solid #0a1f35;
-          border-radius: 14px;
-          overflow: hidden;
-        }
-      `}</style>
+  /* controls row */
+  .bs-ctrl {
+    flex: 1; min-height: 0;
+    background: #040d18;
+    border: 1px solid #0a1f35;
+    border-radius: 9px;
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* pseudocode panel – fixed width on desktop */
+  .bs-pseudo {
+    width: 230px;
+    flex-shrink: 0;
+    background: #040d18;
+    border: 1px solid #0a1f35;
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  /* 📱 Mobile styles (≤ 600px) */
+  @media (max-width: 600px) {
+    .bs-bottom {
+      flex-direction: column;
+      height: auto;              /* remove fixed height */
+      gap: 8px;
+    }
+
+    .bar-canvas {
+      flex: 0 0 auto;            /* don't grow/shrink */
+      height: 30vh;              /* roughly 1/3 of viewport */
+      max-height: 30vh;
+    }
+
+    .bs-pseudo {
+      width: 100%;               /* full width */
+      height: 140px;             /* give it some space – adjust as needed */
+    }
+
+    .bs-header > div:last-child {
+      margin-left: 0;             /* center legend on small screens */
+      justify-content: flex-start;
+    }
+  }
+
+  /* legend inside header – keep it flexible */
+  .bs-header > div:last-child {
+    margin-left: auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+`}</style>
 
       <div className="bs-shell">
         <div className="bs-inner">
