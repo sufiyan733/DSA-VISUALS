@@ -1109,7 +1109,6 @@ export default function LandingPage() {
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 18% 50%,rgba(79,70,229,0.05) 0%,transparent 46%),radial-gradient(ellipse at 82% 50%,rgba(8,145,178,0.04) 0%,transparent 46%)",pointerEvents:"none"}}/>
 
         <div className="container" style={{textAlign:"center",marginBottom:"clamp(28px,4vw,44px)"}}>
-          <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.16em",color:"#6366f1",textTransform:"uppercase",marginBottom:"10px"}}>Topics</p>
           <h2 style={{fontSize:"clamp(22px,4.5vw,44px)",fontWeight:900,color:"#f8fafc",letterSpacing:"-0.025em",lineHeight:1.06}}>
             Click any topic to{" "}<span className="shimmer-text">launch it</span>
           </h2>
