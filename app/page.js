@@ -171,6 +171,123 @@ function ParticleCanvas() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// PREMIUM LOGO
+// ─────────────────────────────────────────────────────────────────────────────
+function PremiumLogo() {
+  return (
+    <div style={{
+      display:"flex", alignItems:"center", gap:"13px",
+      cursor:"default", userSelect:"none",
+    }}>
+
+      {/* ── Monogram badge ── */}
+      <div style={{ position:"relative", width:"42px", height:"42px", flexShrink:0 }}>
+
+        {/* Deep ambient glow — largest, most diffuse */}
+        <div style={{
+          position:"absolute", inset:"-8px",
+          borderRadius:"16px",
+          background:"radial-gradient(ellipse at 50% 50%, rgba(129,140,248,0.38) 0%, rgba(167,139,250,0.18) 45%, transparent 75%)",
+          filter:"blur(8px)",
+          animation:"logoPulse 3.8s ease-in-out infinite",
+        }}/>
+
+        {/* Animated gradient border ring */}
+        <div style={{
+          position:"absolute", inset:"-1.5px",
+          borderRadius:"12px",
+          background:"linear-gradient(135deg, #818cf8, #c084fc, #22d3ee, #818cf8)",
+          backgroundSize:"300% 300%",
+          animation:"borderSpin 4s linear infinite",
+          opacity:0.9,
+        }}/>
+
+        {/* Badge body */}
+        <div style={{
+          position:"absolute", inset:"1.5px",
+          borderRadius:"10.5px",
+          background:"linear-gradient(155deg, #0e0e2e 0%, #080818 55%, #0c0c25 100%)",
+          display:"flex", alignItems:"center", justifyContent:"center",
+          overflow:"hidden",
+          boxShadow:"inset 0 1px 0 rgba(255,255,255,0.06), inset 0 -1px 0 rgba(0,0,0,0.4)",
+        }}>
+
+          {/* Corner accent — top-left */}
+          <div style={{
+            position:"absolute", top:0, left:0,
+            width:"14px", height:"14px",
+            background:"radial-gradient(circle at 0% 0%, rgba(129,140,248,0.5) 0%, transparent 70%)",
+          }}/>
+          {/* Corner accent — bottom-right */}
+          <div style={{
+            position:"absolute", bottom:0, right:0,
+            width:"14px", height:"14px",
+            background:"radial-gradient(circle at 100% 100%, rgba(34,211,238,0.4) 0%, transparent 70%)",
+          }}/>
+
+          {/* Shimmer sweep */}
+          <div style={{
+            position:"absolute", top:"-20%", left:"-80%",
+            width:"55%", height:"140%",
+            background:"linear-gradient(105deg, transparent, rgba(255,255,255,0.09), transparent)",
+            transform:"skewX(-15deg)",
+            animation:"badgeSweep 3.2s ease-in-out infinite",
+          }}/>
+
+          {/* Monogram text */}
+          <span style={{
+            fontFamily:"'Space Mono', monospace",
+            fontSize:"14px", fontWeight:700, letterSpacing:"-0.03em",
+            background:"linear-gradient(145deg, #e0e7ff 0%, #a5b4fc 35%, #c084fc 65%, #67e8f9 100%)",
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text",
+            position:"relative", zIndex:1,
+            filter:"drop-shadow(0 0 6px rgba(129,140,248,0.6))",
+          }}>VS</span>
+        </div>
+      </div>
+
+      {/* ── Wordmark ── */}
+      <div style={{ lineHeight:1, position:"relative" }}>
+
+        {/* Main wordmark row */}
+        <div style={{ display:"flex", alignItems:"center", gap:"0px", position:"relative" }}>
+
+          {/* "Visuo" — cool white with subtle glow */}
+          <span style={{
+            fontFamily:"'Space Mono', monospace",
+            fontSize:"clamp(15px, 1.6vw, 20px)",
+            fontWeight:700,
+            letterSpacing:"0.02em",
+            color:"#dde4ff",
+            textShadow:"0 0 18px rgba(199,210,254,0.25)",
+          }}>Visuo</span>
+
+          {/* "Slayer" — animated multi-stop shimmer */}
+          <span style={{
+            fontFamily:"'Space Mono', monospace",
+            fontSize:"clamp(15px, 1.6vw, 20px)",
+            fontWeight:700,
+            letterSpacing:"0.02em",
+            background:"linear-gradient(90deg, #818cf8 0%, #a78bfa 22%, #e879f9 44%, #22d3ee 66%, #a78bfa 88%, #818cf8 100%)",
+            backgroundSize:"250% auto",
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text",
+            animation:"shimmer 3.6s linear infinite",
+            filter:"drop-shadow(0 0 8px rgba(167,139,250,0.45))",
+          }}>Slayer</span>
+        </div>
+
+        {/* Divider line under wordmark */}
+        <div style={{
+          height:"1px", marginTop:"4px",
+          background:"linear-gradient(to right, rgba(129,140,248,0.5), rgba(34,211,238,0.3), transparent)",
+          borderRadius:"1px",
+        }}/>
+      </div>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // TOPIC CARD
 // ─────────────────────────────────────────────────────────────────────────────
 function TopicCard({ item, catColor, onLeafClick, animDelay }) {
@@ -242,8 +359,6 @@ function DSAExplorer({ onLeafClick }) {
 
   return (
     <div style={{width:"100%",fontFamily:"'DM Sans',sans-serif"}}>
-
-      {/* Tab switcher */}
       <div style={{display:"flex",justifyContent:"center",marginBottom:"20px"}}>
         <div style={{display:"flex",gap:"5px",padding:"4px",borderRadius:"13px",background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)"}}>
           {Object.entries(TREE).map(([id,t]) => {
@@ -270,14 +385,12 @@ function DSAExplorer({ onLeafClick }) {
         </div>
       </div>
 
-      {/* ── DESKTOP: sidebar + content grid ── */}
       {!isMobile && (
         <div style={{
           display:"grid",gridTemplateColumns:"185px 1fr",
           borderRadius:"14px",border:"1px solid rgba(255,255,255,0.07)",
           overflow:"hidden",minHeight:"340px",background:"rgba(4,4,20,0.5)",
         }}>
-          {/* Sidebar */}
           <div style={{borderRight:"1px solid rgba(255,255,255,0.06)",display:"flex",flexDirection:"column",background:"rgba(0,0,0,0.18)"}}>
             <div style={{padding:"14px 12px 10px",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
               <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"4px"}}>
@@ -315,7 +428,6 @@ function DSAExplorer({ onLeafClick }) {
             </div>
           </div>
 
-          {/* Content */}
           <div style={{padding:"18px",opacity:fadeIn?1:0,transform:fadeIn?"translateY(0)":"translateY(4px)",transition:"opacity .15s,transform .15s",display:"flex",flexDirection:"column"}}>
             <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:"14px",paddingBottom:"12px",borderBottom:"1px solid rgba(255,255,255,0.05)"}}>
               <div>
@@ -341,7 +453,6 @@ function DSAExplorer({ onLeafClick }) {
         </div>
       )}
 
-      {/* ── MOBILE: accordion ── */}
       {isMobile && (
         <div style={{display:"flex",flexDirection:"column",gap:"6px"}}>
           {tab.categories.map(c => {
@@ -478,7 +589,6 @@ function Toast({ message, onClose }) {
 // MOBILE MENU
 // ─────────────────────────────────────────────────────────────────────────────
 function MobileMenu({ open, onClose }) {
-  // Prevent body scroll when open
   useEffect(() => {
     if (open) document.body.style.overflow = "hidden";
     else document.body.style.overflow = "";
@@ -489,10 +599,7 @@ function MobileMenu({ open, onClose }) {
   return (
     <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(4,4,16,0.97)",backdropFilter:"blur(22px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"32px",animation:"fadeInScale .24s cubic-bezier(.16,1,.3,1)"}}>
       <button onClick={onClose} style={{position:"absolute",top:"16px",right:"16px",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",color:"#64748b",fontSize:"15px",cursor:"pointer",padding:"7px 10px",lineHeight:1}}>✕</button>
-      <div style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"20px",marginBottom:"8px",userSelect:"none",lineHeight:1}}>
-        <span style={{color:"#c7d2fe"}}>Visuo</span>
-        <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
-      </div>
+      <PremiumLogo />
       {[["#features","Features"],["#tree","Topics"],["#footer","End"]].map(([href,label])=>(
         <a key={href} href={href} onClick={onClose} style={{color:"#94a3b8",textDecoration:"none",fontSize:"22px",fontWeight:800,transition:"color .18s",letterSpacing:"-0.01em"}}
           onMouseEnter={e=>e.target.style.color="#c7d2fe"} onMouseLeave={e=>e.target.style.color="#94a3b8"}>{label}</a>
@@ -509,7 +616,6 @@ export default function LandingPage() {
   const [toast,    setToast]    = useState(null);
   const [heroVis,  setHeroVis]  = useState(false);
   const [scrollY,  setScrollY]  = useState(0);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     setTimeout(() => setHeroVis(true), 80);
@@ -562,6 +668,9 @@ export default function LandingPage() {
         @keyframes scanline   {0%{left:-50%}100%{left:150%}}
         @keyframes badgePulse {0%,100%{opacity:1}50%{opacity:.55}}
         @keyframes heroIn     {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+        @keyframes badgeSweep {0%{left:-80%}60%,100%{left:170%}}
+        @keyframes logoPulse  {0%,100%{opacity:0.7;transform:scale(1)}50%{opacity:1;transform:scale(1.08)}}
+        @keyframes borderSpin {0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 
         .shimmer-text{
           background:linear-gradient(90deg,#6366f1 0%,#a5b4fc 28%,#e0e7ff 50%,#a5b4fc 72%,#6366f1 100%);
@@ -569,10 +678,9 @@ export default function LandingPage() {
           animation:shimmer 5s linear infinite;
         }
 
-        /* ── Reset overflow at root ───────────────────────────────── */
-        html,body{max-width:100%;overflow-x:hidden;}
+        html,body{max-width:100%;overflow-x:hidden;width:100%;}
+        #__next{width:100%;min-height:100vh;}
 
-        /* ── Shared container ─────────────────────────────────────── */
         .container{
           width:100%;
           max-width:1180px;
@@ -583,20 +691,52 @@ export default function LandingPage() {
           box-sizing:border-box;
         }
 
-        /* ── Nav ────────────────────────────────────────────────── */
-        .nav-inner{
-          display:grid;
-          grid-template-columns:1fr auto 1fr;
+        /* ── Nav: logo left, links right ─────────────────────────── */
+        .nav-bar-inner{
+          position:static;
+          display:flex;
           align-items:center;
-          gap:12px;
+          justify-content:space-between;
+          height:58px;
         }
-        .nav-logo{ grid-column:1; justify-self:start; }
-        .nav-links-center{ grid-column:2; display:flex; align-items:center; gap:28px; }
-        .nav-right{ grid-column:3; justify-self:end; display:flex; align-items:center; }
 
-        .nav-link{color:#94a3b8;text-decoration:none;font-size:13px;font-weight:500;transition:color .18s;white-space:nowrap;position:relative;padding:3px 0;}
-        .nav-link::after{content:'';position:absolute;bottom:0;left:50%;right:50%;height:1px;background:#818cf8;transition:left .2s,right .2s;}
-        .nav-link:hover{color:#c7d2fe;}.nav-link:hover::after{left:0;right:0;}
+        /* Logo: left side of the nav bar (in-flow, not fixed) */
+        .nav-logo{
+          display:flex;
+          align-items:center;
+          flex-shrink:0;
+        }
+
+        /* Links: right side */
+        .nav-links-right{
+          display:flex;
+          align-items:center;
+          gap:6px;
+        }
+
+        @media(max-width:768px){
+          .nav-links-right{ display:none !important; }
+        }
+
+        .nav-link{
+          color:#64748b;
+          text-decoration:none;
+          font-size:12px;
+          font-weight:600;
+          letter-spacing:0.04em;
+          text-transform:uppercase;
+          padding:6px 14px;
+          border-radius:8px;
+          border:1px solid transparent;
+          transition:all .2s cubic-bezier(.16,1,.3,1);
+          white-space:nowrap;
+          position:relative;
+        }
+        .nav-link:hover{
+          color:#c7d2fe;
+          background:rgba(129,140,248,0.07);
+          border-color:rgba(129,140,248,0.18);
+        }
 
         /* ── Buttons ──────────────────────────────────────────────── */
         .glow-btn{
@@ -614,14 +754,11 @@ export default function LandingPage() {
         .glow-btn::after{content:'';position:absolute;top:-50%;left:-60%;width:50%;height:200%;background:rgba(255,255,255,.13);transform:skewX(-20deg);transition:left .5s;}
         .glow-btn:hover::after{left:120%;}
 
-        /* ── Divider ─────────────────────────────────────────────── */
         .hr{width:100%;height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.06) 20%,rgba(255,255,255,0.06) 80%,transparent);}
 
-        /* ── Grids ───────────────────────────────────────────────── */
         .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
         .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 
-        /* ── Responsive ──────────────────────────────────────────── */
         @media(max-width:1024px){
           .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
         }
@@ -629,16 +766,8 @@ export default function LandingPage() {
           .feat-grid{grid-template-columns:repeat(2,1fr);}
         }
         @media(max-width:768px){
-          .nav-links-center{display:none!important;}
-          .hamburger{display:flex!important;}
-          .nav-inner{grid-template-columns:1fr auto;}
-          .nav-logo{ grid-column:1; }
-          .nav-right{ grid-column:2; }
           .hero-btns{flex-direction:column!important;align-items:stretch!important;width:100%;}
           .hero-btns .glow-btn{width:100%;max-width:100%;text-align:center;}
-        }
-        @media(min-width:769px){
-          .hamburger{display:none!important;}
         }
         @media(max-width:580px){
           .feat-grid{grid-template-columns:1fr;}
@@ -649,7 +778,6 @@ export default function LandingPage() {
       `}</style>
 
       <ParticleCanvas />
-      <MobileMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
 
       {/* ════ NAV ═══════════════════════════════════════════════════ */}
       <nav style={{
@@ -659,25 +787,42 @@ export default function LandingPage() {
         borderBottom:scrollY>50?"1px solid rgba(255,255,255,0.07)":"1px solid rgba(255,255,255,0.04)",
         transition:"all .3s",
       }}>
-        <div className="container" style={{paddingTop:"13px",paddingBottom:"13px"}}>
-          <div className="nav-inner">
-            {/* Logo */}
-            <div className="nav-logo" style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"clamp(18px,2.5vw,26px)",letterSpacing:"0.01em",cursor:"default",userSelect:"none",lineHeight:1}}>
-              <span style={{color:"#c7d2fe"}}>Visuo</span>
-              <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
+        <div className="container" style={{paddingTop:"0",paddingBottom:"0"}}>
+          <div className="nav-bar-inner">
+
+            {/* ── Logo: in-flow, left side, shifted slightly right ── */}
+            <div className="nav-logo">
+              <PremiumLogo />
             </div>
 
-            {/* Centered nav links */}
-            <div className="nav-links-center">
-              <a href="#features" className="nav-link">Features</a>
-              <a href="#tree"     className="nav-link">Topics</a>
-              <a href="#footer"   className="nav-link">End</a>
+            {/* ── Links: right side ── */}
+            <div className="nav-links-right">
+              {/* Subtle divider dot */}
+              {[["#features","Features"],["#tree","Topics"],["#footer","End"]].map(([href,label], i) => (
+                <a key={href} href={href} className="nav-link">{label}</a>
+              ))}
+              {/* CTA pill */}
+              <a href="#tree" style={{
+                marginLeft:"6px",
+                display:"inline-flex", alignItems:"center",
+                padding:"7px 18px",
+                borderRadius:"9px",
+                background:"linear-gradient(135deg, rgba(79,70,229,0.22), rgba(124,58,237,0.18))",
+                border:"1px solid rgba(129,140,248,0.28)",
+                color:"#a5b4fc",
+                fontSize:"12px", fontWeight:700,
+                letterSpacing:"0.04em", textTransform:"uppercase",
+                textDecoration:"none",
+                transition:"all .2s cubic-bezier(.16,1,.3,1)",
+                boxShadow:"0 2px 12px rgba(99,102,241,0.15)",
+                whiteSpace:"nowrap",
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.background="linear-gradient(135deg,rgba(79,70,229,0.35),rgba(124,58,237,0.3))";e.currentTarget.style.borderColor="rgba(129,140,248,0.5)";e.currentTarget.style.color="#c7d2fe";e.currentTarget.style.boxShadow="0 4px 20px rgba(99,102,241,0.28)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="linear-gradient(135deg,rgba(79,70,229,0.22),rgba(124,58,237,0.18))";e.currentTarget.style.borderColor="rgba(129,140,248,0.28)";e.currentTarget.style.color="#a5b4fc";e.currentTarget.style.boxShadow="0 2px 12px rgba(99,102,241,0.15)";}}>
+                Get Started →
+              </a>
             </div>
 
-            {/* Right slot — hamburger on mobile */}
-            <div className="nav-right">
-              <button className="hamburger" onClick={()=>setMenuOpen(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"7px 10px",cursor:"pointer",color:"#94a3b8",fontSize:"15px",lineHeight:1,display:"flex",alignItems:"center"}}>☰</button>
-            </div>
           </div>
         </div>
       </nav>
@@ -691,7 +836,6 @@ export default function LandingPage() {
         position:"relative",zIndex:1,textAlign:"center",overflow:"hidden",
         width:"100%",
       }}>
-        {/* Light effects */}
         <div style={{position:"absolute",width:"min(900px,130vw)",height:"min(700px,100vw)",borderRadius:"50%",background:"radial-gradient(ellipse,rgba(79,70,229,0.18) 0%,rgba(99,102,241,0.08) 35%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-55%)",pointerEvents:"none",zIndex:0}}/>
         <div style={{position:"absolute",width:"min(480px,80vw)",height:"min(480px,80vw)",borderRadius:"50%",background:"radial-gradient(circle,rgba(129,140,248,0.22) 0%,rgba(99,102,241,0.1) 40%,transparent 68%)",top:"45%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",zIndex:0}}/>
         <div style={{position:"absolute",width:"min(380px,60vw)",height:"min(380px,60vw)",borderRadius:"50%",background:"radial-gradient(circle,rgba(167,139,250,0.14) 0%,transparent 65%)",top:"38%",left:"62%",transform:"translateX(-50%)",pointerEvents:"none",zIndex:0}}/>
@@ -699,10 +843,8 @@ export default function LandingPage() {
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"60%",height:"2px",background:"linear-gradient(to right,transparent,rgba(129,140,248,0.35) 30%,rgba(167,139,250,0.45) 50%,rgba(129,140,248,0.35) 70%,transparent)",pointerEvents:"none",zIndex:0}}/>
         <div style={{position:"absolute",width:"min(700px,95vw)",height:"min(700px,95vw)",borderRadius:"50%",border:"1px solid rgba(99,102,241,0.06)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",animation:"pulseRing 8s ease-in-out infinite",pointerEvents:"none",zIndex:0}}/>
 
-        {/* All hero content in a container so it obeys the same side padding */}
         <div className="container" style={{display:"flex",flexDirection:"column",alignItems:"center",width:"100%",position:"relative",zIndex:1}}>
 
-          {/* Badge */}
           <div style={{
             display:"inline-flex",alignItems:"center",gap:"7px",
             background:"rgba(110,231,183,0.07)",border:"1px solid rgba(110,231,183,0.18)",
@@ -716,7 +858,6 @@ export default function LandingPage() {
             Visual Learning · 40+ Topics
           </div>
 
-          {/* Headline */}
           <h1 style={{
             fontSize:"clamp(32px,8.5vw,90px)",fontWeight:900,lineHeight:1.02,
             maxWidth:"820px",marginBottom:"18px",letterSpacing:"-0.025em",
@@ -727,7 +868,6 @@ export default function LandingPage() {
             <span style={{color:"#f8fafc"}}>Feel the logic.</span>
           </h1>
 
-          {/* Sub */}
           <p style={{
             fontSize:"clamp(14px,2vw,17px)",color:"#64748b",maxWidth:"480px",
             lineHeight:1.78,marginBottom:"30px",
@@ -739,7 +879,6 @@ export default function LandingPage() {
             <em style={{color:"#a5b4fc",fontStyle:"normal",fontWeight:700,background:"rgba(99,102,241,0.1)",padding:"1px 6px",borderRadius:"5px"}}>understand</em>{" "}DSA.
           </p>
 
-          {/* CTAs */}
           <div className="hero-btns" style={{
             display:"flex",gap:"12px",flexWrap:"wrap",justifyContent:"center",alignItems:"center",
             width:"100%",maxWidth:"400px",
@@ -749,9 +888,8 @@ export default function LandingPage() {
             <a href="#tree" className="glow-btn" style={{flex:"1 1 auto"}}>Topics ↓</a>
           </div>
 
-        </div>{/* /container */}
+        </div>
 
-        {/* Scroll hint */}
         <div style={{
           position:"absolute",bottom:"24px",left:"50%",
           display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",
@@ -800,18 +938,17 @@ export default function LandingPage() {
       <section id="tree" style={{paddingTop:"clamp(60px,8vw,88px)",paddingBottom:"clamp(60px,8vw,88px)",position:"relative",zIndex:1,overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 18% 50%,rgba(79,70,229,0.05) 0%,transparent 46%),radial-gradient(ellipse at 82% 50%,rgba(8,145,178,0.04) 0%,transparent 46%)",pointerEvents:"none"}}/>
 
-        <div className="section-pad" style={{textAlign:"center",marginBottom:"clamp(28px,4vw,40px)"}}>
+        <div className="container" style={{textAlign:"center",marginBottom:"clamp(28px,4vw,40px)"}}>
           <h2 style={{fontSize:"clamp(20px,4vw,40px)",fontWeight:900,color:"#f8fafc",letterSpacing:"-0.02em",marginBottom:"11px"}}>
             Click any topic to <span className="shimmer-text">launch it</span>
           </h2>
         </div>
 
-        <div className="section-pad">
+        <div className="container">
           <div style={{
-            maxWidth:"1060px",margin:"0 auto",
             background:"rgba(4,4,18,0.55)",
             border:"1px solid rgba(255,255,255,0.07)",
-            borderRadius:"20px",padding:"clamp(16px,2.5vw,24px)",
+            borderRadius:"20px",padding:"clamp(14px,2.5vw,24px)",
             boxShadow:"0 0 0 1px rgba(99,102,241,0.04),0 24px 56px rgba(0,0,0,0.38),inset 0 1px 0 rgba(255,255,255,0.04)",
             position:"relative",overflow:"hidden",
           }}>
@@ -822,7 +959,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div style={{display:"flex",justifyContent:"center",gap:"16px",flexWrap:"wrap",marginTop:"20px",padding:"0 18px"}}>
+        <div style={{display:"flex",justifyContent:"center",gap:"16px",flexWrap:"wrap",marginTop:"20px",padding:"0 clamp(16px,4vw,44px)"}}>
           {[{dot:"#818cf8",label:"Basic"},{dot:"#22d3ee",label:"Intermediate"},{dot:"#f87171",label:"Advanced"}].map(({dot,label})=>(
             <div key={label} style={{display:"flex",alignItems:"center",gap:"5px"}}>
               <span style={{width:"6px",height:"6px",borderRadius:"50%",background:dot,boxShadow:`0 0 4px ${dot}`,display:"inline-block"}}/>
@@ -835,35 +972,35 @@ export default function LandingPage() {
       <div className="hr"/>
 
       {/* ════ CTA ═══════════════════════════════════════════════════ */}
-      <section className="section-pad" style={{paddingTop:"clamp(70px,9vw,100px)",paddingBottom:"clamp(70px,9vw,100px)",textAlign:"center",position:"relative",zIndex:1,overflow:"hidden"}}>
+      <section style={{paddingTop:"clamp(70px,9vw,100px)",paddingBottom:"clamp(70px,9vw,100px)",position:"relative",zIndex:1,overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 50% 60%,rgba(79,70,229,0.08) 0%,transparent 60%)",pointerEvents:"none"}}/>
-        <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.14em",color:"#6366f1",textTransform:"uppercase",marginBottom:"10px",position:"relative"}}>Ready to level up?</p>
-        <h2 style={{fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,color:"#f8fafc",marginBottom:"12px",letterSpacing:"-0.025em",lineHeight:1.06,position:"relative"}}>
-          Stop memorizing.<br/><span className="shimmer-text">Start visualizing.</span>
-        </h2>
-        <p style={{color:"#64748b",fontSize:"14px",maxWidth:"340px",margin:"0 auto 28px",lineHeight:1.65,position:"relative"}}>
-          Open source · No account needed · Just click and learn.
-        </p>
-        <button className="glow-btn" style={{fontSize:"15px",padding:"14px 38px",position:"relative"}}>Get Started — It&apos;s Free →</button>
+        <div className="container" style={{textAlign:"center"}}>
+          <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.14em",color:"#6366f1",textTransform:"uppercase",marginBottom:"10px",position:"relative"}}>Ready to level up?</p>
+          <h2 style={{fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,color:"#f8fafc",marginBottom:"12px",letterSpacing:"-0.025em",lineHeight:1.06,position:"relative"}}>
+            Stop memorizing.<br/><span className="shimmer-text">Start visualizing.</span>
+          </h2>
+          <p style={{color:"#64748b",fontSize:"14px",maxWidth:"340px",margin:"0 auto 28px",lineHeight:1.65,position:"relative"}}>
+            Open source · No account needed · Just click and learn.
+          </p>
+          <button className="glow-btn" style={{fontSize:"15px",padding:"14px 38px",position:"relative"}}>Get Started — It&apos;s Free →</button>
+        </div>
       </section>
 
       <div className="hr"/>
 
       {/* ════ FOOTER ════════════════════════════════════════════════ */}
-      <footer id="footer" style={{padding:"clamp(22px,3vw,30px) clamp(16px,3vw,32px)",position:"relative",zIndex:1,background:"rgba(4,4,15,0.7)"}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"14px",maxWidth:"1180px",margin:"0 auto"}}>
-          <div style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"17px",letterSpacing:"0.01em",userSelect:"none",lineHeight:1}}>
-            <span style={{color:"#c7d2fe"}}>Visuo</span>
-            <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
-            <span style={{color:"#374151",fontSize:"9px",marginLeft:"8px",letterSpacing:"0.08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>DSA Visualizer</span>
+      <footer id="footer" style={{paddingTop:"clamp(22px,3vw,30px)",paddingBottom:"clamp(22px,3vw,30px)",position:"relative",zIndex:1,background:"rgba(4,4,15,0.7)"}}>
+        <div className="container">
+          <div className="footer-inner" style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"14px"}}>
+            <PremiumLogo />
+            <div className="footer-links" style={{display:"flex",gap:"20px",flexWrap:"wrap",alignItems:"center"}}>
+              {[["#features","Features"],["#tree","Topics"],["#","GitHub"]].map(([href,label])=>(
+                <a key={label} href={href} style={{color:"#374151",textDecoration:"none",fontSize:"12px",fontWeight:500,transition:"color .18s"}}
+                  onMouseEnter={e=>e.target.style.color="#a5b4fc"} onMouseLeave={e=>e.target.style.color="#374151"}>{label}</a>
+              ))}
+            </div>
+            <p style={{color:"#1e293b",fontSize:"11px"}}>Built with Next.js · Open source</p>
           </div>
-          <div style={{display:"flex",gap:"20px",flexWrap:"wrap",alignItems:"center"}}>
-            {[["#features","Features"],["#tree","Topics"],["#","GitHub"]].map(([href,label])=>(
-              <a key={label} href={href} style={{color:"#374151",textDecoration:"none",fontSize:"12px",fontWeight:500,transition:"color .18s"}}
-                onMouseEnter={e=>e.target.style.color="#a5b4fc"} onMouseLeave={e=>e.target.style.color="#374151"}>{label}</a>
-            ))}
-          </div>
-          <p style={{color:"#1e293b",fontSize:"11px"}}>Built with Next.js · Open source</p>
         </div>
       </footer>
 

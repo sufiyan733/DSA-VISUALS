@@ -180,6 +180,7 @@ export default function Sidebar() {
   const [mobileOpen,    setMobileOpen]    = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
   const [toggleHovered, setToggleHovered] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const searchInputRef = useRef(null);
 
   const section = NAV.find(s => s.id === activeTab) ?? NAV[0];
@@ -200,6 +201,9 @@ export default function Sidebar() {
 
   // Close mobile sidebar on route change
   useEffect(() => { setMobileOpen(false); }, [pathname]);
+
+  // Mark as mounted so sidebar becomes visible after client hydration
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -483,6 +487,13 @@ export default function Sidebar() {
       );
     });
 
+  // ── RENDER GUARD ─────────────────────────────────────────────────────────
+  // Don't render anything until we know the client viewport.
+  // This is the only reliable way to prevent the sidebar flashing open
+  // on first load on any screen size — CSS-only solutions are too late
+  // because the browser paints before the stylesheet takes effect.
+  if (!mounted) return null;
+
   // ── COLLAPSED ────────────────────────────────────────────────────────────
   // On mobile, collapsed state shows nothing — the FAB handles opening.
   // On desktop, collapsed state shows the edge pull-tab.
@@ -613,29 +624,38 @@ export default function Sidebar() {
              • Width is capped at 85vw so it never fills the screen.
         ───────────────────────────────────────────────────────────── */
 
-        /* Desktop default — visible */
+        /* ── Sidebar visibility gated on mount ────────────────────
+           Before JS runs (SSR / first paint), sidebar is hidden on
+           ALL viewports. The mounted flag adds data-ready which
+           triggers the correct visible/hidden state per breakpoint.
+           This prevents the flash-of-open-sidebar on any screen size.
+        ───────────────────────────────────────────────────────── */
+
+        /* Before mount: always hidden, no transition (prevents flash) */
         .vs-sidebar-root {
-          transform: translateX(0);
-          animation: vs-sidebar-in 0.3s cubic-bezier(0.22,1,0.36,1);
-          /* Ensure no horizontal overflow leaks out */
+          transform: translateX(-100%);
           overflow-x: hidden;
+          /* No transition here — we don't want an animated slide on load */
         }
 
-        /* Mobile: always start off-screen, NO animation on initial paint */
+        /* After mount on DESKTOP: slide in with the entry animation */
+        .vs-sidebar-root[data-ready="true"] {
+          transform: translateX(0);
+          animation: vs-sidebar-in 0.3s cubic-bezier(0.22,1,0.36,1);
+          transition: none; /* animation handles it */
+        }
+
+        /* After mount on MOBILE: stay off-screen, transition on toggle */
         @media (max-width: 768px) {
-          .vs-sidebar-root {
+          .vs-sidebar-root[data-ready="true"] {
             animation: none !important;
-            /* Start fully hidden off the left edge */
             transform: translateX(-100%) !important;
-            /* Smooth slide when toggled */
             transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
                         box-shadow 0.3s cubic-bezier(0.22,1,0.36,1) !important;
-            /* Cap width so it never covers the full screen */
             width: min(272px, 85vw) !important;
           }
           .vs-sidebar-root.mobile-open {
             transform: translateX(0) !important;
-            /* Extra shadow so it clearly floats above content */
             box-shadow: 4px 0 40px rgba(0,0,0,0.8), 20px 0 60px rgba(0,0,0,0.5) !important;
           }
         }
@@ -756,6 +776,7 @@ export default function Sidebar() {
       {/* ── SIDEBAR SHELL ──────────────────────────────────────────────── */}
       <aside
         className={`vs-sidebar-root${mobileOpen ? " mobile-open" : ""}`}
+        data-ready={mounted ? "true" : "false"}
         aria-label="Navigation sidebar"
         aria-hidden={!mobileOpen ? undefined : undefined}
         style={{
