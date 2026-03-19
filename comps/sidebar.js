@@ -142,7 +142,6 @@ function getActiveItem(pathname) {
   return null;
 }
 
-// Build cross-section search results grouped by section
 function globalSearch(query) {
   if (!query.trim()) return null;
   const q = query.toLowerCase();
@@ -185,7 +184,6 @@ export default function Sidebar() {
 
   const section = NAV.find(s => s.id === activeTab) ?? NAV[0];
 
-  // Global search results (null = not searching)
   const globalResults = globalSearch(search);
   const isSearching   = !!globalResults;
 
@@ -218,7 +216,7 @@ export default function Sidebar() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [search]);
 
-  // Prevent body scroll when mobile sidebar is open
+  // Lock body scroll when mobile sidebar is open
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.body.style.overflow = mobileOpen ? "hidden" : "";
@@ -235,7 +233,6 @@ export default function Sidebar() {
     setMobileOpen(false);
   }, [router]);
 
-  // When searching, open all groups in results automatically
   useEffect(() => {
     if (!globalResults) return;
     const next = { ...openGroups };
@@ -246,12 +243,10 @@ export default function Sidebar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search]);
 
-  // Current tab's groups (used when NOT searching)
   const tabGroups = section.groups;
 
   const W_OPEN = 272;
 
-  // Design tokens
   const BG       = "#030712";
   const SURFACE  = "rgba(10,13,22,0.97)";
   const BORDER   = "rgba(255,255,255,0.07)";
@@ -263,13 +258,11 @@ export default function Sidebar() {
   const ACCENT   = "#7c6bfa";
   const ACCENT2  = "#a78bfa";
 
-  // Shared renderer for a list of sections+groups
   const renderGroups = (sections) =>
     sections.map((sec) => {
       const secData = NAV.find(s => s.id === sec.id);
       return (
         <div key={sec.id}>
-          {/* Section divider when in global search mode */}
           {isSearching && (
             <div style={{
               display: "flex", alignItems: "center", gap: "8px",
@@ -286,14 +279,12 @@ export default function Sidebar() {
             </div>
           )}
           {sec.groups.map((group, gi) => {
-            // Find real index in original NAV for consistent key
             const realGi = NAV.find(s => s.id === sec.id)?.groups.findIndex(g => g.label === group.label) ?? gi;
             const groupKey = `${sec.id}-${realGi}`;
             const isOpen   = isSearching ? true : (openGroups[groupKey] !== false);
 
             return (
               <div key={group.label} style={{ marginBottom: "4px" }}>
-                {/* Group header */}
                 <button
                   onClick={() => !isSearching && toggleGroup(groupKey)}
                   style={{
@@ -352,7 +343,6 @@ export default function Sidebar() {
                   )}
                 </button>
 
-                {/* Items */}
                 {isOpen && (
                   <div className="vs-group-open" style={{
                     marginLeft: "16px",
@@ -378,7 +368,7 @@ export default function Sidebar() {
                             animationDelay: `${idx * 0.025}s`,
                             width: "100%",
                             display: "flex", alignItems: "center", gap: "8px",
-                            padding: "10px 10px", // slightly taller for touch
+                            padding: "10px 10px",
                             borderRadius: "9px",
                             margin: "2px 0",
                             background: isActive
@@ -399,7 +389,7 @@ export default function Sidebar() {
                               ? `0 3px 10px ${group.color}22, inset 0 1px 0 rgba(255,255,255,0.06)`
                               : "none",
                             WebkitTapHighlightColor: "transparent",
-                            minHeight: "44px", // accessible touch target
+                            minHeight: "44px",
                           }}
                         >
                           {isActive && (
@@ -494,6 +484,8 @@ export default function Sidebar() {
     });
 
   // ── COLLAPSED ────────────────────────────────────────────────────────────
+  // On mobile, collapsed state shows nothing — the FAB handles opening.
+  // On desktop, collapsed state shows the edge pull-tab.
   if (collapsed) {
     return (
       <>
@@ -503,11 +495,11 @@ export default function Sidebar() {
             0%,100% { box-shadow: 4px 0 16px rgba(0,0,0,0.4); }
             50%      { box-shadow: 4px 0 20px rgba(124,107,250,0.25); }
           }
-          .vs-collapse-btn {
-            animation: vs-arrow-glow 3s ease-in-out infinite;
-          }
+          .vs-collapse-btn { animation: vs-arrow-glow 3s ease-in-out infinite; }
+          /* On mobile, hide the desktop pull-tab entirely */
+          @media (max-width: 768px) { .vs-collapse-btn-wrap { display: none !important; } }
         `}</style>
-        <div style={{
+        <div className="vs-collapse-btn-wrap" style={{
           position: "fixed", top: "50%", left: 0,
           transform: "translateY(-50%)", zIndex: 400,
         }}>
@@ -549,7 +541,7 @@ export default function Sidebar() {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; }
+        *, *::before, *::after { box-sizing: border-box; }
 
         .vs-scroll::-webkit-scrollbar { width: 3px; }
         .vs-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -591,7 +583,6 @@ export default function Sidebar() {
           from { transform:translateX(-100%); }
           to   { transform:translateX(400%); }
         }
-
         @keyframes vs-orb1 {
           0%,100% { transform: translate(0,0) scale(1); }
           50%      { transform: translate(20px,-15px) scale(1.08); }
@@ -600,30 +591,108 @@ export default function Sidebar() {
           0%,100% { transform: translate(0,0) scale(1); }
           50%      { transform: translate(-15px,10px) scale(0.92); }
         }
-
         @keyframes vs-sidebar-in {
           from { opacity:0; transform:translateX(-16px); }
           to   { opacity:1; transform:translateX(0);     }
         }
-
         @keyframes vs-fade-in { from{opacity:0} to{opacity:1} }
 
-        /* ─── MOBILE STYLES ─────────────────────────────────────────── */
-        /* Desktop: sidebar is always visible, no transform needed */
+        /* ─────────────────────────────────────────────────────────────
+           CORE MOBILE LAYOUT FIX
+           
+           Desktop  : sidebar is a normal fixed panel at left:0.
+                      Page content must have margin-left: 272px
+                      (handled in the parent layout — we just ensure
+                       the sidebar never leaves the viewport).
+           
+           Mobile (≤768px) :
+             • Sidebar is ALWAYS off-screen (translateX(-100%)).
+             • It slides in only when .mobile-open is added.
+             • It should NEVER push page content — it overlays it.
+             • The FAB triggers open/close.
+             • Width is capped at 85vw so it never fills the screen.
+        ───────────────────────────────────────────────────────────── */
+
+        /* Desktop default — visible */
         .vs-sidebar-root {
           transform: translateX(0);
           animation: vs-sidebar-in 0.3s cubic-bezier(0.22,1,0.36,1);
+          /* Ensure no horizontal overflow leaks out */
+          overflow-x: hidden;
         }
 
-        /* Mobile: sidebar slides in/out, starts hidden */
+        /* Mobile: always start off-screen, NO animation on initial paint */
         @media (max-width: 768px) {
           .vs-sidebar-root {
             animation: none !important;
+            /* Start fully hidden off the left edge */
             transform: translateX(-100%) !important;
-            transition: transform 0.3s cubic-bezier(0.22,1,0.36,1) !important;
+            /* Smooth slide when toggled */
+            transition: transform 0.3s cubic-bezier(0.22,1,0.36,1),
+                        box-shadow 0.3s cubic-bezier(0.22,1,0.36,1) !important;
+            /* Cap width so it never covers the full screen */
+            width: min(272px, 85vw) !important;
           }
           .vs-sidebar-root.mobile-open {
             transform: translateX(0) !important;
+            /* Extra shadow so it clearly floats above content */
+            box-shadow: 4px 0 40px rgba(0,0,0,0.8), 20px 0 60px rgba(0,0,0,0.5) !important;
+          }
+        }
+
+        /* ── FAB (floating action button) ─────────────────────────── */
+        /* Hidden on desktop */
+        .vs-mobile-fab {
+          display: none;
+        }
+        /* Shown on mobile */
+        @media (max-width: 768px) {
+          .vs-mobile-fab {
+            display: flex;
+            position: fixed;
+            /* Bottom-left, clear of common system UI */
+            bottom: env(safe-area-inset-bottom, 20px);
+            /* Add 20px to the env() safe area */
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
+            left: 16px;
+            z-index: 1001;
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            background: rgba(10,13,22,0.95);
+            border: 1px solid rgba(124,107,250,0.3);
+            backdrop-filter: blur(16px);
+            color: #a78bfa;
+            font-size: 18px;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.6), 0 0 0 1px rgba(124,107,250,0.1);
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+            /* When sidebar is open, FAB becomes a close button */
+          }
+          .vs-mobile-fab:active {
+            transform: scale(0.9);
+          }
+          /* When open: shift FAB right to clear the sidebar */
+          .vs-mobile-fab.sidebar-open {
+            left: calc(min(272px, 85vw) + 12px);
+            background: rgba(30,12,50,0.97);
+            border-color: rgba(239,68,68,0.35);
+            color: #fca5a5;
+          }
+        }
+
+        /* ── Backdrop ──────────────────────────────────────────────── */
+        /* Never rendered on desktop (conditional render handles it),
+           but guard with CSS too */
+        .vs-mobile-backdrop {
+          display: none;
+        }
+        @media (max-width: 768px) {
+          .vs-mobile-backdrop {
+            display: block;
           }
         }
 
@@ -644,58 +713,42 @@ export default function Sidebar() {
           height: 2px; border-radius: 2px 2px 0 0;
           transition: opacity 0.2s;
         }
-
-        .vs-mobile-fab {
-          display: none;
-          position: fixed;
-          bottom: 24px; left: 20px;
-          z-index: 1001;
-          width: 52px; height: 52px;
-          border-radius: 16px;
-          background: rgba(10,13,22,0.95);
-          border: 1px solid rgba(255,255,255,0.07);
-          backdrop-filter: blur(16px);
-          color: #94a3b8;
-          font-size: 20px;
-          align-items: center;
-          justify-content: center;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.5);
-          cursor: pointer;
-          -webkit-tap-highlight-color: transparent;
-          transition: background 0.2s, transform 0.2s;
-        }
-        @media (max-width: 768px) {
-          .vs-mobile-fab { display: flex; }
-        }
-        .vs-mobile-fab:active { transform: scale(0.92); }
-
-        /* On desktop, never show the backdrop */
-        .vs-mobile-backdrop { display: none; }
-        @media (max-width: 768px) {
-          .vs-mobile-backdrop { display: block; }
-        }
       `}</style>
 
-      {/* Mobile FAB */}
+      {/* ── Mobile FAB ─────────────────────────────────────────────────── */}
       <button
-        className="vs-mobile-fab"
+        className={`vs-mobile-fab${mobileOpen ? " sidebar-open" : ""}`}
         onClick={() => setMobileOpen(p => !p)}
         aria-label={mobileOpen ? "Close navigation" : "Open navigation"}
+        aria-expanded={mobileOpen}
       >
-        {mobileOpen ? "✕" : "☰"}
+        {/* Animated hamburger ↔ X */}
+        <span style={{
+          display: "block",
+          fontSize: mobileOpen ? "16px" : "18px",
+          transition: "font-size 0.15s, transform 0.2s",
+          transform: mobileOpen ? "rotate(90deg)" : "rotate(0deg)",
+          lineHeight: 1,
+        }}>
+          {mobileOpen ? "✕" : "☰"}
+        </span>
       </button>
 
-      {/* Mobile backdrop */}
+      {/* ── Mobile backdrop — tap to close ─────────────────────────────── */}
       {mobileOpen && (
         <div
           className="vs-mobile-backdrop"
           onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
           style={{
             position: "fixed", inset: 0,
-            background: "rgba(0,0,0,0.65)",
-            backdropFilter: "blur(6px)",
+            background: "rgba(0,0,0,0.72)",
+            backdropFilter: "blur(4px)",
+            WebkitBackdropFilter: "blur(4px)",
             zIndex: 299,
             animation: "vs-fade-in 0.2s",
+            // Prevent any touch events falling through
+            touchAction: "none",
           }}
         />
       )}
@@ -703,19 +756,27 @@ export default function Sidebar() {
       {/* ── SIDEBAR SHELL ──────────────────────────────────────────────── */}
       <aside
         className={`vs-sidebar-root${mobileOpen ? " mobile-open" : ""}`}
+        aria-label="Navigation sidebar"
+        aria-hidden={!mobileOpen ? undefined : undefined}
         style={{
           width: `${W_OPEN}px`,
           height: "100vh",
-          position: "fixed", top: 0, left: 0,
+          /* Use dvh where supported for accurate mobile viewport */
+          height: "100dvh",
+          position: "fixed",
+          top: 0,
+          left: 0,
           background: SURFACE,
           borderRight: `1px solid ${BORDER}`,
           backdropFilter: "blur(28px)",
-          display: "flex", flexDirection: "column",
+          WebkitBackdropFilter: "blur(28px)",
+          display: "flex",
+          flexDirection: "column",
           overflow: "hidden",
+          /* z-index: above backdrop(299) and FAB(1001)? No — sidebar at 300,
+             FAB at 1001 so FAB close button is always tappable */
           zIndex: 300,
           boxShadow: "12px 0 60px rgba(0,0,0,0.7), inset -1px 0 0 rgba(255,255,255,0.04)",
-          // On mobile, ensure sidebar is full-width friendly
-          maxWidth: "min(272px, calc(100vw - 32px))",
         }}
       >
         {/* Ambient orbs */}
@@ -776,6 +837,7 @@ export default function Sidebar() {
               </div>
             </a>
 
+            {/* Collapse button — desktop only (mobile uses FAB) */}
             <button
               onClick={toggleCollapse}
               title="Collapse sidebar"
@@ -851,7 +913,6 @@ export default function Sidebar() {
               )}
             </div>
 
-            {/* Search hint */}
             {isSearching && (
               <div style={{
                 fontFamily: SANS, fontSize: "10px", color: TEXT_DIM,
@@ -864,7 +925,7 @@ export default function Sidebar() {
             )}
           </div>
 
-          {/* ── TABS (hidden during search) ─────────────────────────── */}
+          {/* ── TABS ───────────────────────────────────────────────────── */}
           {!isSearching && (
             <div style={{ padding: "12px 14px 0", display: "flex", gap: "6px", flexShrink: 0 }}>
               {NAV.map(sec => {
@@ -928,7 +989,7 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* Section label + count (hidden during search) */}
+          {/* Section label + count */}
           {!isSearching && (
             <div style={{
               padding: "12px 16px 8px",
@@ -957,7 +1018,7 @@ export default function Sidebar() {
             </div>
           )}
 
-          {/* Search mode: total matches */}
+          {/* Search results count */}
           {isSearching && (
             <div style={{
               padding: "10px 16px 6px",
@@ -980,13 +1041,17 @@ export default function Sidebar() {
           )}
 
           {/* ── NAV TREE ───────────────────────────────────────────────── */}
-          <nav className="vs-scroll" style={{
-            flex: 1, overflowY: "auto", overflowX: "hidden",
-            padding: "0 10px 16px",
-            display: "flex", flexDirection: "column", gap: "3px",
-            // Smooth scroll on iOS
-            WebkitOverflowScrolling: "touch",
-          }}>
+          <nav
+            className="vs-scroll"
+            style={{
+              flex: 1, overflowY: "auto", overflowX: "hidden",
+              padding: "0 10px 16px",
+              display: "flex", flexDirection: "column", gap: "3px",
+              WebkitOverflowScrolling: "touch",
+              /* Extra bottom padding so last item isn't hidden behind FAB on mobile */
+              paddingBottom: "72px",
+            }}
+          >
             {isSearching
               ? globalResults.length > 0
                 ? renderGroups(globalResults)
@@ -994,7 +1059,7 @@ export default function Sidebar() {
                   <div style={{ padding: "48px 20px", textAlign: "center", color: TEXT_DIM }}>
                     <div style={{ fontSize: "28px", opacity: 0.2, marginBottom: "12px" }}>⌕</div>
                     <p style={{ fontFamily: SANS, fontSize: "12px", fontWeight: 500, marginBottom: "16px" }}>
-                      No results for "{search}"
+                      No results for &ldquo;{search}&rdquo;
                     </p>
                     <button
                       onClick={() => setSearch("")}
@@ -1060,6 +1125,7 @@ export default function Sidebar() {
               <span>Home</span>
             </a>
           </div>
+
         </div>
       </aside>
     </>

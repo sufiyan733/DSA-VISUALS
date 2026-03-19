@@ -27,6 +27,7 @@ export default function RootLayout({ children }) {
         <SidebarProvider>
           <LayoutWithSidebar>{children}</LayoutWithSidebar>
         </SidebarProvider>
+        {/* {children} */}
       </body>
     </html>
   );

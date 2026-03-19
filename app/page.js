@@ -569,13 +569,25 @@ export default function LandingPage() {
           animation:shimmer 5s linear infinite;
         }
 
+        /* ── Reset overflow at root ───────────────────────────────── */
+        html,body{max-width:100%;overflow-x:hidden;}
+
+        /* ── Shared container ─────────────────────────────────────── */
+        .container{
+          width:100%;
+          max-width:1180px;
+          margin-left:auto;
+          margin-right:auto;
+          padding-left:clamp(16px,4vw,44px);
+          padding-right:clamp(16px,4vw,44px);
+          box-sizing:border-box;
+        }
+
         /* ── Nav ────────────────────────────────────────────────── */
         .nav-inner{
-          max-width:1180px;margin:0 auto;
           display:grid;
           grid-template-columns:1fr auto 1fr;
           align-items:center;
-          padding:13px clamp(16px,3vw,32px);
           gap:12px;
         }
         .nav-logo{ grid-column:1; justify-self:start; }
@@ -609,37 +621,30 @@ export default function LandingPage() {
         .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
         .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
 
-        /* ── Section padding ──────────────────────────────────────── */
-        .section-pad{padding-left:clamp(18px,4vw,44px);padding-right:clamp(18px,4vw,44px);}
-
         /* ── Responsive ──────────────────────────────────────────── */
         @media(max-width:1024px){
-          .stats-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px;}
+          .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px;}
         }
         @media(max-width:900px){
-          .feat-grid{grid-template-columns:repeat(2,1fr)!important;}
+          .feat-grid{grid-template-columns:repeat(2,1fr);}
         }
         @media(max-width:768px){
           .nav-links-center{display:none!important;}
           .hamburger{display:flex!important;}
-          /* On mobile collapse to 2-col logo + hamburger */
-          .nav-inner{
-            grid-template-columns:1fr auto;
-          }
+          .nav-inner{grid-template-columns:1fr auto;}
           .nav-logo{ grid-column:1; }
           .nav-right{ grid-column:2; }
-          .hero-btns{flex-direction:column!important;align-items:center!important;width:100%;}
-          .hero-btns .glow-btn{width:100%;max-width:320px;}
+          .hero-btns{flex-direction:column!important;align-items:stretch!important;width:100%;}
+          .hero-btns .glow-btn{width:100%;max-width:100%;text-align:center;}
         }
         @media(min-width:769px){
           .hamburger{display:none!important;}
         }
         @media(max-width:580px){
-          .feat-grid{grid-template-columns:1fr!important;}
-          .stats-grid{grid-template-columns:repeat(2,1fr)!important;}
-        }
-        @media(max-width:400px){
-          .stats-grid{grid-template-columns:1fr 1fr!important;}
+          .feat-grid{grid-template-columns:1fr;}
+          .stats-grid{grid-template-columns:repeat(2,1fr);}
+          .footer-inner{flex-direction:column!important;align-items:center!important;text-align:center;gap:16px!important;}
+          .footer-links{justify-content:center!important;}
         }
       `}</style>
 
@@ -654,34 +659,37 @@ export default function LandingPage() {
         borderBottom:scrollY>50?"1px solid rgba(255,255,255,0.07)":"1px solid rgba(255,255,255,0.04)",
         transition:"all .3s",
       }}>
-        <div className="nav-inner">
-          {/* Logo */}
-          <div className="nav-logo" style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"clamp(18px,2.5vw,26px)",letterSpacing:"0.01em",cursor:"default",userSelect:"none",lineHeight:1}}>
-            <span style={{color:"#c7d2fe"}}>Visuo</span>
-            <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
-          </div>
+        <div className="container" style={{paddingTop:"13px",paddingBottom:"13px"}}>
+          <div className="nav-inner">
+            {/* Logo */}
+            <div className="nav-logo" style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"clamp(18px,2.5vw,26px)",letterSpacing:"0.01em",cursor:"default",userSelect:"none",lineHeight:1}}>
+              <span style={{color:"#c7d2fe"}}>Visuo</span>
+              <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
+            </div>
 
-          {/* Centered nav links — always in the middle column */}
-          <div className="nav-links-center">
-            <a href="#features" className="nav-link">Features</a>
-            <a href="#tree"     className="nav-link">Topics</a>
-            <a href="#footer"   className="nav-link">End</a>
-          </div>
+            {/* Centered nav links */}
+            <div className="nav-links-center">
+              <a href="#features" className="nav-link">Features</a>
+              <a href="#tree"     className="nav-link">Topics</a>
+              <a href="#footer"   className="nav-link">End</a>
+            </div>
 
-          {/* Right slot — hamburger on mobile, empty on desktop */}
-          <div className="nav-right">
-            <button className="hamburger" onClick={()=>setMenuOpen(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"7px 10px",cursor:"pointer",color:"#94a3b8",fontSize:"15px",lineHeight:1,display:"flex",alignItems:"center"}}>☰</button>
+            {/* Right slot — hamburger on mobile */}
+            <div className="nav-right">
+              <button className="hamburger" onClick={()=>setMenuOpen(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"7px 10px",cursor:"pointer",color:"#94a3b8",fontSize:"15px",lineHeight:1,display:"flex",alignItems:"center"}}>☰</button>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* ════ HERO ══════════════════════════════════════════════════ */}
-      <section className="section-pad" style={{
+      <section style={{
         minHeight:"100vh",display:"flex",flexDirection:"column",
         alignItems:"center",justifyContent:"center",
         paddingTop:"clamp(100px,14vw,130px)",
         paddingBottom:"clamp(60px,8vw,90px)",
         position:"relative",zIndex:1,textAlign:"center",overflow:"hidden",
+        width:"100%",
       }}>
         {/* Light effects */}
         <div style={{position:"absolute",width:"min(900px,130vw)",height:"min(700px,100vw)",borderRadius:"50%",background:"radial-gradient(ellipse,rgba(79,70,229,0.18) 0%,rgba(99,102,241,0.08) 35%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-55%)",pointerEvents:"none",zIndex:0}}/>
@@ -691,54 +699,57 @@ export default function LandingPage() {
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"60%",height:"2px",background:"linear-gradient(to right,transparent,rgba(129,140,248,0.35) 30%,rgba(167,139,250,0.45) 50%,rgba(129,140,248,0.35) 70%,transparent)",pointerEvents:"none",zIndex:0}}/>
         <div style={{position:"absolute",width:"min(700px,95vw)",height:"min(700px,95vw)",borderRadius:"50%",border:"1px solid rgba(99,102,241,0.06)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",animation:"pulseRing 8s ease-in-out infinite",pointerEvents:"none",zIndex:0}}/>
 
-        {/* Badge */}
-        <div style={{
-          display:"inline-flex",alignItems:"center",gap:"7px",
-          background:"rgba(110,231,183,0.07)",border:"1px solid rgba(110,231,183,0.18)",
-          borderRadius:"999px",padding:"5px 14px",
-          fontSize:"10px",fontWeight:700,color:"#6ee7b7",letterSpacing:"0.1em",textTransform:"uppercase",
-          marginBottom:"24px",position:"relative",zIndex:1,
-          opacity:heroVis?1:0,transform:heroVis?"translateY(0)":"translateY(-10px)",
-          transition:"all .6s cubic-bezier(.16,1,.3,1)",
-        }}>
-          <span style={{width:"6px",height:"6px",borderRadius:"50%",background:"#6ee7b7",display:"inline-block",boxShadow:"0 0 6px #6ee7b7",animation:"badgePulse 2.2s ease-in-out infinite"}}/>
-          Visual Learning · 40+ Topics
-        </div>
+        {/* All hero content in a container so it obeys the same side padding */}
+        <div className="container" style={{display:"flex",flexDirection:"column",alignItems:"center",width:"100%",position:"relative",zIndex:1}}>
 
-        {/* Headline */}
-        <h1 style={{
-          fontSize:"clamp(36px,8.5vw,90px)",fontWeight:900,lineHeight:1.02,
-          maxWidth:"820px",marginBottom:"18px",letterSpacing:"-0.025em",
-          position:"relative",zIndex:1,
-          opacity:heroVis?1:0,
-          animation:heroVis?"heroIn .7s .08s both cubic-bezier(.16,1,.3,1)":"none",
-        }}>
-          <span className="shimmer-text">See the code.</span><br/>
-          <span style={{color:"#f8fafc"}}>Feel the logic.</span>
-        </h1>
+          {/* Badge */}
+          <div style={{
+            display:"inline-flex",alignItems:"center",gap:"7px",
+            background:"rgba(110,231,183,0.07)",border:"1px solid rgba(110,231,183,0.18)",
+            borderRadius:"999px",padding:"5px 14px",
+            fontSize:"10px",fontWeight:700,color:"#6ee7b7",letterSpacing:"0.1em",textTransform:"uppercase",
+            marginBottom:"24px",
+            opacity:heroVis?1:0,transform:heroVis?"translateY(0)":"translateY(-10px)",
+            transition:"all .6s cubic-bezier(.16,1,.3,1)",
+          }}>
+            <span style={{width:"6px",height:"6px",borderRadius:"50%",background:"#6ee7b7",display:"inline-block",boxShadow:"0 0 6px #6ee7b7",animation:"badgePulse 2.2s ease-in-out infinite"}}/>
+            Visual Learning · 40+ Topics
+          </div>
 
-        {/* Sub */}
-        <p style={{
-          fontSize:"clamp(14px,2vw,17px)",color:"#64748b",maxWidth:"480px",
-          lineHeight:1.78,marginBottom:"30px",
-          position:"relative",zIndex:1,
-          opacity:heroVis?1:0,
-          animation:heroVis?"heroIn .7s .18s both cubic-bezier(.16,1,.3,1)":"none",
-        }}>
-          Interactive visualizations for every major data structure and algorithm.
-          Step through, watch complexity unfold — finally{" "}
-          <em style={{color:"#a5b4fc",fontStyle:"normal",fontWeight:700,background:"rgba(99,102,241,0.1)",padding:"1px 6px",borderRadius:"5px"}}>understand</em>{" "}DSA.
-        </p>
+          {/* Headline */}
+          <h1 style={{
+            fontSize:"clamp(32px,8.5vw,90px)",fontWeight:900,lineHeight:1.02,
+            maxWidth:"820px",marginBottom:"18px",letterSpacing:"-0.025em",
+            opacity:heroVis?1:0,
+            animation:heroVis?"heroIn .7s .08s both cubic-bezier(.16,1,.3,1)":"none",
+          }}>
+            <span className="shimmer-text">See the code.</span><br/>
+            <span style={{color:"#f8fafc"}}>Feel the logic.</span>
+          </h1>
 
-        {/* CTAs */}
-        <div className="hero-btns" style={{
-          display:"flex",gap:"12px",flexWrap:"wrap",justifyContent:"center",alignItems:"center",
-          position:"relative",zIndex:1,
-          opacity:heroVis?1:0,
-          animation:heroVis?"heroIn .7s .28s both cubic-bezier(.16,1,.3,1)":"none",
-        }}>
-          <a href="#tree" className="glow-btn">Topics ↓</a>
-        </div>
+          {/* Sub */}
+          <p style={{
+            fontSize:"clamp(14px,2vw,17px)",color:"#64748b",maxWidth:"480px",
+            lineHeight:1.78,marginBottom:"30px",
+            opacity:heroVis?1:0,
+            animation:heroVis?"heroIn .7s .18s both cubic-bezier(.16,1,.3,1)":"none",
+          }}>
+            Interactive visualizations for every major data structure and algorithm.
+            Step through, watch complexity unfold — finally{" "}
+            <em style={{color:"#a5b4fc",fontStyle:"normal",fontWeight:700,background:"rgba(99,102,241,0.1)",padding:"1px 6px",borderRadius:"5px"}}>understand</em>{" "}DSA.
+          </p>
+
+          {/* CTAs */}
+          <div className="hero-btns" style={{
+            display:"flex",gap:"12px",flexWrap:"wrap",justifyContent:"center",alignItems:"center",
+            width:"100%",maxWidth:"400px",
+            opacity:heroVis?1:0,
+            animation:heroVis?"heroIn .7s .28s both cubic-bezier(.16,1,.3,1)":"none",
+          }}>
+            <a href="#tree" className="glow-btn" style={{flex:"1 1 auto"}}>Topics ↓</a>
+          </div>
+
+        </div>{/* /container */}
 
         {/* Scroll hint */}
         <div style={{
@@ -755,27 +766,31 @@ export default function LandingPage() {
       <div className="hr"/>
 
       {/* ════ STATS ═════════════════════════════════════════════════ */}
-      <section className="section-pad" style={{paddingTop:"clamp(40px,6vw,60px)",paddingBottom:"clamp(40px,6vw,60px)",maxWidth:"1180px",margin:"0 auto",position:"relative",zIndex:1}}>
-        <div className="stats-grid">
-          {stats.map((s,i)=><StatCard key={s.label} {...s} delay={i*55}/>)}
+      <section style={{paddingTop:"clamp(40px,6vw,60px)",paddingBottom:"clamp(40px,6vw,60px)",position:"relative",zIndex:1}}>
+        <div className="container">
+          <div className="stats-grid">
+            {stats.map((s,i)=><StatCard key={s.label} {...s} delay={i*55}/>)}
+          </div>
         </div>
       </section>
 
       <div className="hr"/>
 
       {/* ════ FEATURES ══════════════════════════════════════════════ */}
-      <section id="features" className="section-pad" style={{paddingTop:"clamp(60px,8vw,90px)",paddingBottom:"clamp(60px,8vw,90px)",maxWidth:"1180px",margin:"0 auto",position:"relative",zIndex:1}}>
-        <div style={{textAlign:"center",marginBottom:"clamp(32px,5vw,48px)"}}>
-          <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.14em",color:"#6366f1",textTransform:"uppercase",marginBottom:"10px"}}>Why VisuoSlayer</p>
-          <h2 style={{fontSize:"clamp(22px,4.5vw,42px)",fontWeight:900,color:"#f8fafc",letterSpacing:"-0.02em",marginBottom:"11px"}}>
-            Everything to <span className="shimmer-text">master DSA</span>
-          </h2>
-          <p style={{color:"#64748b",fontSize:"14px",maxWidth:"340px",margin:"0 auto",lineHeight:1.6}}>
-            One platform. Every structure. Every algorithm. All visual.
-          </p>
-        </div>
-        <div className="feat-grid">
-          {features.map((f,i)=><FeatureCard key={f.title} {...f} delay={i*40}/>)}
+      <section id="features" style={{paddingTop:"clamp(60px,8vw,90px)",paddingBottom:"clamp(60px,8vw,90px)",position:"relative",zIndex:1}}>
+        <div className="container">
+          <div style={{textAlign:"center",marginBottom:"clamp(32px,5vw,48px)"}}>
+            <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.14em",color:"#6366f1",textTransform:"uppercase",marginBottom:"10px"}}>Why VisuoSlayer</p>
+            <h2 style={{fontSize:"clamp(22px,4.5vw,42px)",fontWeight:900,color:"#f8fafc",letterSpacing:"-0.02em",marginBottom:"11px"}}>
+              Everything to <span className="shimmer-text">master DSA</span>
+            </h2>
+            <p style={{color:"#64748b",fontSize:"14px",maxWidth:"340px",margin:"0 auto",lineHeight:1.6}}>
+              One platform. Every structure. Every algorithm. All visual.
+            </p>
+          </div>
+          <div className="feat-grid">
+            {features.map((f,i)=><FeatureCard key={f.title} {...f} delay={i*40}/>)}
+          </div>
         </div>
       </section>
 
