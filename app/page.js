@@ -3,18 +3,16 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// ROUTE MAP — item id → exact Next.js route slug
-// Add new entries here as you build more visualizer pages
+// ROUTE MAP
 // ─────────────────────────────────────────────────────────────────────────────
 const ROUTES = {
-  // ── Data Structures ──
   "array":        "/array",
   "linked-list":  "/linked-list",
   "stack":        "/stack",
   "queue":        "/queue",
   "deque":        "/deque",
   "binary-tree":  "/binary-tree",
-  "bst":          "/bs-tree",       // folder is bs-tree
+  "bst":          "/bs-tree",
   "avl":          "/avl-tree",
   "heap":         "/heap",
   "trie":         "/trie",
@@ -23,7 +21,6 @@ const ROUTES = {
   "adj-matrix":   "/adj-matrix",
   "hash-map":     "/hash-map",
   "hash-set":     "/hash-set",
-  // ── Algorithms ──
   "bubble":       "/bubble-sort",
   "insertion":    "/insertion-sort",
   "merge":        "/merge-sort",
@@ -129,11 +126,10 @@ const TAG = {
 function useIsMobile(bp = 768) {
   const [mobile, setMobile] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia(`(max-width:${bp}px)`);
-    setMobile(mq.matches);
-    const fn = e => setMobile(e.matches);
-    mq.addEventListener("change", fn);
-    return () => mq.removeEventListener("change", fn);
+    const check = () => setMobile(window.innerWidth <= bp);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, [bp]);
   return mobile;
 }
@@ -175,7 +171,7 @@ function ParticleCanvas() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// TOPIC CARD  (leaf)
+// TOPIC CARD
 // ─────────────────────────────────────────────────────────────────────────────
 function TopicCard({ item, catColor, onLeafClick, animDelay }) {
   const [hov, setHov] = useState(false);
@@ -208,11 +204,11 @@ function TopicCard({ item, catColor, onLeafClick, animDelay }) {
         }}>{item.icon}</span>
         <div style={{flex:1,minWidth:0}}>
           <div style={{fontSize:"12px",fontWeight:700,color:hov?"#f1f5f9":"#94a3b8",transition:"color .16s",lineHeight:1.2,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</div>
-          <div style={{fontSize:"9px",color:"#2d3748",lineHeight:1.2,marginTop:"1px"}}>{item.desc}</div>
+          <div style={{fontSize:"9px",color:"#4b5563",lineHeight:1.2,marginTop:"1px"}}>{item.desc}</div>
         </div>
       </div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <code style={{fontSize:"9px",fontFamily:"'Space Mono',monospace",color:hov?catColor:"#374151",transition:"color .16s"}}>{item.complexity}</code>
+        <code style={{fontSize:"9px",fontFamily:"'Space Mono',monospace",color:hov?catColor:"#4b5563",transition:"color .16s"}}>{item.complexity}</code>
         <span style={{fontSize:"8px",fontWeight:700,letterSpacing:"0.04em",padding:"2px 6px",borderRadius:"4px",background:tc.bg,color:tc.text,border:`1px solid ${tc.border}`}}>{item.tag}</span>
       </div>
     </div>
@@ -220,7 +216,7 @@ function TopicCard({ item, catColor, onLeafClick, animDelay }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// DSA EXPLORER  — sidebar on desktop, accordion on mobile
+// DSA EXPLORER
 // ─────────────────────────────────────────────────────────────────────────────
 function DSAExplorer({ onLeafClick }) {
   const [tabId,  setTabId]  = useState("ds");
@@ -288,10 +284,10 @@ function DSAExplorer({ onLeafClick }) {
                 <span style={{width:"18px",height:"18px",borderRadius:"5px",background:`${tab.accent}1e`,border:`1px solid ${tab.accent}28`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"9px",color:tab.accent}}>{tabId==="ds"?"⬡":"⚙"}</span>
                 <span style={{fontSize:"11px",fontWeight:700,color:tab.accent}}>{tab.label}</span>
               </div>
-              <p style={{fontSize:"10px",color:"#374151",lineHeight:1.45}}>{tab.description}</p>
+              <p style={{fontSize:"10px",color:"#4b5563",lineHeight:1.45}}>{tab.description}</p>
             </div>
             <div style={{padding:"6px",flex:1,display:"flex",flexDirection:"column",gap:"2px"}}>
-              <div style={{fontSize:"9px",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#2d3748",padding:"4px 8px 6px"}}>Categories</div>
+              <div style={{fontSize:"9px",fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:"#374151",padding:"4px 8px 6px"}}>Categories</div>
               {tab.categories.map(c => {
                 const active = catId===c.id;
                 return (
@@ -303,7 +299,7 @@ function DSAExplorer({ onLeafClick }) {
                   }}
                   onMouseEnter={e=>{if(!active){e.currentTarget.style.background=`${c.color}0d`;e.currentTarget.style.color=c.color;}}}
                   onMouseLeave={e=>{if(!active){e.currentTarget.style.background="transparent";e.currentTarget.style.color="#4b5563";}}}>
-                    <span style={{width:"6px",height:"6px",borderRadius:"50%",flexShrink:0,background:active?c.color:"#2d3748",boxShadow:active?`0 0 5px ${c.color}`:"none",transition:"all .15s"}}/>
+                    <span style={{width:"6px",height:"6px",borderRadius:"50%",flexShrink:0,background:active?c.color:"#374151",boxShadow:active?`0 0 5px ${c.color}`:"none",transition:"all .15s"}}/>
                     <span style={{flex:1}}>{c.label}</span>
                     <span style={{fontSize:"9px",fontWeight:700,padding:"1px 5px",borderRadius:"4px",background:active?`${c.color}20`:"rgba(255,255,255,0.04)",color:active?c.color:"#374151",border:`1px solid ${active?c.color+"28":"rgba(255,255,255,0.05)"}`,transition:"all .15s"}}>{c.items.length}</span>
                   </button>
@@ -315,7 +311,7 @@ function DSAExplorer({ onLeafClick }) {
                 <span style={{fontSize:"10px",color:cat.color}}>{cat.icon}</span>
                 <span style={{fontSize:"10px",fontWeight:700,color:cat.color}}>{cat.label}</span>
               </div>
-              <p style={{fontSize:"9px",color:"#374151",lineHeight:1.35}}>{cat.desc}</p>
+              <p style={{fontSize:"9px",color:"#4b5563",lineHeight:1.35}}>{cat.desc}</p>
             </div>
           </div>
 
@@ -326,7 +322,7 @@ function DSAExplorer({ onLeafClick }) {
                 <div style={{display:"flex",alignItems:"center",gap:"7px",marginBottom:"3px"}}>
                   <span style={{width:"26px",height:"26px",borderRadius:"7px",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"11px",fontFamily:"'Space Mono',monospace",color:cat.color,background:`${cat.color}18`,border:`1px solid ${cat.color}28`}}>{cat.icon}</span>
                   <span style={{fontSize:"13px",fontWeight:800,color:"#f1f5f9",letterSpacing:"-0.01em"}}>{cat.label}</span>
-                  <span style={{fontSize:"10px",color:"#374151"}}>{cat.items.length} topics</span>
+                  <span style={{fontSize:"10px",color:"#4b5563"}}>{cat.items.length} topics</span>
                 </div>
                 <p style={{fontSize:"11px",color:"#4b5563",marginLeft:"33px"}}>{cat.desc}</p>
               </div>
@@ -352,7 +348,6 @@ function DSAExplorer({ onLeafClick }) {
             const open = catId===c.id;
             return (
               <div key={c.id} style={{borderRadius:"12px",border:`1px solid ${open?c.color+"45":"rgba(255,255,255,0.07)"}`,overflow:"hidden",transition:"border-color .18s"}}>
-                {/* Accordion header */}
                 <button onClick={()=>setCatId(open?"__none":c.id)} style={{
                   width:"100%",display:"flex",alignItems:"center",gap:"10px",
                   padding:"13px 14px",background:open?`${c.color}12`:"rgba(255,255,255,0.025)",
@@ -362,11 +357,10 @@ function DSAExplorer({ onLeafClick }) {
                   <span style={{width:"28px",height:"28px",borderRadius:"8px",flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",fontSize:"12px",color:c.color,background:`${c.color}18`,border:`1px solid ${c.color}28`}}>{c.icon}</span>
                   <div style={{flex:1}}>
                     <div style={{fontSize:"13px",fontWeight:700,color:open?c.color:"#94a3b8"}}>{c.label}</div>
-                    <div style={{fontSize:"10px",color:"#374151",marginTop:"1px"}}>{c.desc} · {c.items.length} topics</div>
+                    <div style={{fontSize:"10px",color:"#4b5563",marginTop:"1px"}}>{c.desc} · {c.items.length} topics</div>
                   </div>
-                  <span style={{fontSize:"10px",color:open?c.color:"#374151",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .25s",display:"inline-block",flexShrink:0}}>▼</span>
+                  <span style={{fontSize:"10px",color:open?c.color:"#4b5563",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .25s",display:"inline-block",flexShrink:0}}>▼</span>
                 </button>
-                {/* Accordion content */}
                 {open && (
                   <div style={{padding:"12px",background:"rgba(0,0,0,0.12)",animation:"itemFade .22s ease-out"}}>
                     <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:"6px"}}>
@@ -395,6 +389,7 @@ function FeatureCard({ icon, title, desc, accent, delay }) {
     const t = setTimeout(() => {
       const obs = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); });
       if (ref.current) obs.observe(ref.current);
+      return () => obs.disconnect();
     }, delay);
     return () => clearTimeout(t);
   }, [delay]);
@@ -426,16 +421,20 @@ function StatCard({ num, suffix, label, accent, delay }) {
   const [vis, setVis] = useState(false);
   const [count, setCount] = useState(0);
   const ref = useRef(null);
+  const started = useRef(false);
+
   useEffect(() => {
     const t = setTimeout(() => {
       const obs = new IntersectionObserver(([e]) => {
-        if (e.isIntersecting) {
+        if (e.isIntersecting && !started.current) {
+          started.current = true;
           setVis(true);
           let s=0; const step=num/55;
           const timer=setInterval(()=>{s+=step;if(s>=num){setCount(num);clearInterval(timer);}else setCount(Math.floor(s));},18);
         }
       });
       if (ref.current) obs.observe(ref.current);
+      return () => obs.disconnect();
     }, delay);
     return () => clearTimeout(t);
   }, [delay, num]);
@@ -479,6 +478,13 @@ function Toast({ message, onClose }) {
 // MOBILE MENU
 // ─────────────────────────────────────────────────────────────────────────────
 function MobileMenu({ open, onClose }) {
+  // Prevent body scroll when open
+  useEffect(() => {
+    if (open) document.body.style.overflow = "hidden";
+    else document.body.style.overflow = "";
+    return () => { document.body.style.overflow = ""; };
+  }, [open]);
+
   if (!open) return null;
   return (
     <div style={{position:"fixed",inset:0,zIndex:200,background:"rgba(4,4,16,0.97)",backdropFilter:"blur(22px)",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:"32px",animation:"fadeInScale .24s cubic-bezier(.16,1,.3,1)"}}>
@@ -488,10 +494,9 @@ function MobileMenu({ open, onClose }) {
         <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
       </div>
       {[["#features","Features"],["#tree","Topics"],["#footer","End"]].map(([href,label])=>(
-        <a key={href} href={href} onClick={onClose} style={{color:"#4b5563",textDecoration:"none",fontSize:"22px",fontWeight:800,transition:"color .18s",letterSpacing:"-0.01em"}}
-          onMouseEnter={e=>e.target.style.color="#c7d2fe"} onMouseLeave={e=>e.target.style.color="#4b5563"}>{label}</a>
+        <a key={href} href={href} onClick={onClose} style={{color:"#94a3b8",textDecoration:"none",fontSize:"22px",fontWeight:800,transition:"color .18s",letterSpacing:"-0.01em"}}
+          onMouseEnter={e=>e.target.style.color="#c7d2fe"} onMouseLeave={e=>e.target.style.color="#94a3b8"}>{label}</a>
       ))}
-      <button className="glow-btn" style={{fontSize:"14px",padding:"13px 30px",marginTop:"4px"}}>Launch App →</button>
     </div>
   );
 }
@@ -558,12 +563,29 @@ export default function LandingPage() {
         @keyframes badgePulse {0%,100%{opacity:1}50%{opacity:.55}}
         @keyframes heroIn     {from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
 
-        /* ── Type ─────────────────────────────────────────────────── */
         .shimmer-text{
           background:linear-gradient(90deg,#6366f1 0%,#a5b4fc 28%,#e0e7ff 50%,#a5b4fc 72%,#6366f1 100%);
           background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
           animation:shimmer 5s linear infinite;
         }
+
+        /* ── Nav ────────────────────────────────────────────────── */
+        .nav-inner{
+          max-width:1180px;margin:0 auto;
+          display:grid;
+          grid-template-columns:1fr auto 1fr;
+          align-items:center;
+          padding:13px clamp(16px,3vw,32px);
+          gap:12px;
+        }
+        .nav-logo{ grid-column:1; justify-self:start; }
+        .nav-links-center{ grid-column:2; display:flex; align-items:center; gap:28px; }
+        .nav-right{ grid-column:3; justify-self:end; display:flex; align-items:center; }
+
+        .nav-link{color:#94a3b8;text-decoration:none;font-size:13px;font-weight:500;transition:color .18s;white-space:nowrap;position:relative;padding:3px 0;}
+        .nav-link::after{content:'';position:absolute;bottom:0;left:50%;right:50%;height:1px;background:#818cf8;transition:left .2s,right .2s;}
+        .nav-link:hover{color:#c7d2fe;}.nav-link:hover::after{left:0;right:0;}
+
         /* ── Buttons ──────────────────────────────────────────────── */
         .glow-btn{
           background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;
@@ -572,45 +594,51 @@ export default function LandingPage() {
           transition:transform .18s,box-shadow .18s;
           box-shadow:0 4px 22px rgba(99,102,241,.32);
           font-family:'DM Sans',sans-serif;letter-spacing:.015em;white-space:nowrap;
+          display:inline-flex;align-items:center;justify-content:center;
+          text-decoration:none;
         }
         .glow-btn:hover{transform:translateY(-2px);box-shadow:0 8px 36px rgba(99,102,241,.52);}
         .glow-btn:active{transform:translateY(0)scale(.98);}
         .glow-btn::after{content:'';position:absolute;top:-50%;left:-60%;width:50%;height:200%;background:rgba(255,255,255,.13);transform:skewX(-20deg);transition:left .5s;}
         .glow-btn:hover::after{left:120%;}
-        .ghost-btn{
-          display:inline-flex;align-items:center;gap:6px;
-          padding:13px 22px;border-radius:12px;
-          border:1px solid rgba(255,255,255,0.1);
-          color:#64748b;text-decoration:none;font-size:14px;font-weight:600;
-          font-family:'DM Sans',sans-serif;transition:all .18s;background:rgba(255,255,255,0.025);
-          white-space:nowrap;
-        }
-        .ghost-btn:hover{color:#a5b4fc;border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.06);}
-        /* ── Nav links ────────────────────────────────────────────── */
-        .nav-link{color:#94a3b8;text-decoration:none;font-size:13px;font-weight:500;transition:color .18s;white-space:nowrap;position:relative;padding:3px 0;}
-        .nav-link::after{content:'';position:absolute;bottom:0;left:50%;right:50%;height:1px;background:#818cf8;transition:left .2s,right .2s;}
-        .nav-link:hover{color:#c7d2fe;}.nav-link:hover::after{left:0;right:0;}
+
         /* ── Divider ─────────────────────────────────────────────── */
         .hr{width:100%;height:1px;background:linear-gradient(to right,transparent,rgba(255,255,255,0.06) 20%,rgba(255,255,255,0.06) 80%,transparent);}
+
         /* ── Grids ───────────────────────────────────────────────── */
         .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
         .stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+
+        /* ── Section padding ──────────────────────────────────────── */
+        .section-pad{padding-left:clamp(18px,4vw,44px);padding-right:clamp(18px,4vw,44px);}
+
         /* ── Responsive ──────────────────────────────────────────── */
-        @media(max-width:1024px){.stats-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px;}}
-        @media(max-width:900px) {.feat-grid{grid-template-columns:repeat(2,1fr)!important;}}
-        @media(max-width:580px) {.feat-grid{grid-template-columns:1fr!important;}.stats-grid{grid-template-columns:repeat(2,1fr)!important;}}
-        @media(max-width:768px){
-          .nav-links{display:none!important;}
-          .hamburger{display:flex!important;}
-          .hero-btns{flex-direction:column!important;align-items:center!important;width:100%;}
-          .hero-btns .glow-btn,.hero-btns .ghost-btn{width:100%;max-width:320px;justify-content:center;}
-          .footer-row{flex-direction:column!important;align-items:center!important;text-align:center;gap:16px;}
-          .footer-links{justify-content:center!important;}
-          section.pad-x{padding-left:18px!important;padding-right:18px!important;}
+        @media(max-width:1024px){
+          .stats-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px;}
         }
-        @media(min-width:769px){.hamburger{display:none!important;}}
-        @media(max-width:400px){
+        @media(max-width:900px){
+          .feat-grid{grid-template-columns:repeat(2,1fr)!important;}
+        }
+        @media(max-width:768px){
+          .nav-links-center{display:none!important;}
+          .hamburger{display:flex!important;}
+          /* On mobile collapse to 2-col logo + hamburger */
+          .nav-inner{
+            grid-template-columns:1fr auto;
+          }
+          .nav-logo{ grid-column:1; }
+          .nav-right{ grid-column:2; }
+          .hero-btns{flex-direction:column!important;align-items:center!important;width:100%;}
+          .hero-btns .glow-btn{width:100%;max-width:320px;}
+        }
+        @media(min-width:769px){
+          .hamburger{display:none!important;}
+        }
+        @media(max-width:580px){
           .feat-grid{grid-template-columns:1fr!important;}
+          .stats-grid{grid-template-columns:repeat(2,1fr)!important;}
+        }
+        @media(max-width:400px){
           .stats-grid{grid-template-columns:1fr 1fr!important;}
         }
       `}</style>
@@ -626,42 +654,41 @@ export default function LandingPage() {
         borderBottom:scrollY>50?"1px solid rgba(255,255,255,0.07)":"1px solid rgba(255,255,255,0.04)",
         transition:"all .3s",
       }}>
-        <div style={{maxWidth:"1180px",margin:"0 auto",display:"flex",alignItems:"center",padding:"13px clamp(16px,3vw,32px)",gap:"12px"}}>
-          <div style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"20px",letterSpacing:"0.01em",flexShrink:0,cursor:"default",userSelect:"none",lineHeight:1}}>
+        <div className="nav-inner">
+          {/* Logo */}
+          <div className="nav-logo" style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"clamp(18px,2.5vw,26px)",letterSpacing:"0.01em",cursor:"default",userSelect:"none",lineHeight:1}}>
             <span style={{color:"#c7d2fe"}}>Visuo</span>
             <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
           </div>
-          <div className="nav-links" style={{display:"flex",alignItems:"center",gap:"28px",flex:1,justifyContent:"center"}}>
+
+          {/* Centered nav links — always in the middle column */}
+          <div className="nav-links-center">
             <a href="#features" className="nav-link">Features</a>
             <a href="#tree"     className="nav-link">Topics</a>
             <a href="#footer"   className="nav-link">End</a>
           </div>
-          <div className="nav-links" style={{marginLeft:"auto",flexShrink:0}}>
-            <button className="glow-btn" style={{padding:"8px 18px",fontSize:"12px",borderRadius:"9px"}}>Launch App →</button>
+
+          {/* Right slot — hamburger on mobile, empty on desktop */}
+          <div className="nav-right">
+            <button className="hamburger" onClick={()=>setMenuOpen(true)} style={{background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"7px 10px",cursor:"pointer",color:"#94a3b8",fontSize:"15px",lineHeight:1,display:"flex",alignItems:"center"}}>☰</button>
           </div>
-          <button className="hamburger" onClick={()=>setMenuOpen(true)} style={{marginLeft:"auto",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:"8px",padding:"7px 10px",cursor:"pointer",color:"#94a3b8",fontSize:"15px",lineHeight:1,display:"flex",alignItems:"center"}}>☰</button>
         </div>
       </nav>
 
       {/* ════ HERO ══════════════════════════════════════════════════ */}
-      <section className="pad-x" style={{
+      <section className="section-pad" style={{
         minHeight:"100vh",display:"flex",flexDirection:"column",
         alignItems:"center",justifyContent:"center",
-        padding:"clamp(100px,14vw,130px) clamp(18px,5vw,48px) clamp(60px,8vw,90px)",
+        paddingTop:"clamp(100px,14vw,130px)",
+        paddingBottom:"clamp(60px,8vw,90px)",
         position:"relative",zIndex:1,textAlign:"center",overflow:"hidden",
       }}>
-        {/* ── Light effect — layered radial blooms ── */}
-        {/* Wide indigo base spill */}
+        {/* Light effects */}
         <div style={{position:"absolute",width:"min(900px,130vw)",height:"min(700px,100vw)",borderRadius:"50%",background:"radial-gradient(ellipse,rgba(79,70,229,0.18) 0%,rgba(99,102,241,0.08) 35%,transparent 70%)",top:"50%",left:"50%",transform:"translate(-50%,-55%)",pointerEvents:"none",zIndex:0}}/>
-        {/* Bright central cone — the "light source" */}
         <div style={{position:"absolute",width:"min(480px,80vw)",height:"min(480px,80vw)",borderRadius:"50%",background:"radial-gradient(circle,rgba(129,140,248,0.22) 0%,rgba(99,102,241,0.1) 40%,transparent 68%)",top:"45%",left:"50%",transform:"translate(-50%,-50%)",pointerEvents:"none",zIndex:0}}/>
-        {/* Violet right-side accent */}
         <div style={{position:"absolute",width:"min(380px,60vw)",height:"min(380px,60vw)",borderRadius:"50%",background:"radial-gradient(circle,rgba(167,139,250,0.14) 0%,transparent 65%)",top:"38%",left:"62%",transform:"translateX(-50%)",pointerEvents:"none",zIndex:0}}/>
-        {/* Cyan bottom-right accent bloom */}
         <div style={{position:"absolute",width:"min(320px,55vw)",height:"min(320px,55vw)",borderRadius:"50%",background:"radial-gradient(circle,rgba(6,182,212,0.1) 0%,transparent 65%)",top:"65%",left:"68%",transform:"translateX(-50%)",pointerEvents:"none",zIndex:0}}/>
-        {/* Subtle top edge beam — horizontal streak of light */}
         <div style={{position:"absolute",top:0,left:"50%",transform:"translateX(-50%)",width:"60%",height:"2px",background:"linear-gradient(to right,transparent,rgba(129,140,248,0.35) 30%,rgba(167,139,250,0.45) 50%,rgba(129,140,248,0.35) 70%,transparent)",pointerEvents:"none",zIndex:0}}/>
-        {/* Slow pulse ring (kept subtle) */}
         <div style={{position:"absolute",width:"min(700px,95vw)",height:"min(700px,95vw)",borderRadius:"50%",border:"1px solid rgba(99,102,241,0.06)",top:"50%",left:"50%",transform:"translate(-50%,-50%)",animation:"pulseRing 8s ease-in-out infinite",pointerEvents:"none",zIndex:0}}/>
 
         {/* Badge */}
@@ -670,7 +697,7 @@ export default function LandingPage() {
           background:"rgba(110,231,183,0.07)",border:"1px solid rgba(110,231,183,0.18)",
           borderRadius:"999px",padding:"5px 14px",
           fontSize:"10px",fontWeight:700,color:"#6ee7b7",letterSpacing:"0.1em",textTransform:"uppercase",
-          marginBottom:"24px",
+          marginBottom:"24px",position:"relative",zIndex:1,
           opacity:heroVis?1:0,transform:heroVis?"translateY(0)":"translateY(-10px)",
           transition:"all .6s cubic-bezier(.16,1,.3,1)",
         }}>
@@ -682,6 +709,7 @@ export default function LandingPage() {
         <h1 style={{
           fontSize:"clamp(36px,8.5vw,90px)",fontWeight:900,lineHeight:1.02,
           maxWidth:"820px",marginBottom:"18px",letterSpacing:"-0.025em",
+          position:"relative",zIndex:1,
           opacity:heroVis?1:0,
           animation:heroVis?"heroIn .7s .08s both cubic-bezier(.16,1,.3,1)":"none",
         }}>
@@ -691,8 +719,9 @@ export default function LandingPage() {
 
         {/* Sub */}
         <p style={{
-          fontSize:"clamp(14px,2vw,17px)",color:"#4b5563",maxWidth:"480px",
+          fontSize:"clamp(14px,2vw,17px)",color:"#64748b",maxWidth:"480px",
           lineHeight:1.78,marginBottom:"30px",
+          position:"relative",zIndex:1,
           opacity:heroVis?1:0,
           animation:heroVis?"heroIn .7s .18s both cubic-bezier(.16,1,.3,1)":"none",
         }}>
@@ -704,11 +733,11 @@ export default function LandingPage() {
         {/* CTAs */}
         <div className="hero-btns" style={{
           display:"flex",gap:"12px",flexWrap:"wrap",justifyContent:"center",alignItems:"center",
+          position:"relative",zIndex:1,
           opacity:heroVis?1:0,
           animation:heroVis?"heroIn .7s .28s both cubic-bezier(.16,1,.3,1)":"none",
         }}>
-          <button className="glow-btn" style={{fontSize:"15px",padding:"14px 34px"}}>Start Visualizing →</button>
-          <a href="#tree" className="ghost-btn">Browse Topics ↓</a>
+          <a href="#tree" className="glow-btn">Topics ↓</a>
         </div>
 
         {/* Scroll hint */}
@@ -716,9 +745,9 @@ export default function LandingPage() {
           position:"absolute",bottom:"24px",left:"50%",
           display:"flex",flexDirection:"column",alignItems:"center",gap:"4px",
           animation:"scrollBounce 2.4s ease-in-out infinite",
-          opacity:heroVis?0.22:0,transition:"opacity .8s 1s",
+          opacity:heroVis?0.22:0,transition:"opacity .8s 1s",zIndex:1,
         }}>
-          <span style={{fontSize:"9px",letterSpacing:"0.12em",color:"#2d3748",textTransform:"uppercase"}}>scroll</span>
+          <span style={{fontSize:"9px",letterSpacing:"0.12em",color:"#374151",textTransform:"uppercase"}}>scroll</span>
           <div style={{width:"1px",height:"22px",background:"linear-gradient(to bottom,#6366f1,transparent)"}}/>
         </div>
       </section>
@@ -726,7 +755,7 @@ export default function LandingPage() {
       <div className="hr"/>
 
       {/* ════ STATS ═════════════════════════════════════════════════ */}
-      <section className="pad-x" style={{padding:"clamp(40px,6vw,60px) clamp(18px,4vw,44px)",maxWidth:"1180px",margin:"0 auto",position:"relative",zIndex:1}}>
+      <section className="section-pad" style={{paddingTop:"clamp(40px,6vw,60px)",paddingBottom:"clamp(40px,6vw,60px)",maxWidth:"1180px",margin:"0 auto",position:"relative",zIndex:1}}>
         <div className="stats-grid">
           {stats.map((s,i)=><StatCard key={s.label} {...s} delay={i*55}/>)}
         </div>
@@ -735,13 +764,13 @@ export default function LandingPage() {
       <div className="hr"/>
 
       {/* ════ FEATURES ══════════════════════════════════════════════ */}
-      <section id="features" className="pad-x" style={{padding:"clamp(60px,8vw,90px) clamp(18px,4vw,44px)",maxWidth:"1180px",margin:"0 auto",position:"relative",zIndex:1}}>
+      <section id="features" className="section-pad" style={{paddingTop:"clamp(60px,8vw,90px)",paddingBottom:"clamp(60px,8vw,90px)",maxWidth:"1180px",margin:"0 auto",position:"relative",zIndex:1}}>
         <div style={{textAlign:"center",marginBottom:"clamp(32px,5vw,48px)"}}>
           <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.14em",color:"#6366f1",textTransform:"uppercase",marginBottom:"10px"}}>Why VisuoSlayer</p>
           <h2 style={{fontSize:"clamp(22px,4.5vw,42px)",fontWeight:900,color:"#f8fafc",letterSpacing:"-0.02em",marginBottom:"11px"}}>
             Everything to <span className="shimmer-text">master DSA</span>
           </h2>
-          <p style={{color:"#4b5563",fontSize:"14px",maxWidth:"340px",margin:"0 auto",lineHeight:1.6}}>
+          <p style={{color:"#64748b",fontSize:"14px",maxWidth:"340px",margin:"0 auto",lineHeight:1.6}}>
             One platform. Every structure. Every algorithm. All visual.
           </p>
         </div>
@@ -753,16 +782,16 @@ export default function LandingPage() {
       <div className="hr"/>
 
       {/* ════ DSA EXPLORER ══════════════════════════════════════════ */}
-      <section id="tree" style={{padding:"clamp(60px,8vw,88px) 0",position:"relative",zIndex:1,overflow:"hidden"}}>
+      <section id="tree" style={{paddingTop:"clamp(60px,8vw,88px)",paddingBottom:"clamp(60px,8vw,88px)",position:"relative",zIndex:1,overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 18% 50%,rgba(79,70,229,0.05) 0%,transparent 46%),radial-gradient(ellipse at 82% 50%,rgba(8,145,178,0.04) 0%,transparent 46%)",pointerEvents:"none"}}/>
 
-        <div className="pad-x" style={{textAlign:"center",marginBottom:"clamp(28px,4vw,40px)",padding:"0 clamp(18px,4vw,24px)"}}>
+        <div className="section-pad" style={{textAlign:"center",marginBottom:"clamp(28px,4vw,40px)"}}>
           <h2 style={{fontSize:"clamp(20px,4vw,40px)",fontWeight:900,color:"#f8fafc",letterSpacing:"-0.02em",marginBottom:"11px"}}>
             Click any topic to <span className="shimmer-text">launch it</span>
           </h2>
         </div>
 
-        <div style={{padding:"0 clamp(10px,2.5vw,44px)"}}>
+        <div className="section-pad">
           <div style={{
             maxWidth:"1060px",margin:"0 auto",
             background:"rgba(4,4,18,0.55)",
@@ -791,13 +820,13 @@ export default function LandingPage() {
       <div className="hr"/>
 
       {/* ════ CTA ═══════════════════════════════════════════════════ */}
-      <section className="pad-x" style={{padding:"clamp(70px,9vw,100px) clamp(18px,5vw,48px)",textAlign:"center",position:"relative",zIndex:1,overflow:"hidden"}}>
+      <section className="section-pad" style={{paddingTop:"clamp(70px,9vw,100px)",paddingBottom:"clamp(70px,9vw,100px)",textAlign:"center",position:"relative",zIndex:1,overflow:"hidden"}}>
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 50% 60%,rgba(79,70,229,0.08) 0%,transparent 60%)",pointerEvents:"none"}}/>
         <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.14em",color:"#6366f1",textTransform:"uppercase",marginBottom:"10px",position:"relative"}}>Ready to level up?</p>
         <h2 style={{fontSize:"clamp(24px,5.5vw,52px)",fontWeight:900,color:"#f8fafc",marginBottom:"12px",letterSpacing:"-0.025em",lineHeight:1.06,position:"relative"}}>
           Stop memorizing.<br/><span className="shimmer-text">Start visualizing.</span>
         </h2>
-        <p style={{color:"#4b5563",fontSize:"14px",maxWidth:"340px",margin:"0 auto 28px",lineHeight:1.65,position:"relative"}}>
+        <p style={{color:"#64748b",fontSize:"14px",maxWidth:"340px",margin:"0 auto 28px",lineHeight:1.65,position:"relative"}}>
           Open source · No account needed · Just click and learn.
         </p>
         <button className="glow-btn" style={{fontSize:"15px",padding:"14px 38px",position:"relative"}}>Get Started — It&apos;s Free →</button>
@@ -807,16 +836,16 @@ export default function LandingPage() {
 
       {/* ════ FOOTER ════════════════════════════════════════════════ */}
       <footer id="footer" style={{padding:"clamp(22px,3vw,30px) clamp(16px,3vw,32px)",position:"relative",zIndex:1,background:"rgba(4,4,15,0.7)"}}>
-        <div className="footer-row" style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"14px",maxWidth:"1180px",margin:"0 auto"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:"14px",maxWidth:"1180px",margin:"0 auto"}}>
           <div style={{fontFamily:"'Space Mono',monospace",fontWeight:700,fontSize:"17px",letterSpacing:"0.01em",userSelect:"none",lineHeight:1}}>
             <span style={{color:"#c7d2fe"}}>Visuo</span>
             <span style={{background:"linear-gradient(90deg,#818cf8,#a78bfa)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text"}}>Slayer</span>
-            <span style={{color:"#2d3748",fontSize:"9px",marginLeft:"8px",letterSpacing:"0.08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>DSA Visualizer</span>
+            <span style={{color:"#374151",fontSize:"9px",marginLeft:"8px",letterSpacing:"0.08em",textTransform:"uppercase",fontFamily:"'DM Sans',sans-serif",fontWeight:500}}>DSA Visualizer</span>
           </div>
-          <div className="footer-links" style={{display:"flex",gap:"20px",flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",gap:"20px",flexWrap:"wrap",alignItems:"center"}}>
             {[["#features","Features"],["#tree","Topics"],["#","GitHub"]].map(([href,label])=>(
-              <a key={label} href={href} style={{color:"#2d3748",textDecoration:"none",fontSize:"12px",fontWeight:500,transition:"color .18s"}}
-                onMouseEnter={e=>e.target.style.color="#a5b4fc"} onMouseLeave={e=>e.target.style.color="#2d3748"}>{label}</a>
+              <a key={label} href={href} style={{color:"#374151",textDecoration:"none",fontSize:"12px",fontWeight:500,transition:"color .18s"}}
+                onMouseEnter={e=>e.target.style.color="#a5b4fc"} onMouseLeave={e=>e.target.style.color="#374151"}>{label}</a>
             ))}
           </div>
           <p style={{color:"#1e293b",fontSize:"11px"}}>Built with Next.js · Open source</p>
