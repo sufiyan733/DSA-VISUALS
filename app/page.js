@@ -757,13 +757,9 @@ export default function LandingPage() {
         <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at 18% 50%,rgba(79,70,229,0.05) 0%,transparent 46%),radial-gradient(ellipse at 82% 50%,rgba(8,145,178,0.04) 0%,transparent 46%)",pointerEvents:"none"}}/>
 
         <div className="pad-x" style={{textAlign:"center",marginBottom:"clamp(28px,4vw,40px)",padding:"0 clamp(18px,4vw,24px)"}}>
-          <p style={{fontSize:"10px",fontWeight:700,letterSpacing:"0.14em",color:"#22d3ee",textTransform:"uppercase",marginBottom:"10px"}}>Interactive Explorer</p>
           <h2 style={{fontSize:"clamp(20px,4vw,40px)",fontWeight:900,color:"#f8fafc",letterSpacing:"-0.02em",marginBottom:"11px"}}>
             Click any topic to <span className="shimmer-text">launch it</span>
           </h2>
-          <p style={{color:"#4b5563",fontSize:"13px",maxWidth:"380px",margin:"0 auto",lineHeight:1.6}}>
-            Pick a tab · select a category · click any card to open its visualizer
-          </p>
         </div>
 
         <div style={{padding:"0 clamp(10px,2.5vw,44px)"}}>

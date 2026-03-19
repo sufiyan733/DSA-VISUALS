@@ -1,663 +1,204 @@
-// 'use client'
-// import { useReducer, useEffect, useRef, useCallback } from 'react'
-// import { motion, AnimatePresence } from 'framer-motion'
-// import Navbar from '@/comps/navbar'
-// import { generateMergeSortSteps } from './ms'
-
-// // ── colours ───────────────────────────────────────────────────────────────────
-// const V  = '#8b5cf6'   // violet  — main accent
-// const V2 = '#a78bfa'   // light violet
-// const C  = '#06b6d4'   // cyan    — comparing
-// const G  = '#10b981'   // green   — sorted / merged
-// const R  = '#f87171'   // red     — placing
-// const Y  = '#fbbf24'   // amber   — active range
-
-// const BAR_STATES = {
-//   sorted:    { border: `${G}70`,  bg: `${G}18`,  glow: `0 0 8px ${G}40`  },
-//   comparing: { border: `${C}80`,  bg: `${C}20`,  glow: `0 0 14px ${C}55` },
-//   placing:   { border: `${R}80`,  bg: `${R}20`,  glow: `0 0 14px ${R}55` },
-//   active:    { border: `${Y}60`,  bg: `${Y}14`,  glow: `0 0 8px ${Y}35`  },
-//   merging:   { border: `${V2}70`, bg: `${V2}18`, glow: `0 0 10px ${V2}45`},
-//   default:   { border: '#0a1f35', bg: '#040d18',  glow: 'none'            },
-// }
-
-// const PSEUDO = [
-//   { code: 'function mergeSort(arr, l, r)',  indent: 0 },
-//   { code: 'if l >= r → return',             indent: 1 },
-//   { code: 'mid = ⌊(l + r) / 2⌋',          indent: 1 },
-//   { code: 'mergeSort(arr, l, mid)',          indent: 1 },
-//   { code: 'mergeSort(arr, mid+1, r)',        indent: 1 },
-//   { code: 'merge(arr, l, mid, r)',           indent: 1 },
-//   { code: 'compare left[i] vs right[j]',    indent: 2 },
-//   { code: 'place smaller element',           indent: 2 },
-//   { code: 'copy remaining elements',         indent: 2 },
-//   { code: '✦ subarray merged',              indent: 1 },
-//   { code: '✦ array fully sorted',           indent: 0 },
-// ]
-
-// const LEGEND = [
-//   { key: 'default',   label: 'Unsorted'  },
-//   { key: 'active',    label: 'Range'     },
-//   { key: 'comparing', label: 'Comparing' },
-//   { key: 'placing',   label: 'Placing'   },
-//   { key: 'sorted',    label: 'Sorted'    },
-// ]
-
-// // ── reducer ───────────────────────────────────────────────────────────────────
-// const randomArray = (size) =>
-//   Array.from({ length: size }, () => Math.floor(Math.random() * 340) + 30)
-
-// const init = { arraySize: 20, speed: 180, steps: [], stepIndex: 0, isPlaying: false, isDone: false }
-
-// function reducer(state, action) {
-//   switch (action.type) {
-//     case 'GENERATE': return { ...state, steps: action.steps, stepIndex: 0, isPlaying: false, isDone: false }
-//     case 'PLAY':     return { ...state, isPlaying: true,  isDone: false }
-//     case 'PAUSE':    return { ...state, isPlaying: false }
-//     case 'NEXT_STEP': {
-//       const next = state.stepIndex + 1
-//       if (next >= state.steps.length - 1)
-//         return { ...state, stepIndex: state.steps.length - 1, isPlaying: false, isDone: true }
-//       return { ...state, stepIndex: next }
-//     }
-//     case 'RESET':     return { ...state, stepIndex: 0, isPlaying: false, isDone: false }
-//     case 'SET_SPEED': return { ...state, speed: action.speed }
-//     case 'SET_SIZE':  return { ...state, arraySize: action.arraySize }
-//     default:          return state
-//   }
-// }
-
-// export default function MergeSortPage() {
-//   const [state, dispatch] = useReducer(reducer, init)
-//   const { arraySize, speed, steps, stepIndex, isPlaying, isDone } = state
-//   const iRef = useRef(null)
-
-//   const step = steps[stepIndex] ?? {
-//     array: randomArray(arraySize), phase: 'idle',
-//     left: 0, mid: 0, right: 0,
-//     comparing: [], merging: [], sorted: [], currentLine: -1, depth: 0,
-//   }
-
-//   useEffect(() => {
-//     clearInterval(iRef.current)
-//     dispatch({ type: 'GENERATE', steps: generateMergeSortSteps(randomArray(arraySize)) })
-//   }, [arraySize])
-
-//   useEffect(() => {
-//     if (!isPlaying || !steps.length) { clearInterval(iRef.current); return }
-//     clearInterval(iRef.current)
-//     iRef.current = setInterval(() => dispatch({ type: 'NEXT_STEP' }), speed)
-//     return () => clearInterval(iRef.current)
-//   }, [isPlaying, speed, steps.length])
-
-//   useEffect(() => () => clearInterval(iRef.current), [])
-
-//   const handleGenerate = useCallback(() => {
-//     clearInterval(iRef.current)
-//     dispatch({ type: 'GENERATE', steps: generateMergeSortSteps(randomArray(arraySize)) })
-//   }, [arraySize])
-
-//   const handlePlay  = useCallback(() => { if (!isDone && steps.length) dispatch({ type: 'PLAY'      }) }, [isDone, steps.length])
-//   const handlePause = useCallback(() => { clearInterval(iRef.current); dispatch({ type: 'PAUSE' })     }, [])
-//   const handleStep  = useCallback(() => { if (!isDone && steps.length) dispatch({ type: 'NEXT_STEP' }) }, [isDone, steps.length])
-//   const handleReset = useCallback(() => { clearInterval(iRef.current); dispatch({ type: 'RESET' })     }, [])
-
-//   // ── bar state ──────────────────────────────────────────────────────────────
-//   const getBarState = (i) => {
-//     if (step.sorted?.includes(i))    return 'sorted'
-//     if (step.comparing?.includes(i)) return 'comparing'
-//     if (step.merging?.includes(i))   return 'placing'
-//     if (i >= step.left && i <= step.right && step.phase !== 'done') return 'active'
-//     return 'default'
-//   }
-
-//   const maxVal = Math.max(...(step.array || [1]))
-//   const pct    = steps.length > 1 ? (stepIndex / (steps.length - 1)) * 100 : 0
-//   const sortedCount = step.sorted?.length ?? 0
-
-//   // ── status ─────────────────────────────────────────────────────────────────
-//   const phaseLabel = {
-//     idle:    { text: 'Press ▶ Play or ⏭ Step to begin',  color: '#334155' },
-//     split:   { text: `Splitting  [${step.left}…${step.right}]  at mid ${step.mid}`, color: V2 },
-//     single:  { text: `Base case — single element at [${step.left}]`, color: Y },
-//     compare: { text: `Comparing  arr[${step.comparing?.[0]}]  vs  arr[${step.comparing?.[1]}]`, color: C },
-//     place:   { text: `Placing element at index ${step.merging?.[0]}`, color: R },
-//     merged:  { text: `✦ Merged  [${step.left}…${step.right}]  — ${step.right - step.left + 1} elements sorted`, color: G },
-//     done:    { text: '✦ Array fully sorted', color: G },
-//   }
-//   const status = phaseLabel[step.phase] ?? phaseLabel.idle
-
-//   // max recursion depth for depth meter
-//   const maxDepth = Math.ceil(Math.log2(arraySize + 1))
-
-//   return (
-//     <>
-//       <Navbar />
-
-//       <style>{`
-//         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-//         html,body{margin:0;padding:0;overflow:hidden;height:100%;}
-//         *,*::before,*::after{box-sizing:border-box;}
-
-//         .shell {
-//           height: calc(100vh - 52px);
-//           background: #030612;
-//           color: white;
-//           display: flex;
-//           flex-direction: column;
-//           overflow: hidden;
-//           padding: 14px 20px 12px;
-//           gap: 10px;
-//           position: relative;
-//         }
-
-//         /* violet ambient */
-//         .shell::before {
-//           content:'';position:absolute;top:-80px;left:50%;
-//           transform:translateX(-50%);width:700px;height:280px;
-//           background:radial-gradient(ellipse,${V}0a 0%,transparent 70%);
-//           pointer-events:none;z-index:0;
-//         }
-//         .shell::after {
-//           content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
-//           background-image:radial-gradient(circle,${V}0e 1px,transparent 1px);
-//           background-size:26px 26px;
-//         }
-
-//         .inner {position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;}
-
-//         /* bar canvas */
-//         .canvas {
-//           flex:1;min-height:0;
-//           background:#040912;
-//           border:1px solid #150a2e;
-//           border-radius:14px;
-//           padding:14px 14px 8px;
-//           display:flex;align-items:flex-end;gap:2px;
-//           position:relative;overflow:hidden;
-//         }
-//         .canvas::before {
-//           content:'';position:absolute;inset:0;pointer-events:none;
-//           background:linear-gradient(#150a2e10 1px,transparent 1px),
-//                      linear-gradient(90deg,#150a2e10 1px,transparent 1px);
-//           background-size:36px 36px;border-radius:14px;
-//         }
-
-//         /* range bracket overlay */
-//         .range-bar {
-//           position:absolute;bottom:0;height:3px;
-//           border-radius:999px;pointer-events:none;z-index:10;
-//           transition:left 0.15s,width 0.15s;
-//         }
-
-//         /* bottom strip */
-//         .bottom {
-//           display:flex;gap:10px;flex-shrink:0;
-//           align-items:stretch;
-//         }
-
-//         /* left controls col */
-//         .ctrl-col {
-//           flex:1;min-width:0;
-//           display:flex;flex-direction:column;gap:8px;
-//         }
-
-//         .status-bar {
-//           background:#040912;border:1px solid #150a2e;
-//           border-radius:9px;padding:7px 14px;
-//           font-family:'JetBrains Mono',monospace;font-size:11px;
-//           height:32px;display:flex;align-items:center;flex-shrink:0;
-//         }
-
-//         .progress-wrap {
-//           background:#040912;border:1px solid #150a2e;
-//           border-radius:9px;padding:7px 14px;flex-shrink:0;
-//         }
-
-//         .ctrl-wrap {
-//           flex:1;min-height:0;
-//           background:#040912;border:1px solid #150a2e;
-//           border-radius:9px;padding:9px 14px;
-//           display:flex;align-items:center;
-//         }
-
-//         /* pseudocode */
-//         .pseudo-panel {
-//           width:230px;flex-shrink:0;
-//           background:#040912;border:1px solid #150a2e;
-//           border-radius:14px;overflow:hidden;
-//           display:flex;flex-direction:column;
-//         }
-
-//         /* depth meter */
-//         .depth-panel {
-//           width:52px;flex-shrink:0;
-//           background:#040912;border:1px solid #150a2e;
-//           border-radius:14px;overflow:hidden;
-//           display:flex;flex-direction:column;
-//           align-items:center;padding:10px 6px;gap:6px;
-//         }
-
-//         /* buttons */
-//         .btn {
-//           border:none;border-radius:8px;cursor:pointer;
-//           font-family:'Syne',sans-serif;font-weight:700;
-//           transition:all 0.18s;letter-spacing:0.3px;
-//         }
-//         .btn:disabled{opacity:0.25;cursor:not-allowed;}
-//         .btn:hover:not(:disabled){transform:translateY(-1px);}
-
-//         .btn-play {
-//           background:linear-gradient(135deg,${V},#7c3aed);
-//           color:#fff;padding:9px 20px;font-size:12px;
-//           box-shadow:0 0 16px ${V}30;
-//         }
-//         .btn-play:hover:not(:disabled){box-shadow:0 0 24px ${V}55;}
-
-//         .btn-sm {
-//           background:${V}14;color:${V2};
-//           border:1px solid ${V}30 !important;
-//           padding:8px 14px;font-size:11px;
-//         }
-//         .btn-sm.b-gen  {background:${C}14;color:${C};border:1px solid ${C}30 !important;}
-//         .btn-sm.b-step {background:${Y}14;color:${Y};border:1px solid ${Y}30 !important;}
-//         .btn-sm.b-rst  {background:#64748b14;color:#64748b;border:1px solid #64748b28 !important;}
-
-//         input[type=range] { accent-color:${V}; }
-//       `}</style>
-
-//       <div className="shell">
-//         <div className="inner">
-
-//           {/* ── HEADER ── */}
-//           <div style={{ display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
-//             <h1 style={{ fontFamily:'Syne', fontWeight:800, fontSize:'1.5rem', color:'#e2e8f0', letterSpacing:'-0.5px', lineHeight:1, margin:0 }}>
-//               Merge Sort
-//             </h1>
-//             <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:V2, background:`${V}14`, border:`1px solid ${V}30`, borderRadius:'4px', padding:'2px 8px', letterSpacing:'0.5px' }}>
-//               O(n log n)
-//             </span>
-//             <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:'#1e3a5c' }}>
-//               divide &amp; conquer
-//             </span>
-
-//             {sortedCount > 0 && (
-//               <motion.span initial={{opacity:0}} animate={{opacity:1}}
-//                 style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:G, background:`${G}14`, border:`1px solid ${G}28`, borderRadius:'4px', padding:'2px 8px' }}>
-//                 {sortedCount} / {arraySize} sorted
-//               </motion.span>
-//             )}
-
-//             {/* legend */}
-//             <div style={{ display:'flex', gap:'12px', marginLeft:'auto', alignItems:'center' }}>
-//               {LEGEND.map(({ key, label }) => (
-//                 <span key={key} style={{ display:'flex', alignItems:'center', gap:'5px', fontFamily:'JetBrains Mono', fontSize:'10px', color:BAR_STATES[key].border.replace('70','').replace('80','').replace('60','') }}>
-//                   <span style={{ width:8, height:8, borderRadius:'2px', backgroundColor:BAR_STATES[key].border, display:'inline-block', flexShrink:0, boxShadow:BAR_STATES[key].glow }} />
-//                   {label}
-//                 </span>
-//               ))}
-//             </div>
-//           </div>
-
-//           {/* ── MAIN ROW: canvas + depth meter ── */}
-//           <div style={{ flex:1, minHeight:0, display:'flex', gap:'10px', overflow:'hidden' }}>
-
-//             {/* BAR CANVAS */}
-//             <div className="canvas" style={{ flex:1 }}>
-
-//               {/* active range bracket at bottom */}
-//               {step.phase !== 'idle' && step.phase !== 'done' && step.array?.length > 0 && (
-//                 <motion.div
-//                   className="range-bar"
-//                   animate={{
-//                     left:  `${(step.left  / step.array.length) * 100}%`,
-//                     width: `${((step.right - step.left + 1) / step.array.length) * 100}%`,
-//                     background: step.phase === 'merged' ? G : V2,
-//                     boxShadow: step.phase === 'merged' ? `0 0 8px ${G}60` : `0 0 8px ${V2}60`,
-//                   }}
-//                   transition={{ duration:0.2 }}
-//                 />
-//               )}
-
-//               {/* mid divider line */}
-//               {(step.phase === 'split' || step.phase === 'compare' || step.phase === 'place' || step.phase === 'merged') &&
-//                step.array?.length > 0 && step.mid > step.left && (
-//                 <motion.div
-//                   animate={{ opacity:[0.4,0.8,0.4] }}
-//                   transition={{ duration:1.2, repeat:Infinity }}
-//                   style={{
-//                     position:'absolute', bottom:0, zIndex:9,
-//                     left:`${((step.mid + 0.5) / step.array.length) * 100}%`,
-//                     width:'1px', top:'8px',
-//                     background:`linear-gradient(to bottom,transparent,${V2}80,${V2}80,transparent)`,
-//                     pointerEvents:'none',
-//                   }}
-//                 />
-//               )}
-
-//               {/* bars */}
-//               {step.array?.map((value, i) => {
-//                 const s    = getBarState(i)
-//                 const meta = BAR_STATES[s]
-//                 const h    = Math.max((value / maxVal) * 100, 1)
-
-//                 return (
-//                   <div key={i} style={{ flex:1, height:'100%', display:'flex', alignItems:'flex-end', position:'relative', zIndex:5 }}>
-//                     <motion.div
-//                       animate={{
-//                         height:      `${h}%`,
-//                         background:  `linear-gradient(to top, ${meta.border}, ${meta.bg})`,
-//                         borderColor: meta.border,
-//                         boxShadow:   meta.glow,
-//                       }}
-//                       transition={{ duration:0.12, ease:'easeOut' }}
-//                       style={{
-//                         width:'100%', minHeight:'3px',
-//                         borderRadius:'3px 3px 1px 1px',
-//                         border:`1px solid ${meta.border}`,
-//                         position:'relative', overflow:'hidden',
-//                       }}
-//                     >
-//                       {(s === 'comparing' || s === 'placing') && (
-//                         <motion.div
-//                           animate={{ y:['-100%','220%'] }}
-//                           transition={{ duration:0.7, repeat:Infinity, ease:'linear' }}
-//                           style={{ position:'absolute', left:0, right:0, height:'35%', background:`linear-gradient(to bottom,transparent,${meta.border}70,transparent)`, pointerEvents:'none' }}
-//                         />
-//                       )}
-//                     </motion.div>
-//                   </div>
-//                 )
-//               })}
-//             </div>
-
-//             {/* DEPTH METER */}
-//             <div className="depth-panel">
-//               <span style={{ fontFamily:'Syne', fontWeight:700, fontSize:'8px', color:'#1e3050', letterSpacing:'2px', textTransform:'uppercase', writingMode:'vertical-rl', transform:'rotate(180deg)', marginBottom:'4px' }}>
-//                 Depth
-//               </span>
-//               <div style={{ flex:1, display:'flex', flexDirection:'column', gap:'4px', justifyContent:'flex-end', width:'100%' }}>
-//                 {Array.from({ length: maxDepth }).map((_, d) => {
-//                   const isActive = step.depth === d && step.phase !== 'done' && step.phase !== 'idle'
-//                   return (
-//                     <motion.div key={d}
-//                       animate={{
-//                         background: isActive ? `linear-gradient(135deg,${V},${V2})` : '#0a1628',
-//                         boxShadow:  isActive ? `0 0 10px ${V}60` : 'none',
-//                         scale:      isActive ? 1.08 : 1,
-//                       }}
-//                       transition={{ duration:0.2 }}
-//                       style={{ width:'100%', height:'18px', borderRadius:'4px', border:`1px solid ${isActive ? V : '#150a2e'}`, display:'flex', alignItems:'center', justifyContent:'center' }}
-//                     >
-//                       <span style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color: isActive ? 'white' : '#1e3050', fontWeight: isActive ? 700 : 400 }}>{d}</span>
-//                     </motion.div>
-//                   )
-//                 })}
-//               </div>
-//               <span style={{ fontFamily:'JetBrains Mono', fontSize:'7px', color:'#1e3050', letterSpacing:'0.5px', marginTop:'4px' }}>
-//                 lvl
-//               </span>
-//             </div>
-//           </div>
-
-//           {/* ── BOTTOM STRIP ── */}
-//           <div className="bottom">
-
-//             {/* left: status + progress + controls */}
-//             <div className="ctrl-col">
-
-//               {/* status */}
-//               <div className="status-bar">
-//                 <AnimatePresence mode="wait">
-//                   <motion.span key={status.text}
-//                     initial={{opacity:0,y:3}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-3}}
-//                     transition={{duration:0.15}}
-//                     style={{ color:status.color, letterSpacing:'0.3px' }}>
-//                     {status.text}
-//                   </motion.span>
-//                 </AnimatePresence>
-//               </div>
-
-//               {/* progress */}
-//               <div className="progress-wrap">
-//                 <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'JetBrains Mono', fontSize:'10px', color:'#1e3a5c', marginBottom:'5px' }}>
-//                   <span>Progress</span>
-//                   <span style={{ color: pct > 0 ? V2 : '#1e3a5c' }}>{stepIndex} / {Math.max(steps.length - 1, 0)}</span>
-//                 </div>
-//                 <div style={{ width:'100%', height:'4px', background:'#0a1628', borderRadius:'999px', overflow:'hidden' }}>
-//                   <motion.div
-//                     animate={{ width:`${pct}%` }}
-//                     transition={{ duration:0.08 }}
-//                     style={{
-//                       height:'4px', borderRadius:'999px',
-//                       background: isDone
-//                         ? `linear-gradient(90deg,${G},#34d399)`
-//                         : `linear-gradient(90deg,${V},${V2})`,
-//                       boxShadow: isDone ? `0 0 8px ${G}60` : `0 0 8px ${V}60`,
-//                     }}
-//                   />
-//                 </div>
-//               </div>
-
-//               {/* controls */}
-//               <div className="ctrl-wrap">
-//                 <div style={{ display:'flex', alignItems:'center', gap:'8px', width:'100%', flexWrap:'wrap' }}>
-
-//                   {/* play/pause */}
-//                   <button className="btn btn-play" onClick={isPlaying ? handlePause : handlePlay} disabled={isDone && !isPlaying}>
-//                     {isPlaying ? '⏸ Pause' : isDone ? '✦ Done' : '▶ Play'}
-//                   </button>
-
-//                   <button className="btn btn-sm b-step" onClick={handleStep} disabled={isPlaying || isDone}>⏭ Step</button>
-//                   <button className="btn btn-sm b-rst"  onClick={handleReset} disabled={stepIndex === 0 && !isDone}>↺ Reset</button>
-//                   <button className="btn btn-sm b-gen"  onClick={handleGenerate}>⟳ New Array</button>
-
-//                   {/* speed */}
-//                   <div style={{ display:'flex', alignItems:'center', gap:'6px', marginLeft:'auto' }}>
-//                     <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#1e3a5c' }}>🐢</span>
-//                     <input type="range" min={40} max={800} step={20}
-//                       value={1040 - speed}
-//                       onChange={e => dispatch({ type:'SET_SPEED', speed: 1040 - Number(e.target.value) })}
-//                       style={{ width:'80px' }}
-//                     />
-//                     <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#1e3a5c' }}>🐇</span>
-//                     <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#334155', minWidth:'36px' }}>{speed}ms</span>
-//                   </div>
-
-//                   {/* array size */}
-//                   <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-//                     <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#1e3a5c' }}>n:</span>
-//                     <input type="range" min={6} max={40} step={2}
-//                       value={arraySize}
-//                       onChange={e => dispatch({ type:'SET_SIZE', arraySize: Number(e.target.value) })}
-//                       style={{ width:'70px' }}
-//                     />
-//                     <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#334155', minWidth:'20px' }}>{arraySize}</span>
-//                   </div>
-
-//                 </div>
-//               </div>
-//             </div>
-
-//             {/* pseudocode panel */}
-//             <div className="pseudo-panel">
-//               <div style={{ padding:'8px 12px 4px', borderBottom:'1px solid #150a2e', flexShrink:0 }}>
-//                 <span style={{ fontFamily:'Syne', fontWeight:700, fontSize:'9px', color:'#1e3050', letterSpacing:'2px', textTransform:'uppercase' }}>
-//                   Pseudocode
-//                 </span>
-//               </div>
-//               <div style={{ flex:1, overflow:'hidden', padding:'6px 8px', display:'flex', flexDirection:'column', gap:'1px' }}>
-//                 {PSEUDO.map((line, i) => {
-//                   const active = i === step.currentLine
-//                   return (
-//                     <motion.div key={i}
-//                       animate={{
-//                         background: active ? `${V}20` : 'transparent',
-//                         borderLeftColor: active ? V : 'transparent',
-//                       }}
-//                       transition={{ duration:0.15 }}
-//                       style={{
-//                         paddingLeft: `${line.indent * 14 + 8}px`,
-//                         paddingTop:'3px', paddingBottom:'3px', paddingRight:'8px',
-//                         borderRadius:'5px',
-//                         borderLeft:`2px solid ${active ? V : 'transparent'}`,
-//                         fontFamily:'JetBrains Mono', fontSize:'10px',
-//                         color: active ? V2 : '#1e3050',
-//                         fontWeight: active ? 700 : 400,
-//                         lineHeight:1.4,
-//                         display:'flex', alignItems:'center', gap:'6px',
-//                       }}
-//                     >
-//                       {active && (
-//                         <motion.span
-//                           animate={{ opacity:[1,0.3,1] }}
-//                           transition={{ duration:0.8, repeat:Infinity }}
-//                           style={{ color:V2, fontSize:'8px', flexShrink:0 }}
-//                         >▶</motion.span>
-//                       )}
-//                       <span style={{ marginLeft: active ? 0 : '14px' }}>{line.code}</span>
-//                     </motion.div>
-//                   )
-//                 })}
-//               </div>
-
-//               {/* complexity footer */}
-//               <div style={{ borderTop:'1px solid #150a2e', padding:'8px 12px', display:'flex', justifyContent:'space-between', flexShrink:0 }}>
-//                 {[
-//                   { lbl:'Time', val:'O(n log n)', col:V2 },
-//                   { lbl:'Space', val:'O(n)', col:Y     },
-//                   { lbl:'Stable', val:'Yes', col:G     },
-//                 ].map(({lbl,val,col})=>(
-//                   <div key={lbl} style={{ textAlign:'center' }}>
-//                     <p style={{ fontFamily:'JetBrains Mono', fontSize:'7px', color:'#1e3050', marginBottom:'2px', letterSpacing:'1px' }}>{lbl.toUpperCase()}</p>
-//                     <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'11px', color:col, margin:0 }}>{val}</p>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-
-//           </div>
-//         </div>
-//       </div>
-//     </>
-//   )
-// }
 'use client'
-import { useReducer, useEffect, useRef, useCallback } from 'react'
+import { useReducer, useEffect, useRef, useCallback, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Navbar from '@/comps/navbar'
 import { generateMergeSortSteps } from './ms'
 
-// ── Premium color palette ─────────────────────────────────────────────────────
-const palette = {
-  violet: '#8b5cf6',
-  violetLight: '#a78bfa',
-  cyan: '#06b6d4',
-  green: '#10b981',
-  red: '#f87171',
-  amber: '#fbbf24',
-  darkBg: '#030612',
-  cardBg: 'rgba(4, 9, 18, 0.8)',
-  border: '#1e2a4a',
-  textDim: '#8a9bb5',
-  text: '#e2e8f0',
-  glow: 'rgba(139, 92, 246, 0.4)',
+// ── Theme tokens (matched to landing page) ────────────────────────────────────
+const T = {
+  bg:       '#04040f',       // landing: body background
+  surface:  'rgba(4,4,20,0.72)',
+  border:   'rgba(255,255,255,0.07)',
+  borderHi: 'rgba(255,255,255,0.11)',
+  violet:   '#818cf8',       // landing: ds accent
+  violetHi: '#a78bfa',
+  violet2:  '#4f46e5',       // landing: glow-btn base
+  cyan:     '#22d3ee',       // landing: algo accent
+  green:    '#10b981',
+  red:      '#f87171',
+  amber:    '#fbbf24',
+  textPri:  '#f1f5f9',
+  textSec:  '#94a3b8',
+  textDim:  '#475569',
+  font:     "'DM Sans', sans-serif",
+  mono:     "'Space Mono', monospace",
 }
 
-const BAR_STATES = {
-  sorted:    { border: `${palette.green}70`,  bg: `${palette.green}18`,  glow: `0 0 12px ${palette.green}50`  },
-  comparing: { border: `${palette.cyan}80`,  bg: `${palette.cyan}20`,  glow: `0 0 18px ${palette.cyan}70` },
-  placing:   { border: `${palette.red}80`,   bg: `${palette.red}20`,   glow: `0 0 18px ${palette.red}70`  },
-  active:    { border: `${palette.amber}60`, bg: `${palette.amber}14`, glow: `0 0 12px ${palette.amber}40` },
-  merging:   { border: `${palette.violetLight}70`, bg: `${palette.violetLight}18`, glow: `0 0 14px ${palette.violetLight}60` },
-  default:   { border: '#1e3050',             bg: '#0f1a30',           glow: 'none' },
+// ── Bar state palette ─────────────────────────────────────────────────────────
+const BS = {
+  sorted:    { border:`${T.green}70`,    bg:`${T.green}15`,    glow:`0 0 10px ${T.green}45`    },
+  comparing: { border:`${T.cyan}80`,     bg:`${T.cyan}18`,     glow:`0 0 16px ${T.cyan}60`     },
+  placing:   { border:`${T.red}80`,      bg:`${T.red}18`,      glow:`0 0 16px ${T.red}60`      },
+  active:    { border:`${T.amber}55`,    bg:`${T.amber}12`,    glow:`0 0 10px ${T.amber}38`    },
+  merging:   { border:`${T.violetHi}65`, bg:`${T.violetHi}15`, glow:`0 0 12px ${T.violetHi}50`},
+  default:   { border:'rgba(255,255,255,0.06)', bg:'rgba(255,255,255,0.02)', glow:'none' },
 }
-
-const PSEUDO = [
-  { code: 'function mergeSort(arr, l, r)',  indent: 0 },
-  { code: 'if l >= r → return',             indent: 1 },
-  { code: 'mid = ⌊(l + r) / 2⌋',            indent: 1 },
-  { code: 'mergeSort(arr, l, mid)',          indent: 1 },
-  { code: 'mergeSort(arr, mid+1, r)',        indent: 1 },
-  { code: 'merge(arr, l, mid, r)',           indent: 1 },
-  { code: 'compare left[i] vs right[j]',     indent: 2 },
-  { code: 'place smaller element',            indent: 2 },
-  { code: 'copy remaining elements',          indent: 2 },
-  { code: '✦ subarray merged',                indent: 1 },
-  { code: '✦ array fully sorted',             indent: 0 },
-]
 
 const LEGEND = [
-  { key: 'default',   label: 'Unsorted'  },
-  { key: 'active',    label: 'Range'     },
-  { key: 'comparing', label: 'Comparing' },
-  { key: 'placing',   label: 'Placing'   },
-  { key: 'sorted',    label: 'Sorted'    },
+  { key:'default',   label:'Unsorted'  },
+  { key:'active',    label:'Range'     },
+  { key:'comparing', label:'Comparing' },
+  { key:'placing',   label:'Placing'   },
+  { key:'sorted',    label:'Sorted'    },
 ]
 
-// ── reducer ───────────────────────────────────────────────────────────────────
-const randomArray = (size) =>
-  Array.from({ length: size }, () => Math.floor(Math.random() * 340) + 30)
+const PSEUDO = [
+  { code:'mergeSort(arr, l, r)',          indent:0 },
+  { code:'if l >= r → return',           indent:1 },
+  { code:'mid = ⌊(l+r)/2⌋',             indent:1 },
+  { code:'mergeSort(arr, l, mid)',        indent:1 },
+  { code:'mergeSort(arr, mid+1, r)',      indent:1 },
+  { code:'merge(arr, l, mid, r)',         indent:1 },
+  { code:'compare left[i] vs right[j]',  indent:2 },
+  { code:'place smaller element',        indent:2 },
+  { code:'copy remaining elements',      indent:2 },
+  { code:'✦ subarray merged',            indent:1 },
+  { code:'✦ array fully sorted',         indent:0 },
+]
 
-const init = { arraySize: 20, speed: 180, steps: [], stepIndex: 0, isPlaying: false, isDone: false }
+// ── Reducer ───────────────────────────────────────────────────────────────────
+const rnd = (n) => Array.from({length:n}, () => Math.floor(Math.random()*340)+30)
+const INIT = { arraySize:20, speed:180, steps:[], stepIndex:0, isPlaying:false, isDone:false }
 
-function reducer(state, action) {
-  switch (action.type) {
-    case 'GENERATE': return { ...state, steps: action.steps, stepIndex: 0, isPlaying: false, isDone: false }
-    case 'PLAY':     return { ...state, isPlaying: true,  isDone: false }
-    case 'PAUSE':    return { ...state, isPlaying: false }
+function reducer(s, a) {
+  switch(a.type) {
+    case 'GENERATE':  return {...s, steps:a.steps, stepIndex:0, isPlaying:false, isDone:false}
+    case 'PLAY':      return {...s, isPlaying:true,  isDone:false}
+    case 'PAUSE':     return {...s, isPlaying:false}
     case 'NEXT_STEP': {
-      const next = state.stepIndex + 1
-      if (next >= state.steps.length - 1)
-        return { ...state, stepIndex: state.steps.length - 1, isPlaying: false, isDone: true }
-      return { ...state, stepIndex: next }
+      const nx = s.stepIndex + 1
+      if (nx >= s.steps.length-1) return {...s, stepIndex:s.steps.length-1, isPlaying:false, isDone:true}
+      return {...s, stepIndex:nx}
     }
-    case 'RESET':     return { ...state, stepIndex: 0, isPlaying: false, isDone: false }
-    case 'SET_SPEED': return { ...state, speed: action.speed }
-    case 'SET_SIZE':  return { ...state, arraySize: action.arraySize }
-    default:          return state
+    case 'RESET':     return {...s, stepIndex:0, isPlaying:false, isDone:false}
+    case 'SET_SPEED': return {...s, speed:a.speed}
+    case 'SET_SIZE':  return {...s, arraySize:a.arraySize}
+    default:          return s
   }
 }
 
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function Label({children, color=T.textDim, size='9px', mono=false, style={}}) {
+  return (
+    <span style={{fontFamily:mono?T.mono:T.font, fontSize:size, color, letterSpacing:'0.06em', ...style}}>
+      {children}
+    </span>
+  )
+}
+
+function Badge({children, color=T.violet}) {
+  return (
+    <span style={{
+      fontFamily:T.mono, fontSize:'10px', color,
+      background:`${color}18`, border:`1px solid ${color}35`,
+      borderRadius:'999px', padding:'2px 10px', letterSpacing:'0.04em',
+    }}>{children}</span>
+  )
+}
+
+function Card({children, style={}, className=''}) {
+  return (
+    <div className={className} style={{
+      background:T.surface,
+      border:`1px solid ${T.border}`,
+      borderRadius:'16px',
+      backdropFilter:'blur(12px)',
+      boxShadow:'0 8px 32px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)',
+      ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function Btn({children, variant='secondary', onClick, disabled}) {
+  const styles = {
+    primary: {
+      background:`linear-gradient(135deg,${T.violet2},#7c3aed)`,
+      color:'#fff', border:'none',
+      boxShadow:`0 4px 18px rgba(99,102,241,0.35)`,
+    },
+    secondary: {
+      background:'rgba(255,255,255,0.04)',
+      color:T.textSec, border:`1px solid ${T.border}`,
+    },
+    cyan: {
+      background:`${T.cyan}12`,
+      color:T.cyan, border:`1px solid ${T.cyan}30`,
+    },
+    amber: {
+      background:`${T.amber}12`,
+      color:T.amber, border:`1px solid ${T.amber}30`,
+    },
+  }
+  return (
+    <button
+      onClick={onClick} disabled={disabled}
+      style={{
+        ...styles[variant],
+        fontFamily:T.font, fontWeight:700, fontSize:'12px',
+        padding:'8px 16px', borderRadius:'10px',
+        cursor:'pointer', letterSpacing:'0.02em',
+        transition:'all 0.18s cubic-bezier(0.4,0,0.2,1)',
+        opacity: disabled ? 0.28 : 1,
+        whiteSpace:'nowrap',
+      }}
+      onMouseEnter={e => { if(!disabled) e.currentTarget.style.transform='translateY(-1px)' }}
+      onMouseLeave={e => { e.currentTarget.style.transform='translateY(0)' }}
+    >
+      {children}
+    </button>
+  )
+}
+
+// ── Main component ────────────────────────────────────────────────────────────
 export default function MergeSortPage() {
-  const [state, dispatch] = useReducer(reducer, init)
-  const { arraySize, speed, steps, stepIndex, isPlaying, isDone } = state
+  const [state, dispatch] = useReducer(reducer, INIT)
+  const {arraySize, speed, steps, stepIndex, isPlaying, isDone} = state
   const iRef = useRef(null)
+  const [isMobile, setIsMobile] = useState(false)
+  const [showPseudo, setShowPseudo] = useState(true)
+
+  // detect mobile
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    if (mq.matches) setShowPseudo(false)
+    const fn = e => { setIsMobile(e.matches); if(e.matches) setShowPseudo(false) }
+    mq.addEventListener('change', fn)
+    return () => mq.removeEventListener('change', fn)
+  }, [])
 
   const step = steps[stepIndex] ?? {
-    array: randomArray(arraySize), phase: 'idle',
-    left: 0, mid: 0, right: 0,
-    comparing: [], merging: [], sorted: [], currentLine: -1, depth: 0,
+    array: rnd(arraySize), phase:'idle',
+    left:0, mid:0, right:0,
+    comparing:[], merging:[], sorted:[], currentLine:-1, depth:0,
   }
 
-  // Generate steps when array size changes
   useEffect(() => {
     clearInterval(iRef.current)
-    dispatch({ type: 'GENERATE', steps: generateMergeSortSteps(randomArray(arraySize)) })
+    dispatch({type:'GENERATE', steps:generateMergeSortSteps(rnd(arraySize))})
   }, [arraySize])
 
-  // Playback interval
   useEffect(() => {
     if (!isPlaying || !steps.length) { clearInterval(iRef.current); return }
     clearInterval(iRef.current)
-    iRef.current = setInterval(() => dispatch({ type: 'NEXT_STEP' }), speed)
+    iRef.current = setInterval(() => dispatch({type:'NEXT_STEP'}), speed)
     return () => clearInterval(iRef.current)
   }, [isPlaying, speed, steps.length])
 
-  // Cleanup on unmount
   useEffect(() => () => clearInterval(iRef.current), [])
 
   const handleGenerate = useCallback(() => {
     clearInterval(iRef.current)
-    dispatch({ type: 'GENERATE', steps: generateMergeSortSteps(randomArray(arraySize)) })
+    dispatch({type:'GENERATE', steps:generateMergeSortSteps(rnd(arraySize))})
   }, [arraySize])
 
-  const handlePlay  = useCallback(() => { if (!isDone && steps.length) dispatch({ type: 'PLAY'      }) }, [isDone, steps.length])
-  const handlePause = useCallback(() => { clearInterval(iRef.current); dispatch({ type: 'PAUSE' })     }, [])
-  const handleStep  = useCallback(() => { if (!isDone && steps.length) dispatch({ type: 'NEXT_STEP' }) }, [isDone, steps.length])
-  const handleReset = useCallback(() => { clearInterval(iRef.current); dispatch({ type: 'RESET' })     }, [])
+  const handlePlay  = useCallback(() => { if(!isDone && steps.length) dispatch({type:'PLAY'}) }, [isDone, steps.length])
+  const handlePause = useCallback(() => { clearInterval(iRef.current); dispatch({type:'PAUSE'}) }, [])
+  const handleStep  = useCallback(() => { if(!isDone && steps.length) dispatch({type:'NEXT_STEP'}) }, [isDone, steps.length])
+  const handleReset = useCallback(() => { clearInterval(iRef.current); dispatch({type:'RESET'}) }, [])
 
-  // ── bar state ──────────────────────────────────────────────────────────────
   const getBarState = (i) => {
     if (step.sorted?.includes(i))    return 'sorted'
     if (step.comparing?.includes(i)) return 'comparing'
@@ -667,464 +208,479 @@ export default function MergeSortPage() {
   }
 
   const maxVal = Math.max(...(step.array || [1]))
-  const pct    = steps.length > 1 ? (stepIndex / (steps.length - 1)) * 100 : 0
+  const pct    = steps.length > 1 ? (stepIndex / (steps.length-1)) * 100 : 0
   const sortedCount = step.sorted?.length ?? 0
+  const maxDepth = Math.ceil(Math.log2(arraySize+1))
 
-  // ── status ─────────────────────────────────────────────────────────────────
-  const phaseLabel = {
-    idle:    { text: 'Press ▶ Play or ⏭ Step to begin',  color: palette.textDim },
-    split:   { text: `Splitting  [${step.left}…${step.right}]  at mid ${step.mid}`, color: palette.violetLight },
-    single:  { text: `Base case — single element at [${step.left}]`, color: palette.amber },
-    compare: { text: `Comparing  arr[${step.comparing?.[0]}]  vs  arr[${step.comparing?.[1]}]`, color: palette.cyan },
-    place:   { text: `Placing element at index ${step.merging?.[0]}`, color: palette.red },
-    merged:  { text: `✦ Merged  [${step.left}…${step.right}]  — ${step.right - step.left + 1} elements sorted`, color: palette.green },
-    done:    { text: '✦ Array fully sorted', color: palette.green },
+  const statusMap = {
+    idle:    {text:'Press ▶ Play or ⏭ Step to begin', color:T.textDim},
+    split:   {text:`Splitting [${step.left}…${step.right}] at mid ${step.mid}`, color:T.violetHi},
+    single:  {text:`Base case — single element at [${step.left}]`, color:T.amber},
+    compare: {text:`Comparing arr[${step.comparing?.[0]}] vs arr[${step.comparing?.[1]}]`, color:T.cyan},
+    place:   {text:`Placing element at index ${step.merging?.[0]}`, color:T.red},
+    merged:  {text:`✦ Merged [${step.left}…${step.right}] — ${step.right-step.left+1} elements`, color:T.green},
+    done:    {text:'✦ Array fully sorted', color:T.green},
   }
-  const status = phaseLabel[step.phase] ?? phaseLabel.idle
+  const status = statusMap[step.phase] ?? statusMap.idle
 
-  // max recursion depth for depth meter
-  const maxDepth = Math.ceil(Math.log2(arraySize + 1))
-
+  // ── Layout: mobile stacks vertically, desktop is column layout ──────────────
   return (
     <>
       <Navbar />
 
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-        html,body{margin:0;padding:0;overflow:hidden;height:100%;background:${palette.darkBg};}
-        *,*::before,*::after{box-sizing:border-box;}
+        @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;500;700;900&display=swap');
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        html, body { height:100%; overflow:hidden; background:${T.bg}; }
 
-        .shell {
+        @keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+        @keyframes scanline { 0%{left:-50%} 100%{left:150%} }
+        @keyframes rangePulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+        @keyframes barShine { from{top:-120%} to{top:220%} }
+
+        .ms-shell {
           height: calc(100vh - 52px);
-          background: radial-gradient(circle at 50% 20%, #1a1f3a, ${palette.darkBg});
-          color: white;
+          background: ${T.bg};
+          overflow: hidden;
           display: flex;
           flex-direction: column;
-          overflow: hidden;
-          padding: 14px 20px 12px;
-          gap: 10px;
           position: relative;
         }
 
-        /* premium noise overlay */
-        .shell::after {
+        /* Ambient glow matching landing hero */
+        .ms-shell::before {
+          content:''; position:absolute;
+          width:min(640px,90vw); height:min(480px,70vw);
+          top:-10%; left:50%; transform:translateX(-50%);
+          border-radius:50%;
+          background:radial-gradient(ellipse,rgba(99,102,241,0.11) 0%,rgba(79,70,229,0.05) 40%,transparent 70%);
+          pointer-events:none; z-index:0;
+        }
+        /* Dot grid */
+        .ms-shell::after {
           content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
-          background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.015'/%3E%3C/svg%3E");
+          background-image:radial-gradient(circle,rgba(129,140,248,0.06) 1px,transparent 1px);
+          background-size:28px 28px;
         }
 
-        .inner {position:relative;z-index:1;flex:1;min-height:0;display:flex;flex-direction:column;gap:10px;}
-
-        /* bar canvas */
-        .canvas {
-          flex:1;min-height:0;
-          background:${palette.cardBg};
-          backdrop-filter:blur(8px);
-          border:1px solid ${palette.border};
-          border-radius:24px;
-          padding:14px 14px 8px;
-          display:flex;align-items:flex-end;gap:2px;
-          position:relative;overflow:hidden;
-          box-shadow:0 20px 40px -15px rgba(0,0,0,0.7), inset 0 1px 2px rgba(255,255,255,0.05);
-        }
-        .canvas::before {
-          content:'';position:absolute;inset:0;pointer-events:none;
-          background:linear-gradient(${palette.border}10 1px, transparent 1px),
-                     linear-gradient(90deg,${palette.border}10 1px, transparent 1px);
-          background-size:36px 36px;border-radius:24px;
+        .ms-inner {
+          position:relative; z-index:1;
+          flex:1; min-height:0;
+          display:flex; flex-direction:column;
+          padding:clamp(10px,1.5vw,16px) clamp(12px,2vw,20px) clamp(8px,1.2vw,12px);
+          gap:clamp(8px,1.2vw,12px);
+          overflow:hidden;
         }
 
-        /* range bracket */
-        .range-bar {
-          position:absolute;bottom:0;height:4px;
-          border-radius:999px;pointer-events:none;z-index:10;
-          transition:left 0.2s,width 0.2s;
-          filter:drop-shadow(0 0 8px currentColor);
+        /* Canvas area */
+        .ms-canvas {
+          flex:1; min-height:0;
+          background:${T.surface};
+          border:1px solid ${T.border};
+          border-radius:18px;
+          padding:clamp(10px,1.5vw,16px) clamp(10px,1.5vw,16px) clamp(6px,1vw,10px);
+          display:flex; align-items:flex-end; gap:clamp(1px,0.2vw,3px);
+          position:relative; overflow:hidden;
+          backdrop-filter:blur(10px);
+          box-shadow:0 16px 40px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        /* Grid lines on canvas */
+        .ms-canvas::before {
+          content:''; position:absolute; inset:0; pointer-events:none; border-radius:18px;
+          background:
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+          background-size: 40px 40px;
+        }
+        /* Scanline shimmer */
+        .ms-canvas-scan {
+          position:absolute; top:0; height:100%; width:40%; pointer-events:none; z-index:10;
+          background:linear-gradient(100deg,transparent,rgba(255,255,255,0.008),transparent);
+          animation:scanline 9s ease-in-out infinite;
         }
 
-        /* bottom strip */
-        .bottom {
-          display:flex;gap:10px;flex-shrink:0;
+        /* Range indicator */
+        .ms-range {
+          position:absolute; bottom:0; height:3px;
+          border-radius:999px; pointer-events:none; z-index:15;
+        }
+
+        /* Bottom strip */
+        .ms-bottom {
+          display:flex;
+          gap:clamp(8px,1.2vw,12px);
+          flex-shrink:0;
           align-items:stretch;
+          min-height:0;
         }
 
-        /* left controls col */
-        .ctrl-col {
-          flex:1;min-width:0;
-          display:flex;flex-direction:column;gap:8px;
+        /* Controls column */
+        .ms-ctrl-col {
+          flex:1; min-width:0;
+          display:flex; flex-direction:column;
+          gap:clamp(6px,1vw,8px);
         }
 
-        .status-bar {
-          background:${palette.cardBg};
-          backdrop-filter:blur(8px);
-          border:1px solid ${palette.border};
-          border-radius:12px;
-          padding:8px 16px;
-          font-family:'JetBrains Mono',monospace;font-size:11px;
-          height:38px;display:flex;align-items:center;flex-shrink:0;
-          box-shadow:0 4px 12px rgba(0,0,0,0.3);
+        /* Depth panel - hidden on mobile, shown on large screens */
+        .ms-depth { display:flex; }
+        @media(max-width:900px) { .ms-depth { display:none !important; } }
+
+        /* Pseudo panel - toggleable on small screens */
+        .ms-pseudo { display:flex; }
+        @media(max-width:768px) { .ms-pseudo { display:none !important; } }
+        .ms-pseudo.force-show { display:flex !important; }
+
+        /* Mobile: bottom strip stacks vertically */
+        @media(max-width:640px) {
+          .ms-bottom { flex-direction:column; }
+          .ms-ctrl-col { gap:6px; }
         }
 
-        .progress-wrap {
-          background:${palette.cardBg};
-          backdrop-filter:blur(8px);
-          border:1px solid ${palette.border};
-          border-radius:12px;
-          padding:8px 14px;flex-shrink:0;
-          box-shadow:0 4px 12px rgba(0,0,0,0.3);
+        /* Sliders */
+        input[type=range] {
+          accent-color: ${T.violet};
+          cursor:pointer;
         }
+        input[type=range]::-webkit-slider-thumb { cursor:pointer; }
 
-        .ctrl-wrap {
-          flex:1;min-height:0;
-          background:${palette.cardBg};
-          backdrop-filter:blur(8px);
-          border:1px solid ${palette.border};
-          border-radius:12px;
-          padding:10px 16px;
-          display:flex;align-items:center;
-          box-shadow:0 4px 12px rgba(0,0,0,0.3);
-        }
-
-        /* pseudocode panel */
-        .pseudo-panel {
-          width:260px;flex-shrink:0;
-          background:${palette.cardBg};
-          backdrop-filter:blur(8px);
-          border:1px solid ${palette.border};
-          border-radius:20px;
-          overflow:hidden;
-          display:flex;flex-direction:column;
-          box-shadow:0 20px 30px -15px rgba(0,0,0,0.7);
-        }
-
-        /* depth meter */
-        .depth-panel {
-          width:60px;flex-shrink:0;
-          background:${palette.cardBg};
-          backdrop-filter:blur(8px);
-          border:1px solid ${palette.border};
-          border-radius:20px;
-          overflow:hidden;
-          display:flex;flex-direction:column;
-          align-items:center;padding:12px 6px;gap:8px;
-          box-shadow:0 20px 30px -15px rgba(0,0,0,0.7);
-        }
-
-        /* buttons */
-        .btn {
-          border:none;border-radius:10px;cursor:pointer;
-          font-family:'Syne',sans-serif;font-weight:700;
-          transition:all 0.2s cubic-bezier(0.4,0,0.2,1);
-          letter-spacing:0.3px;
-        }
-        .btn:disabled{opacity:0.25;cursor:not-allowed;}
-        .btn:hover:not(:disabled){transform:translateY(-2px);}
-
-        .btn-play {
-          background:linear-gradient(135deg,${palette.violet},#7c3aed);
-          color:#fff;padding:9px 22px;font-size:12px;
-          box-shadow:0 8px 16px -6px ${palette.glow};
-        }
-        .btn-play:hover:not(:disabled){box-shadow:0 14px 24px -8px ${palette.violet}80;}
-
-        .btn-sm {
-          background:rgba(8,6,16,0.6);
-          backdrop-filter:blur(4px);
-          border:1px solid ${palette.border} !important;
-          padding:8px 14px;font-size:11px;
-          color:${palette.textDim};
-        }
-        .btn-sm:hover:not(:disabled){border-color:currentColor !important;}
-        .b-gen  { color:${palette.cyan}; }
-        .b-step { color:${palette.amber}; }
-        .b-rst  { color:${palette.textDim}; }
-
-        input[type=range] { accent-color:${palette.violet}; }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width:3px; height:3px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:${T.violet2}; border-radius:2px; }
       `}</style>
 
-      <div className="shell">
-        <div className="inner">
+      <div className="ms-shell">
+        <div className="ms-inner">
 
-          {/* ── HEADER ── */}
-          <div style={{ display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
-            <h1 style={{ fontFamily:'Syne', fontWeight:800, fontSize:'1.6rem', color:'#e2e8f0', letterSpacing:'-0.5px', lineHeight:1, margin:0 }}>
+          {/* ── HEADER ─────────────────────────────────────────────── */}
+          <div style={{
+            display:'flex', alignItems:'center', flexWrap:'wrap',
+            gap:'8px', flexShrink:0,
+            paddingBottom:`clamp(6px,1vw,10px)`,
+            borderBottom:`1px solid ${T.border}`,
+          }}>
+            <h1 style={{
+              fontFamily:T.font, fontWeight:900,
+              fontSize:'clamp(18px,2.5vw,26px)',
+              color:T.textPri, letterSpacing:'-0.02em',
+              lineHeight:1, margin:0,
+            }}>
               Merge Sort
             </h1>
-            <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:palette.violetLight, background:`${palette.violet}20`, border:`1px solid ${palette.violet}40`, borderRadius:'20px', padding:'2px 12px' }}>
-              O(n log n)
-            </span>
-            <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:palette.textDim }}>
-              divide & conquer
-            </span>
+            <Badge color={T.violet}>O(n log n)</Badge>
+            <Badge color={T.cyan}>Divide &amp; Conquer</Badge>
+            <Badge color={T.green}>Stable</Badge>
 
-            {sortedCount > 0 && (
-              <motion.span
-                initial={{opacity:0, scale:0.9}}
-                animate={{opacity:1, scale:1}}
-                style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:palette.green, background:`${palette.green}20`, border:`1px solid ${palette.green}40`, borderRadius:'20px', padding:'2px 12px' }}
-              >
-                {sortedCount} / {arraySize} sorted
-              </motion.span>
-            )}
+            <AnimatePresence>
+              {sortedCount > 0 && (
+                <motion.div
+                  initial={{opacity:0,scale:.9,x:-6}}
+                  animate={{opacity:1,scale:1,x:0}}
+                  exit={{opacity:0,scale:.9}}
+                  transition={{duration:.2}}
+                >
+                  <Badge color={T.green}>{sortedCount}/{arraySize} sorted</Badge>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
-            {/* legend */}
-            <div style={{ display:'flex', gap:'12px', marginLeft:'auto', alignItems:'center' }}>
-              {LEGEND.map(({ key, label }) => (
-                <span key={key} style={{ display:'flex', alignItems:'center', gap:'5px', fontFamily:'JetBrains Mono', fontSize:'9px', color:BAR_STATES[key].border.replace('70','').replace('80','').replace('60','') }}>
-                  <span style={{ width:8, height:8, borderRadius:'2px', backgroundColor:BAR_STATES[key].border, display:'inline-block', boxShadow:BAR_STATES[key].glow }} />
-                  {label}
+            {/* Legend — hidden on very small screens */}
+            <div style={{
+              display:'flex', gap:isMobile?'8px':'14px',
+              marginLeft:'auto', alignItems:'center', flexWrap:'wrap',
+            }}>
+              {LEGEND.map(({key, label}) => (
+                <span key={key} style={{
+                  display:'flex', alignItems:'center', gap:'5px',
+                  fontFamily:T.mono, fontSize:'9px',
+                  color:BS[key].border.replace('70','cc').replace('80','cc').replace('55','cc').replace('65','cc'),
+                }}>
+                  <span style={{
+                    width:8, height:8, borderRadius:'2px', flexShrink:0,
+                    background:BS[key].border,
+                    boxShadow:BS[key].glow,
+                    display:'inline-block',
+                  }}/>
+                  {!isMobile && label}
                 </span>
               ))}
+              {/* Toggle pseudocode on mobile */}
+              {isMobile && (
+                <button
+                  onClick={() => setShowPseudo(p => !p)}
+                  style={{
+                    fontFamily:T.mono, fontSize:'9px', color:T.violet,
+                    background:`${T.violet}14`, border:`1px solid ${T.violet}30`,
+                    borderRadius:'6px', padding:'3px 8px', cursor:'pointer',
+                  }}
+                >
+                  {showPseudo ? 'Hide' : '{ }'} Code
+                </button>
+              )}
             </div>
           </div>
 
-          {/* ── MAIN ROW: canvas + depth meter ── */}
-          <div style={{ flex:1, minHeight:0, display:'flex', gap:'10px', overflow:'hidden' }}>
+          {/* ── MAIN ROW: canvas + depth ────────────────────────────── */}
+          <div style={{flex:1, minHeight:0, display:'flex', gap:'clamp(8px,1.2vw,12px)', overflow:'hidden'}}>
 
             {/* BAR CANVAS */}
-            <div className="canvas" style={{ flex:1 }}>
+            <div className="ms-canvas" style={{flex:1}}>
+              <div className="ms-canvas-scan"/>
 
-              {/* active range bracket */}
+              {/* Range bracket */}
               {step.phase !== 'idle' && step.phase !== 'done' && step.array?.length > 0 && (
                 <motion.div
-                  className="range-bar"
+                  className="ms-range"
                   animate={{
-                    left:  `${(step.left  / step.array.length) * 100}%`,
-                    width: `${((step.right - step.left + 1) / step.array.length) * 100}%`,
-                    background: step.phase === 'merged' ? palette.green : palette.violetLight,
-                    boxShadow: step.phase === 'merged' ? `0 0 12px ${palette.green}` : `0 0 12px ${palette.violetLight}`,
+                    left:`${(step.left/step.array.length)*100}%`,
+                    width:`${((step.right-step.left+1)/step.array.length)*100}%`,
+                    background: step.phase==='merged' ? T.green : T.violetHi,
+                    boxShadow: step.phase==='merged' ? `0 0 10px ${T.green}` : `0 0 10px ${T.violetHi}`,
                   }}
-                  transition={{ duration:0.2 }}
+                  transition={{duration:.18}}
                 />
               )}
 
-              {/* mid divider */}
-              {(step.phase === 'split' || step.phase === 'compare' || step.phase === 'place' || step.phase === 'merged') &&
+              {/* Mid divider */}
+              {['split','compare','place','merged'].includes(step.phase) &&
                step.array?.length > 0 && step.mid > step.left && (
                 <motion.div
-                  animate={{ opacity:[0.4,0.8,0.4] }}
-                  transition={{ duration:1.5, repeat:Infinity }}
+                  animate={{opacity:[.35,.75,.35]}}
+                  transition={{duration:1.6, repeat:Infinity}}
                   style={{
                     position:'absolute', bottom:0, zIndex:9,
-                    left:`${((step.mid + 0.5) / step.array.length) * 100}%`,
-                    width:'2px', top:'8px',
-                    background:`linear-gradient(to bottom,transparent,${palette.violetLight},${palette.violetLight},transparent)`,
+                    left:`${((step.mid+.5)/step.array.length)*100}%`,
+                    width:'1px', top:'6px',
+                    background:`linear-gradient(to bottom,transparent,${T.violetHi}80,${T.violetHi}80,transparent)`,
                     pointerEvents:'none',
                   }}
                 />
               )}
 
-              {/* bars */}
-              {step.array?.map((value, i) => {
-                const s    = getBarState(i)
-                const meta = BAR_STATES[s]
-                const h    = Math.max((value / maxVal) * 100, 1)
-
+              {/* Bars */}
+              {step.array?.map((val, i) => {
+                const st   = getBarState(i)
+                const meta = BS[st]
+                const h    = Math.max((val/maxVal)*100, 1)
                 return (
-                  <motion.div
-                    key={i}
-                    layout
-                    transition={{ layout: { type:'spring', stiffness:300, damping:30 } }}
-                    style={{ flex:1, height:'100%', display:'flex', alignItems:'flex-end', position:'relative', zIndex:5 }}
-                  >
+                  <div key={i} style={{flex:1, height:'100%', display:'flex', alignItems:'flex-end', position:'relative', zIndex:5}}>
                     <motion.div
                       animate={{
-                        height: `${h}%`,
-                        background: `linear-gradient(to top, ${meta.border}, ${meta.bg})`,
-                        borderColor: meta.border,
-                        boxShadow: meta.glow,
+                        height:`${h}%`,
+                        background:`linear-gradient(to top,${meta.border},${meta.bg})`,
+                        borderColor:meta.border,
+                        boxShadow:meta.glow,
                       }}
-                      transition={{ duration:0.12 }}
+                      transition={{duration:.11}}
                       style={{
                         width:'100%', minHeight:'3px',
-                        borderRadius:'4px 4px 2px 2px',
+                        borderRadius:'3px 3px 1px 1px',
                         border:`1px solid ${meta.border}`,
                         position:'relative', overflow:'hidden',
                       }}
                     >
-                      {/* shine effect for active bars */}
-                      {(s === 'comparing' || s === 'placing') && (
+                      {(st==='comparing'||st==='placing') && (
                         <motion.div
-                          animate={{ y:['-100%','200%'] }}
-                          transition={{ duration:0.8, repeat:Infinity, ease:'linear' }}
-                          style={{ position:'absolute', left:0, right:0, height:'30%', background:`linear-gradient(to bottom,transparent,${meta.border}80,transparent)`, pointerEvents:'none' }}
+                          style={{
+                            position:'absolute', left:0, right:0, height:'30%',
+                            background:`linear-gradient(to bottom,transparent,${meta.border}70,transparent)`,
+                            pointerEvents:'none',
+                            top:'-120%',
+                          }}
+                          animate={{top:['−120%','220%']}}
+                          transition={{duration:.75, repeat:Infinity, ease:'linear'}}
                         />
                       )}
                     </motion.div>
-                  </motion.div>
+                  </div>
                 )
               })}
             </div>
 
             {/* DEPTH METER */}
-            <div className="depth-panel">
-              <span style={{ fontFamily:'Syne', fontWeight:700, fontSize:'8px', color:palette.textDim, letterSpacing:'2px', textTransform:'uppercase', writingMode:'vertical-rl', transform:'rotate(180deg)', marginBottom:'4px' }}>
-                Depth
-              </span>
-              <div style={{ flex:1, display:'flex', flexDirection:'column', gap:'4px', justifyContent:'flex-end', width:'100%' }}>
-                {Array.from({ length: maxDepth }).map((_, d) => {
-                  const isActive = step.depth === d && step.phase !== 'done' && step.phase !== 'idle'
+            <Card className="ms-depth" style={{
+              width:'clamp(48px,5vw,60px)',
+              flexShrink:0, flexDirection:'column',
+              alignItems:'center', padding:'12px 6px', gap:'6px',
+            }}>
+              <span style={{
+                fontFamily:T.mono, fontWeight:700, fontSize:'7px',
+                color:T.textDim, letterSpacing:'2px', textTransform:'uppercase',
+                writingMode:'vertical-rl', transform:'rotate(180deg)',
+              }}>Depth</span>
+              <div style={{flex:1, display:'flex', flexDirection:'column', gap:'3px', justifyContent:'flex-end', width:'100%'}}>
+                {Array.from({length:maxDepth}).map((_,d) => {
+                  const active = step.depth===d && !['done','idle'].includes(step.phase)
                   return (
-                    <motion.div
-                      key={d}
+                    <motion.div key={d}
                       animate={{
-                        background: isActive ? `linear-gradient(135deg,${palette.violet},${palette.violetLight})` : palette.cardBg,
-                        boxShadow:  isActive ? `0 0 12px ${palette.violetLight}` : 'none',
-                        scale:      isActive ? 1.1 : 1,
+                        background: active ? `linear-gradient(135deg,${T.violet2},${T.violetHi})` : 'rgba(255,255,255,0.03)',
+                        boxShadow:  active ? `0 0 10px ${T.violetHi}60` : 'none',
+                        scaleX:     active ? 1.05 : 1,
                       }}
-                      transition={{ duration:0.2 }}
+                      transition={{duration:.18}}
                       style={{
-                        width:'100%', height:'20px', borderRadius:'8px',
-                        border:`1px solid ${isActive ? palette.violetLight : palette.border}`,
+                        width:'100%', height:'clamp(14px,1.8vw,20px)', borderRadius:'6px',
+                        border:`1px solid ${active ? T.violetHi : T.border}`,
                         display:'flex', alignItems:'center', justifyContent:'center',
                       }}
                     >
-                      <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color: isActive ? 'white' : palette.textDim, fontWeight: isActive ? 700 : 400 }}>{d}</span>
+                      <span style={{fontFamily:T.mono, fontSize:'8px', color:active?'#fff':T.textDim, fontWeight:active?700:400}}>{d}</span>
                     </motion.div>
                   )
                 })}
               </div>
-              <span style={{ fontFamily:'JetBrains Mono', fontSize:'7px', color:palette.textDim, marginTop:'4px' }}>level</span>
-            </div>
+              <span style={{fontFamily:T.mono, fontSize:'7px', color:T.textDim}}>lvl</span>
+            </Card>
           </div>
 
-          {/* ── BOTTOM STRIP ── */}
-          <div className="bottom">
+          {/* ── BOTTOM STRIP ────────────────────────────────────────── */}
+          <div className="ms-bottom">
 
-            {/* left: status + progress + controls */}
-            <div className="ctrl-col">
+            {/* Controls column */}
+            <div className="ms-ctrl-col">
 
-              {/* status */}
-              <div className="status-bar">
+              {/* Status bar */}
+              <Card style={{padding:'8px 14px', display:'flex', alignItems:'center', minHeight:'36px', flexShrink:0}}>
                 <AnimatePresence mode="wait">
                   <motion.span key={status.text}
                     initial={{opacity:0,y:3}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-3}}
-                    transition={{duration:0.15}}
-                    style={{ color:status.color, letterSpacing:'0.3px' }}
+                    transition={{duration:.14}}
+                    style={{fontFamily:T.mono, fontSize:'clamp(9px,1.1vw,11px)', color:status.color, letterSpacing:'0.02em'}}
                   >
                     {status.text}
                   </motion.span>
                 </AnimatePresence>
-              </div>
+              </Card>
 
-              {/* progress */}
-              <div className="progress-wrap">
-                <div style={{ display:'flex', justifyContent:'space-between', fontFamily:'JetBrains Mono', fontSize:'10px', color:palette.textDim, marginBottom:'6px' }}>
-                  <span>Progress</span>
-                  <span style={{ color: pct > 0 ? palette.violetLight : palette.textDim }}>{stepIndex} / {Math.max(steps.length - 1, 0)}</span>
+              {/* Progress */}
+              <Card style={{padding:'8px 14px', flexShrink:0}}>
+                <div style={{display:'flex', justifyContent:'space-between', marginBottom:'6px'}}>
+                  <Label mono>Progress</Label>
+                  <Label color={pct>0?T.violetHi:T.textDim} mono>
+                    {stepIndex} / {Math.max(steps.length-1,0)}
+                  </Label>
                 </div>
-                <div style={{ width:'100%', height:'6px', background:'#0a1628', borderRadius:'999px', overflow:'hidden' }}>
+                <div style={{width:'100%', height:'5px', background:'rgba(255,255,255,0.05)', borderRadius:'999px', overflow:'hidden'}}>
                   <motion.div
-                    animate={{ width:`${pct}%` }}
-                    transition={{ duration:0.08 }}
+                    animate={{width:`${pct}%`}}
+                    transition={{duration:.08}}
                     style={{
-                      height:'6px', borderRadius:'999px',
+                      height:'5px', borderRadius:'999px',
                       background: isDone
-                        ? `linear-gradient(90deg,${palette.green},#34d399)`
-                        : `linear-gradient(90deg,${palette.violet},${palette.violetLight})`,
-                      boxShadow: isDone ? `0 0 10px ${palette.green}` : `0 0 10px ${palette.violetLight}`,
+                        ? `linear-gradient(90deg,${T.green},#34d399)`
+                        : `linear-gradient(90deg,${T.violet2},${T.violetHi})`,
+                      boxShadow: isDone ? `0 0 8px ${T.green}60` : `0 0 8px ${T.violetHi}60`,
                     }}
                   />
                 </div>
-              </div>
+              </Card>
 
-              {/* controls */}
-              <div className="ctrl-wrap">
-                <div style={{ display:'flex', alignItems:'center', gap:'8px', width:'100%', flexWrap:'wrap' }}>
-
-                  {/* play/pause */}
-                  <button className="btn btn-play" onClick={isPlaying ? handlePause : handlePlay} disabled={isDone && !isPlaying}>
+              {/* Controls */}
+              <Card style={{padding:'10px 14px', flex:1, display:'flex', alignItems:'center'}}>
+                <div style={{
+                  display:'flex', alignItems:'center',
+                  gap:'clamp(6px,1vw,10px)',
+                  width:'100%', flexWrap:'wrap',
+                }}>
+                  {/* Primary play/pause */}
+                  <Btn variant="primary" onClick={isPlaying?handlePause:handlePlay} disabled={isDone&&!isPlaying}>
                     {isPlaying ? '⏸ Pause' : isDone ? '✦ Done' : '▶ Play'}
-                  </button>
+                  </Btn>
 
-                  <button className="btn btn-sm b-step" onClick={handleStep} disabled={isPlaying || isDone}>⏭ Step</button>
-                  <button className="btn btn-sm b-rst"  onClick={handleReset} disabled={stepIndex === 0 && !isDone}>↺ Reset</button>
-                  <button className="btn btn-sm b-gen"  onClick={handleGenerate}>⟳ New Array</button>
+                  <Btn variant="amber" onClick={handleStep} disabled={isPlaying||isDone}>⏭ Step</Btn>
+                  <Btn variant="secondary" onClick={handleReset} disabled={stepIndex===0&&!isDone}>↺ Reset</Btn>
+                  <Btn variant="cyan" onClick={handleGenerate}>⟳ New Array</Btn>
 
-                  {/* speed */}
-                  <div style={{ display:'flex', alignItems:'center', gap:'6px', marginLeft:'auto' }}>
-                    <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim }}>🐢</span>
-                    <input
-                      type="range" min={40} max={800} step={20}
-                      value={1040 - speed}
-                      onChange={e => dispatch({ type:'SET_SPEED', speed: 1040 - Number(e.target.value) })}
-                      style={{ width:'90px' }}
+                  {/* Speed slider */}
+                  <div style={{display:'flex', alignItems:'center', gap:'5px', marginLeft:'auto'}}>
+                    <Label mono size="9px">🐢</Label>
+                    <input type="range" min={40} max={800} step={20}
+                      value={1040-speed}
+                      onChange={e=>dispatch({type:'SET_SPEED', speed:1040-Number(e.target.value)})}
+                      style={{width:'clamp(60px,7vw,90px)'}}
                     />
-                    <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim }}>🐇</span>
-                    <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim, minWidth:'40px' }}>{speed}ms</span>
+                    <Label mono size="9px">🐇</Label>
+                    <Label mono color={T.textSec} size="9px" style={{minWidth:'38px'}}>{speed}ms</Label>
                   </div>
 
-                  {/* array size */}
-                  <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                    <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim }}>n:</span>
-                    <input
-                      type="range" min={6} max={40} step={2}
+                  {/* Array size slider */}
+                  <div style={{display:'flex', alignItems:'center', gap:'5px'}}>
+                    <Label mono size="9px">n:</Label>
+                    <input type="range" min={6} max={40} step={2}
                       value={arraySize}
-                      onChange={e => dispatch({ type:'SET_SIZE', arraySize: Number(e.target.value) })}
-                      style={{ width:'80px' }}
+                      onChange={e=>dispatch({type:'SET_SIZE', arraySize:Number(e.target.value)})}
+                      style={{width:'clamp(55px,6vw,80px)'}}
                     />
-                    <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim, minWidth:'22px' }}>{arraySize}</span>
+                    <Label mono color={T.textSec} size="9px" style={{minWidth:'20px'}}>{arraySize}</Label>
                   </div>
-
                 </div>
-              </div>
+              </Card>
             </div>
 
-            {/* pseudocode panel */}
-            <div className="pseudo-panel">
-              <div style={{ padding:'10px 14px 6px', borderBottom:'1px solid '+palette.border, flexShrink:0 }}>
-                <span style={{ fontFamily:'Syne', fontWeight:700, fontSize:'10px', color:palette.textDim, letterSpacing:'2px', textTransform:'uppercase' }}>
+            {/* Pseudocode panel */}
+            <Card
+              className={`ms-pseudo${showPseudo?' force-show':''}`}
+              style={{
+                width:'clamp(220px,22vw,280px)',
+                flexShrink:0, flexDirection:'column',
+              }}
+            >
+              <div style={{padding:'10px 14px 7px', borderBottom:`1px solid ${T.border}`, flexShrink:0}}>
+                <Label mono size="9px" color={T.textDim} style={{letterSpacing:'0.14em', textTransform:'uppercase'}}>
                   Pseudocode
-                </span>
+                </Label>
               </div>
-              <div style={{ flex:1, overflow:'hidden', padding:'8px 10px', display:'flex', flexDirection:'column', gap:'2px' }}>
+
+              <div style={{flex:1, overflow:'hidden', padding:'7px 8px', display:'flex', flexDirection:'column', gap:'1px'}}>
                 {PSEUDO.map((line, i) => {
                   const active = i === step.currentLine
                   return (
                     <motion.div key={i}
                       animate={{
-                        background: active ? `${palette.violet}20` : 'transparent',
-                        borderLeftColor: active ? palette.violet : 'transparent',
+                        background: active ? `${T.violet}1e` : 'transparent',
+                        borderLeftColor: active ? T.violet : 'transparent',
                       }}
-                      transition={{ duration:0.15 }}
+                      transition={{duration:.14}}
                       style={{
-                        paddingLeft: `${line.indent * 16 + 12}px`,
-                        paddingTop:'4px', paddingBottom:'4px', paddingRight:'8px',
+                        paddingLeft:`${line.indent*14+10}px`,
+                        paddingTop:'3px', paddingBottom:'3px', paddingRight:'6px',
                         borderRadius:'6px',
-                        borderLeft:`3px solid`,
-                        fontFamily:'JetBrains Mono', fontSize:'10px',
-                        color: active ? palette.violetLight : palette.textDim,
+                        borderLeft:`2px solid`,
+                        fontFamily:T.mono, fontSize:'clamp(8px,1vw,10px)',
+                        color: active ? T.violetHi : T.textDim,
                         fontWeight: active ? 700 : 400,
                         lineHeight:1.4,
-                        display:'flex', alignItems:'center', gap:'6px',
+                        display:'flex', alignItems:'center', gap:'5px',
                       }}
                     >
                       {active && (
                         <motion.span
-                          animate={{ opacity:[1,0.3,1] }}
-                          transition={{ duration:0.8, repeat:Infinity }}
-                          style={{ color:palette.violetLight, fontSize:'8px' }}
+                          animate={{opacity:[1,.3,1]}}
+                          transition={{duration:.9, repeat:Infinity}}
+                          style={{color:T.violetHi, fontSize:'7px', flexShrink:0}}
                         >▶</motion.span>
                       )}
-                      <span style={{ marginLeft: active ? 0 : '14px' }}>{line.code}</span>
+                      <span style={{marginLeft:active?0:'12px'}}>{line.code}</span>
                     </motion.div>
                   )
                 })}
               </div>
 
-              {/* complexity footer */}
-              <div style={{ borderTop:'1px solid '+palette.border, padding:'10px 14px', display:'flex', justifyContent:'space-between', flexShrink:0 }}>
+              {/* Complexity footer */}
+              <div style={{borderTop:`1px solid ${T.border}`, padding:'9px 14px', display:'flex', justifyContent:'space-between', flexShrink:0}}>
                 {[
-                  { lbl:'Time', val:'O(n log n)', col:palette.violetLight },
-                  { lbl:'Space', val:'O(n)', col:palette.amber },
-                  { lbl:'Stable', val:'Yes', col:palette.green },
+                  {lbl:'Time',  val:'O(n log n)', col:T.violetHi},
+                  {lbl:'Space', val:'O(n)',        col:T.amber},
+                  {lbl:'Stable',val:'Yes',         col:T.green},
                 ].map(({lbl,val,col})=>(
-                  <div key={lbl} style={{ textAlign:'center' }}>
-                    <p style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color:palette.textDim, marginBottom:'2px', letterSpacing:'1px' }}>{lbl.toUpperCase()}</p>
-                    <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'12px', color:col, margin:0 }}>{val}</p>
+                  <div key={lbl} style={{textAlign:'center'}}>
+                    <p style={{fontFamily:T.mono, fontSize:'7px', color:T.textDim, marginBottom:'2px', letterSpacing:'0.1em'}}>{lbl.toUpperCase()}</p>
+                    <p style={{fontFamily:T.mono, fontWeight:700, fontSize:'clamp(10px,1.2vw,12px)', color:col, margin:0}}>{val}</p>
                   </div>
                 ))}
               </div>
-            </div>
+            </Card>
 
           </div>
         </div>
