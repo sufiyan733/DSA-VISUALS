@@ -13,8 +13,15 @@ const ROUTES = {
   queue:          "/queue",
   "hash-map":     "/hash-map",
   "hash-set":     "/hash-set",
-  tree:           "/tree-explaination",
-  graph:          "/graph-explaination",
+ "binary-tree":  "/tree-explaination",
+  "bst":          "/tree-explaination",
+  "avl":          "/tree-explaination",
+  "heap":         "/tree-explaination",
+  "trie":         "/tree-explaination",
+  graph:          "/graph",
+  "graph":        "/graph",
+  "adj-list":     "/graph",
+  "adj-matrix":   "/graph",
   bubble:         "/bubble-sort",
   insertion:      "/insertion-sort",
   merge:          "/merge-sort",
@@ -35,6 +42,12 @@ const ROUTES = {
   lis:            "/lis",
 };
 
+// Group-level navigation routes (clicking the group header goes here)
+const GROUP_ROUTES = {
+  Trees:  "/tree-explaination",
+  Graphs: "/graph-explaination",
+};
+
 const NAV = [
   {
     id: "ds", label: "Data Structures", icon: "⬡",
@@ -53,9 +66,28 @@ const NAV = [
       },
       {
         label: "Non-Linear", icon: "⑂", color: "#a78bfa",
-        items: [
-          { id: "tree",  label: "Tree",  icon: "⑂", complexity: "O(log n)", tag: "Mid"  },
-          { id: "graph", label: "Graph", icon: "◎", complexity: "O(V+E)",  tag: "Hard" },
+        items: [],           // visual separator — items live in sub-groups below
+        subGroups: [
+          {
+            label: "Trees", icon: "⑂", color: "#a78bfa",
+            groupRoute: GROUP_ROUTES.Trees,
+            items: [
+              { id: "binary-tree", label: "Binary Tree", icon: "⑂",  complexity: "O(log n)", tag: "Mid"  },
+              { id: "bst",         label: "BST",         icon: "⑂",  complexity: "O(log n)", tag: "Mid"  },
+              { id: "avl",         label: "AVL Tree",    icon: "⑂",  complexity: "O(log n)", tag: "Hard" },
+              { id: "heap",        label: "Heap",        icon: "△",  complexity: "O(log n)", tag: "Mid"  },
+              { id: "trie",        label: "Trie",        icon: "⑂",  complexity: "O(m)",     tag: "Hard" },
+            ],
+          },
+          {
+            label: "Graphs", icon: "◎", color: "#c084fc",
+            groupRoute: GROUP_ROUTES.Graphs,
+            items: [
+              { id: "graph",      label: "Graph",       icon: "◎", complexity: "O(V+E)", tag: "Hard" },
+              { id: "adj-list",   label: "Adj. List",   icon: "≡",  complexity: "O(V+E)", tag: "Mid"  },
+              { id: "adj-matrix", label: "Adj. Matrix", icon: "⊞",  complexity: "O(V²)",  tag: "Mid"  },
+            ],
+          },
         ],
       },
     ],
@@ -118,7 +150,12 @@ const TAG_STYLE = {
 function getSectionForPath(pathname) {
   for (const section of NAV) {
     for (const group of section.groups) {
-      if ((group.items || []).some(it => ROUTES[it.id] === pathname)) return section.id;
+      const directMatch = group.items?.some(it => ROUTES[it.id] === pathname);
+      if (directMatch) return section.id;
+      if (group.subGroups) {
+        const subMatch = group.subGroups.some(sg => sg.items.some(it => ROUTES[it.id] === pathname));
+        if (subMatch) return section.id;
+      }
     }
   }
   return "ds";
@@ -131,8 +168,20 @@ function globalSearch(query) {
   for (const section of NAV) {
     const matchedGroups = [];
     for (const group of section.groups) {
-      const items = (group.items || []).filter(it => it.label.toLowerCase().includes(q));
-      if (items.length) matchedGroups.push({ ...group, items });
+      // Direct items
+      const directItems = (group.items || []).filter(it => it.label.toLowerCase().includes(q));
+      // SubGroup items
+      let flatSubItems = [];
+      if (group.subGroups) {
+        group.subGroups.forEach(sg => {
+          const sgItems = sg.items.filter(it => it.label.toLowerCase().includes(q));
+          if (sgItems.length) {
+            flatSubItems = [...flatSubItems, ...sgItems.map(it => ({ ...it, _subGroupColor: sg.color, _subGroupLabel: sg.label }))];
+          }
+        });
+      }
+      const allItems = [...directItems, ...flatSubItems];
+      if (allItems.length) matchedGroups.push({ ...group, items: allItems, subGroups: undefined });
     }
     if (matchedGroups.length) results.push({ ...section, groups: matchedGroups });
   }
@@ -218,6 +267,9 @@ export default function Sidebar() {
     NAV.forEach(sec =>
       sec.groups.forEach((_, i) => { init[`${sec.id}-${i}`] = sec.id === activeSection; })
     );
+    // Non-linear sub-groups default open
+    init["ds-nonlinear-Trees"]  = true;
+    init["ds-nonlinear-Graphs"] = true;
     return init;
   });
   const [hovItem,       setHovItem]       = useState(null);
@@ -239,7 +291,9 @@ export default function Sidebar() {
     const secData = NAV.find(s => s.id === sec);
     if (!secData) return;
     secData.groups.forEach((g, i) => {
-      if ((g.items || []).some(it => ROUTES[it.id] === pathname))
+      const directMatch = g.items?.some(it => ROUTES[it.id] === pathname);
+      const subMatch = g.subGroups?.some(sg => sg.items.some(it => ROUTES[it.id] === pathname));
+      if (directMatch || subMatch)
         setOpenGroups(p => ({ ...p, [`${sec}-${i}`]: true }));
     });
   }, [pathname]);
@@ -280,6 +334,10 @@ export default function Sidebar() {
     const route = ROUTES[itemId];
     if (route) router.push(route);
     setMobileOpen(false);
+  }, [router]);
+
+  const navigateGroup = useCallback((groupRoute) => {
+    if (groupRoute) { router.push(groupRoute); setMobileOpen(false); }
   }, [router]);
 
   useEffect(() => {
@@ -323,6 +381,7 @@ export default function Sidebar() {
             const realGi   = NAV.find(s => s.id === sec.id)?.groups.findIndex(g => g.label === group.label) ?? gi;
             const groupKey = `${sec.id}-${realGi}`;
             const isOpen   = isSearching ? true : (openGroups[groupKey] !== false);
+            const hasSubGroups = !isSearching && group.subGroups?.length > 0;
 
             return (
               <div key={group.label} style={{ marginBottom: "4px" }}>
@@ -337,16 +396,80 @@ export default function Sidebar() {
                   <span style={{ width: "5px", height: "5px", borderRadius: "50%", flexShrink: 0, background: isOpen ? group.color : TEXT_DIM, boxShadow: isOpen ? `0 0 8px ${group.color}` : "none", transition: "all 0.2s" }} />
                   <span style={{ fontFamily: MONO, fontSize: "11px", opacity: 0.7, flexShrink: 0 }}>{group.icon}</span>
                   <span style={{ flex: 1, textAlign: "left" }}>{group.label}</span>
+                  {/* Item count — sum across subgroups if present */}
                   <span style={{ fontFamily: MONO, fontSize: "9px", fontWeight: 700, padding: "1px 7px", borderRadius: "5px", background: isOpen ? `${group.color}22` : "rgba(255,255,255,0.05)", color: isOpen ? group.color : TEXT_DIM, border: `1px solid ${isOpen ? group.color + "30" : "rgba(255,255,255,0.07)"}`, transition: "all 0.2s" }}>
-                    {(group.items || []).length}
+                    {hasSubGroups
+                      ? group.subGroups.reduce((s, sg) => s + sg.items.length, 0)
+                      : (group.items || []).length}
                   </span>
                   {!isSearching && (
                     <span style={{ fontSize: "9px", color: isOpen ? group.color : TEXT_DIM, transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s cubic-bezier(0.22,1,0.36,1), color 0.2s", flexShrink: 0 }}>▼</span>
                   )}
                 </button>
 
-                {/* ── ITEMS ── */}
-                {isOpen && (group.items || []).length > 0 && (
+                {/* ── EXPANDED: direct items (e.g. Linear) ── */}
+                {isOpen && !hasSubGroups && (group.items || []).length > 0 && (
+                  <div className="vs-group-open" style={{ marginLeft: "16px", paddingLeft: "10px", borderLeft: `1px solid ${group.color}18`, marginTop: "3px" }}>
+                    {(group.items || []).map((item, idx) => (
+                      <ItemRow key={item.id} item={item} idx={idx} groupColor={group.color} {...itemRowProps} />
+                    ))}
+                  </div>
+                )}
+
+                {/* ── EXPANDED: sub-groups (Non-Linear → Trees / Graphs) ── */}
+                {isOpen && hasSubGroups && (
+                  <div className="vs-group-open" style={{ marginLeft: "8px", marginTop: "3px", display: "flex", flexDirection: "column", gap: "3px" }}>
+                    {group.subGroups.map((sg) => {
+                      const sgKey  = `${sec.id}-nonlinear-${sg.label}`;
+                      const sgOpen = openGroups[sgKey] !== false;
+
+                      return (
+                        <div key={sg.label}>
+                          {/* Sub-group header — clicking the label area navigates to group route */}
+                          <div style={{ display: "flex", alignItems: "center", gap: "0", borderRadius: "9px", overflow: "hidden", background: sgOpen ? `${sg.color}0a` : "transparent", border: `1px solid ${sgOpen ? sg.color + "28" : "transparent"}`, transition: "all 0.2s", marginBottom: "2px" }}>
+                            {/* Chevron toggle */}
+                            <button
+                              onClick={() => toggleGroup(sgKey)}
+                              style={{ padding: "8px 6px 8px 10px", background: "none", border: "none", cursor: "pointer", color: sgOpen ? sg.color : TEXT_DIM, fontSize: "9px", transition: "color 0.18s", transform: sgOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.22s cubic-bezier(0.22,1,0.36,1), color 0.18s", flexShrink: 0, WebkitTapHighlightColor: "transparent" }}>
+                              ▼
+                            </button>
+
+                            {/* Clickable label → group route */}
+                            <button
+                              onClick={() => navigateGroup(sg.groupRoute)}
+                              style={{ flex: 1, display: "flex", alignItems: "center", gap: "7px", padding: "8px 10px 8px 2px", background: "none", border: "none", cursor: sg.groupRoute ? "pointer" : "default", color: sgOpen ? sg.color : TEXT_DIM, fontFamily: SANS, fontSize: "11px", fontWeight: 700, letterSpacing: "0.03em", transition: "color 0.18s", textAlign: "left", WebkitTapHighlightColor: "transparent" }}
+                              onMouseEnter={e => { if (sg.groupRoute) e.currentTarget.style.color = sg.color; }}
+                              onMouseLeave={e => { e.currentTarget.style.color = sgOpen ? sg.color : TEXT_DIM; }}
+                              title={sg.groupRoute ? `Go to ${sg.label} overview` : undefined}
+                            >
+                              <span style={{ fontFamily: MONO, fontSize: "11px", opacity: 0.7 }}>{sg.icon}</span>
+                              <span style={{ flex: 1 }}>{sg.label}</span>
+                              {/* "→" hint that it's navigable */}
+                              {sg.groupRoute && (
+                                <span style={{ fontSize: "10px", opacity: 0.55, fontFamily: MONO, marginRight: "2px" }}>↗</span>
+                              )}
+                              <span style={{ fontFamily: MONO, fontSize: "9px", fontWeight: 700, padding: "1px 6px", borderRadius: "5px", background: sgOpen ? `${sg.color}22` : "rgba(255,255,255,0.05)", color: sgOpen ? sg.color : TEXT_DIM, border: `1px solid ${sgOpen ? sg.color + "30" : "rgba(255,255,255,0.07)"}` }}>
+                                {sg.items.length}
+                              </span>
+                            </button>
+                          </div>
+
+                          {/* Sub-group items */}
+                          {sgOpen && (
+                            <div className="vs-group-open" style={{ marginLeft: "20px", paddingLeft: "10px", borderLeft: `1px solid ${sg.color}18`, marginTop: "2px" }}>
+                              {sg.items.map((item, idx) => (
+                                <ItemRow key={item.id} item={item} idx={idx} groupColor={sg.color} {...itemRowProps} />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* ── SEARCH: flat items (may have _subGroupColor) ── */}
+                {isSearching && isOpen && (group.items || []).length > 0 && (
                   <div className="vs-group-open" style={{ marginLeft: "16px", paddingLeft: "10px", borderLeft: `1px solid ${group.color}18`, marginTop: "3px" }}>
                     {(group.items || []).map((item, idx) => (
                       <ItemRow key={item.id} item={item} idx={idx} groupColor={group.color} {...itemRowProps} />
@@ -592,7 +715,10 @@ export default function Sidebar() {
                 <span style={{ fontFamily: SANS, fontSize: "10px", fontWeight: 700, color: TEXT_SEC, letterSpacing: "0.1em", textTransform: "uppercase" }}>{section.label}</span>
               </div>
               <span style={{ fontFamily: MONO, fontSize: "9px", color: TEXT_DIM, background: "rgba(255,255,255,0.04)", padding: "2px 8px", borderRadius: "6px", border: `1px solid ${BORDER}` }}>
-                {section.groups.reduce((a, g) => a + (g.items || []).length, 0)} topics
+                {section.groups.reduce((a, g) => {
+                  if (g.subGroups) return a + g.subGroups.reduce((b, sg) => b + sg.items.length, 0);
+                  return a + (g.items || []).length;
+                }, 0)} topics
               </span>
             </div>
           )}
