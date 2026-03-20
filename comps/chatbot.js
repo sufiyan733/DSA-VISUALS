@@ -71,6 +71,39 @@
 // ];
 
 // // ─────────────────────────────────────────────────────────────────────────────
+// // PREMIUM VOICE CATALOG — ordered by quality
+// // ─────────────────────────────────────────────────────────────────────────────
+// const PREMIUM_VOICE_PRIORITY = [
+//   // Microsoft Neural (highest quality)
+//   "Microsoft Aria Online (Natural) - English (United States)",
+//   "Microsoft Jenny Online (Natural) - English (United States)",
+//   "Microsoft Guy Online (Natural) - English (United States)",
+//   "Microsoft Ana Online (Natural) - English (United States)",
+//   "Microsoft Emma Online (Natural) - English (United Kingdom)",
+//   "Microsoft Ryan Online (Natural) - English (United Kingdom)",
+//   "Microsoft Sonia Online (Natural) - English (United Kingdom)",
+//   "Microsoft Neerja Online (Natural) - English (India)",
+//   "Microsoft Prabhat Online (Natural) - English (India)",
+//   // Google Neural
+//   "Google US English",
+//   "Google UK English Female",
+//   "Google UK English Male",
+//   // macOS premium
+//   "Samantha (Enhanced)",
+//   "Alex",
+//   "Karen (Enhanced)",
+//   "Daniel (Enhanced)",
+//   "Moira (Enhanced)",
+//   "Rishi (Enhanced)",
+//   "Tessa (Enhanced)",
+//   // iOS/macOS standard
+//   "Samantha",
+//   "Karen",
+//   "Daniel",
+//   "Moira",
+// ];
+
+// // ─────────────────────────────────────────────────────────────────────────────
 // // ROBOT LOGO
 // // ─────────────────────────────────────────────────────────────────────────────
 // function RobotLogo({ size = 20, animated = false }) {
@@ -166,7 +199,6 @@
 //     <polyline points="20 6 9 17 4 12"/>
 //   </svg>;
 // }
-// // NEW ICONS
 // function IconSearch({ size=14 }) {
 //   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
 //     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -196,6 +228,24 @@
 //     <rect x="4" y="4" width="16" height="16" rx="2"/>
 //   </svg>;
 // }
+// // NEW ICONS
+// function IconBookmark({ size=14 }) {
+//   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+//   </svg>;
+// }
+// function IconPin({ size=14 }) {
+//   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+//     <circle cx="12" cy="10" r="3"/>
+//   </svg>;
+// }
+// function IconTheme({ size=14 }) {
+//   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+//     <circle cx="12" cy="12" r="5"/>
+//     <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+//   </svg>;
+// }
 
 // // ─────────────────────────────────────────────────────────────────────────────
 // // HEADER BUTTON
@@ -211,6 +261,8 @@
 //     search:  { idle:TEXT_DIM, hover:"#34d399", bg:"transparent", hBg:"rgba(52,211,153,0.1)", b:"transparent", hB:"rgba(52,211,153,0.3)" },
 //     export:  { idle:TEXT_DIM, hover:ACCENT3, bg:"transparent", hBg:"rgba(56,189,248,0.1)", b:"transparent", hB:"rgba(56,189,248,0.3)" },
 //     keys:    { idle:TEXT_DIM, hover:ACCENT4, bg:"transparent", hBg:"rgba(165,180,252,0.1)", b:"transparent", hB:"rgba(165,180,252,0.3)" },
+//     bookmark:{ idle:TEXT_DIM, hover:"#f472b6", bg:"transparent", hBg:"rgba(244,114,182,0.1)", b:"transparent", hB:"rgba(244,114,182,0.3)" },
+//     focus:   { idle:TEXT_DIM, hover:"#fbbf24", bg:"transparent", hBg:"rgba(251,191,36,0.1)", b:"transparent", hB:"rgba(251,191,36,0.3)" },
 //   };
 //   const s = styles[variant] || styles.default;
 //   return (
@@ -255,7 +307,7 @@
 // }
 
 // // ─────────────────────────────────────────────────────────────────────────────
-// // CODE BLOCK — FIX: copy button always below on mobile, never overlapping
+// // CODE BLOCK
 // // ─────────────────────────────────────────────────────────────────────────────
 // function CodeBlock({ code }) {
 //   const [copied, setCopied] = useState(false);
@@ -279,7 +331,6 @@
 //       }}>
 //         {code}
 //       </pre>
-//       {/* Copy bar always below — never overlapping code */}
 //       <div style={{
 //         display:"flex", justifyContent:"flex-end",
 //         background:"rgba(0,0,0,0.35)",
@@ -306,7 +357,7 @@
 // }
 
 // // ─────────────────────────────────────────────────────────────────────────────
-// // MARKDOWN RENDERER
+// // MARKDOWN RENDERER — supports streaming (partial content)
 // // ─────────────────────────────────────────────────────────────────────────────
 // function RichText({ content }) {
 //   const parts = content.split(/(```[\s\S]*?```)/g);
@@ -363,38 +414,96 @@
 // }
 
 // // ─────────────────────────────────────────────────────────────────────────────
-// // VOICE PICKER MODAL — FIX: premium voices with instant speed change
+// // STREAMING TEXT RENDERER — typewriter effect at natural reading speed
 // // ─────────────────────────────────────────────────────────────────────────────
-// function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeedChange }) {
+// function StreamingMessage({ fullText, onDone }) {
+//   const [displayed, setDisplayed] = useState("");
+//   const idxRef = useRef(0);
+//   const rafRef = useRef(null);
+//   const lastTimeRef = useRef(0);
+
+//   useEffect(() => {
+//     idxRef.current = 0;
+//     setDisplayed("");
+//     lastTimeRef.current = 0;
+
+//     const CHARS_PER_FRAME = 4; // ~240 chars/sec at 60fps — feels natural, not slow
+//     const MIN_INTERVAL = 16;   // 60fps cap
+
+//     const tick = (timestamp) => {
+//       if (timestamp - lastTimeRef.current >= MIN_INTERVAL) {
+//         lastTimeRef.current = timestamp;
+//         const next = Math.min(idxRef.current + CHARS_PER_FRAME, fullText.length);
+//         idxRef.current = next;
+//         setDisplayed(fullText.slice(0, next));
+//         if (next >= fullText.length) {
+//           onDone?.();
+//           return;
+//         }
+//       }
+//       rafRef.current = requestAnimationFrame(tick);
+//     };
+
+//     rafRef.current = requestAnimationFrame(tick);
+//     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+//   }, [fullText]);
+
+//   return <RichText content={displayed}/>;
+// }
+
+// // ─────────────────────────────────────────────────────────────────────────────
+// // VOICE PICKER MODAL — fixed: premium voices listed, speed works instantly
+// // ─────────────────────────────────────────────────────────────────────────────
+// function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeedChange, onTestVoice }) {
 //   const [availableVoices, setAvailableVoices] = useState([]);
+//   const [testingIdx, setTestingIdx] = useState(null);
 
 //   useEffect(() => {
 //     const load = () => {
 //       const all = window.speechSynthesis?.getVoices() || [];
-//       // Prefer premium/natural voices, filter English
-//       const preferred = [
-//         "Google US English",
-//         "Google UK English Female",
-//         "Google UK English Male",
-//         "Microsoft Aria Online (Natural) - English (United States)",
-//         "Microsoft Guy Online (Natural) - English (United States)",
-//         "Microsoft Jenny Online (Natural) - English (United States)",
-//         "Samantha",
-//         "Alex",
-//         "Karen",
-//         "Daniel",
-//       ];
 //       const enVoices = all.filter(v => v.lang.startsWith("en"));
+
+//       // Sort: premium first, then by quality signals
+//       const isPremium = (v) =>
+//         v.name.toLowerCase().includes("natural") ||
+//         v.name.toLowerCase().includes("neural") ||
+//         v.name.toLowerCase().includes("online") ||
+//         v.name.toLowerCase().includes("enhanced");
+
+//       const isGoogle = (v) => v.name.toLowerCase().includes("google");
+//       const isMicrosoft = (v) => v.name.toLowerCase().includes("microsoft");
+
 //       const sorted = [
-//         ...enVoices.filter(v => preferred.some(p => v.name.includes(p.split(" ")[0]) || v.name === p)),
-//         ...enVoices.filter(v => !preferred.some(p => v.name.includes(p.split(" ")[0]) || v.name === p)),
-//       ].slice(0, 12);
-//       setAvailableVoices(sorted.length ? sorted : enVoices.slice(0, 12));
+//         ...enVoices.filter(v => isPremium(v)),
+//         ...enVoices.filter(v => !isPremium(v) && (isGoogle(v) || isMicrosoft(v))),
+//         ...enVoices.filter(v => !isPremium(v) && !isGoogle(v) && !isMicrosoft(v)),
+//       ].slice(0, 16);
+
+//       setAvailableVoices(sorted.length ? sorted : enVoices.slice(0, 16));
 //     };
 //     load();
 //     window.speechSynthesis?.addEventListener("voiceschanged", load);
 //     return () => window.speechSynthesis?.removeEventListener("voiceschanged", load);
 //   }, []);
+
+//   const testVoice = (v, idx) => {
+//     setTestingIdx(idx);
+//     window.speechSynthesis?.cancel();
+//     const utt = new SpeechSynthesisUtterance("Hello! I am ready to explain algorithms.");
+//     utt.voice = v;
+//     utt.rate = voiceSpeed;
+//     utt.onend = () => setTestingIdx(null);
+//     utt.onerror = () => setTestingIdx(null);
+//     window.speechSynthesis?.speak(utt);
+//   };
+
+//   const getVoiceQuality = (v) => {
+//     if (v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("neural")) return "NEURAL";
+//     if (v.name.toLowerCase().includes("enhanced")) return "ENHANCED";
+//     if (v.name.toLowerCase().includes("online")) return "ONLINE";
+//     if (v.name.toLowerCase().includes("google")) return "GOOGLE";
+//     return null;
+//   };
 
 //   return (
 //     <div style={{
@@ -406,7 +515,7 @@
 //       <div style={{
 //         background:"linear-gradient(145deg,rgba(14,17,35,0.98) 0%,rgba(8,11,24,0.99) 100%)",
 //         border:"1px solid rgba(56,189,248,0.25)", borderRadius:"20px",
-//         padding:"26px 22px", width:"min(420px,calc(100vw - 28px))",
+//         padding:"26px 22px", width:"min(440px,calc(100vw - 28px))",
 //         boxShadow:"0 32px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.07)",
 //         position:"relative", maxHeight:"85vh", overflowY:"auto",
 //       }}>
@@ -423,11 +532,11 @@
 //             Voice & Speed
 //           </div>
 //           <div style={{ fontFamily:SANS, fontSize:"11.5px", color:TEXT_DIM }}>
-//             Choose a premium voice and reading speed
+//             Choose a premium voice · click to preview
 //           </div>
 //         </div>
 
-//         {/* Speed slider */}
+//         {/* Speed */}
 //         <div style={{
 //           marginBottom:"18px", padding:"12px 14px", borderRadius:"10px",
 //           background:"rgba(56,189,248,0.06)", border:"1px solid rgba(56,189,248,0.15)",
@@ -452,9 +561,8 @@
 //           </div>
 //         </div>
 
-//         {/* Voice list */}
 //         <div style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_DIM, letterSpacing:"0.08em", marginBottom:"10px" }}>
-//           AVAILABLE VOICES
+//           AVAILABLE VOICES ({availableVoices.length} found)
 //         </div>
 //         <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
 //           {availableVoices.length === 0 && (
@@ -463,44 +571,61 @@
 //             </div>
 //           )}
 //           {availableVoices.map((v, i) => {
-//             const isOnline = v.name.toLowerCase().includes("online") || v.name.toLowerCase().includes("natural") || v.name.toLowerCase().includes("neural");
+//             const quality = getVoiceQuality(v);
 //             const isSel = currentVoice?.name === v.name;
+//             const isTesting = testingIdx === i;
+//             const qualityColors = {
+//               NEURAL: "#34d399", ENHANCED: ACCENT3, ONLINE: ACCENT4, GOOGLE: "#f472b6"
+//             };
 //             return (
-//               <button key={i} onClick={()=> onSelect(v)} style={{
-//                 display:"flex", alignItems:"center", gap:"10px",
+//               <div key={i} style={{
+//                 display:"flex", alignItems:"center", gap:"8px",
 //                 padding:"10px 12px", borderRadius:"10px",
 //                 background: isSel ? "rgba(56,189,248,0.12)" : "rgba(255,255,255,0.02)",
 //                 border:`1px solid ${isSel ? "rgba(56,189,248,0.4)" : "rgba(255,255,255,0.05)"}`,
-//                 cursor:"pointer", outline:"none", textAlign:"left",
 //                 transition:"all 0.15s",
-//               }}
-//                 onMouseEnter={e=>{ if(!isSel){ e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.1)"; }}}
-//                 onMouseLeave={e=>{ if(!isSel){ e.currentTarget.style.background="rgba(255,255,255,0.02)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.05)"; }}}
-//               >
-//                 <div style={{
-//                   width:"28px", height:"28px", borderRadius:"8px", flexShrink:0,
-//                   background: isSel ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.04)",
-//                   display:"flex", alignItems:"center", justifyContent:"center",
-//                   color: isSel ? ACCENT3 : TEXT_DIM,
-//                 }}><IconVolume size={13}/></div>
-//                 <div style={{ flex:1, minWidth:0 }}>
-//                   <div style={{ fontFamily:SANS, fontSize:"12px", color:isSel?TEXT_PRI:TEXT_SEC, fontWeight:600,
-//                     overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-//                     {v.name}
+//               }}>
+//                 <button onClick={()=> onSelect(v)} style={{
+//                   display:"flex", alignItems:"center", gap:"10px",
+//                   flex:1, background:"none", border:"none",
+//                   cursor:"pointer", outline:"none", textAlign:"left",
+//                 }}>
+//                   <div style={{
+//                     width:"28px", height:"28px", borderRadius:"8px", flexShrink:0,
+//                     background: isSel ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.04)",
+//                     display:"flex", alignItems:"center", justifyContent:"center",
+//                     color: isSel ? ACCENT3 : TEXT_DIM,
+//                   }}><IconVolume size={13}/></div>
+//                   <div style={{ flex:1, minWidth:0 }}>
+//                     <div style={{ fontFamily:SANS, fontSize:"12px", color:isSel?TEXT_PRI:TEXT_SEC, fontWeight:600,
+//                       overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
+//                       {v.name}
+//                     </div>
+//                     <div style={{ display:"flex", gap:"5px", alignItems:"center", marginTop:"2px", flexWrap:"wrap" }}>
+//                       <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM }}>{v.lang}</span>
+//                       {quality && (
+//                         <span style={{
+//                           fontFamily:MONO, fontSize:"7px", color:qualityColors[quality],
+//                           background:`${qualityColors[quality]}18`, border:`1px solid ${qualityColors[quality]}35`,
+//                           borderRadius:"4px", padding:"1px 5px", letterSpacing:"0.06em",
+//                         }}>{quality}</span>
+//                       )}
+//                     </div>
 //                   </div>
-//                   <div style={{ display:"flex", gap:"5px", alignItems:"center", marginTop:"2px" }}>
-//                     <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM }}>{v.lang}</span>
-//                     {isOnline && (
-//                       <span style={{
-//                         fontFamily:MONO, fontSize:"7px", color:"#34d399",
-//                         background:"rgba(52,211,153,0.12)", border:"1px solid rgba(52,211,153,0.25)",
-//                         borderRadius:"4px", padding:"1px 5px", letterSpacing:"0.06em",
-//                       }}>PREMIUM</span>
-//                     )}
-//                   </div>
-//                 </div>
-//                 {isSel && <div style={{ width:"7px", height:"7px", borderRadius:"50%", background:ACCENT3, flexShrink:0 }}/>}
-//               </button>
+//                   {isSel && <div style={{ width:"7px", height:"7px", borderRadius:"50%", background:ACCENT3, flexShrink:0 }}/>}
+//                 </button>
+//                 {/* Preview button */}
+//                 <button onClick={()=> testVoice(v, i)} style={{
+//                   width:"28px", height:"28px", borderRadius:"7px", flexShrink:0,
+//                   background: isTesting ? "rgba(52,211,153,0.15)" : "rgba(255,255,255,0.04)",
+//                   border:`1px solid ${isTesting ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.06)"}`,
+//                   color: isTesting ? "#34d399" : TEXT_DIM,
+//                   cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
+//                   outline:"none", transition:"all 0.15s",
+//                 }} title="Preview voice">
+//                   {isTesting ? <IconStop size={10}/> : <IconVolume size={11}/>}
+//                 </button>
+//               </div>
 //             );
 //           })}
 //         </div>
@@ -510,26 +635,126 @@
 // }
 
 // // ─────────────────────────────────────────────────────────────────────────────
-// // SEARCH OVERLAY — search within conversation
+// // BOOKMARKS PANEL
+// // ─────────────────────────────────────────────────────────────────────────────
+// function BookmarksPanel({ bookmarks, messages, onJump, onRemove, onClose }) {
+//   return (
+//     <div style={{
+//       position:"absolute", inset:0, zIndex:13,
+//       background:"rgba(3,7,18,0.9)", backdropFilter:"blur(14px)",
+//       display:"flex", alignItems:"flex-start", justifyContent:"flex-end",
+//       animation:"bot-modal-in 0.22s cubic-bezier(0.22,1,0.36,1)",
+//     }} onClick={e=> e.target===e.currentTarget && onClose()}>
+//       <div style={{
+//         background:"linear-gradient(145deg,rgba(14,17,35,0.99) 0%,rgba(8,11,24,0.99) 100%)",
+//         border:"1px solid rgba(244,114,182,0.2)", borderRadius:"0 0 0 20px",
+//         padding:"20px 18px", width:"min(360px,100vw)",
+//         boxShadow:"-24px 0 60px rgba(0,0,0,0.6)",
+//         height:"100%", overflowY:"auto",
+//       }}>
+//         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"18px" }}>
+//           <div>
+//             <div style={{ fontFamily:DISPLAY, fontSize:"13px", color:TEXT_PRI, fontWeight:700, letterSpacing:"0.04em" }}>
+//               Bookmarks
+//             </div>
+//             <div style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_DIM, marginTop:"3px" }}>
+//               {bookmarks.length} saved
+//             </div>
+//           </div>
+//           <button onClick={onClose} style={{
+//             width:"28px", height:"28px", borderRadius:"8px",
+//             background:"rgba(255,255,255,0.04)", border:`1px solid ${BORDER}`,
+//             color:TEXT_DIM, cursor:"pointer", display:"flex",
+//             alignItems:"center", justifyContent:"center", outline:"none",
+//           }}><IconX size={12}/></button>
+//         </div>
+//         {bookmarks.length === 0 && (
+//           <div style={{ textAlign:"center", padding:"40px 0" }}>
+//             <div style={{ fontSize:"28px", marginBottom:"10px" }}>🔖</div>
+//             <div style={{ fontFamily:SANS, fontSize:"12px", color:TEXT_DIM }}>No bookmarks yet</div>
+//             <div style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_DIM, marginTop:"6px", opacity:0.5 }}>
+//               Click the bookmark icon on any AI message
+//             </div>
+//           </div>
+//         )}
+//         <div style={{ display:"flex", flexDirection:"column", gap:"8px" }}>
+//           {bookmarks.map((idx) => {
+//             const msg = messages[idx];
+//             if (!msg) return null;
+//             return (
+//               <div key={idx} style={{
+//                 padding:"12px 14px", borderRadius:"12px",
+//                 background:"rgba(244,114,182,0.06)", border:"1px solid rgba(244,114,182,0.15)",
+//               }}>
+//                 <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"6px" }}>
+//                   <span style={{ fontFamily:MONO, fontSize:"8px", color:"#f472b6", letterSpacing:"0.06em" }}>
+//                     MSG #{idx+1} · {msg.time}
+//                   </span>
+//                   <div style={{ display:"flex", gap:"4px" }}>
+//                     <button onClick={()=>{ onJump(idx); onClose(); }} style={{
+//                       fontFamily:MONO, fontSize:"8px", color:ACCENT3,
+//                       background:"rgba(56,189,248,0.1)", border:"1px solid rgba(56,189,248,0.25)",
+//                       borderRadius:"5px", padding:"2px 7px", cursor:"pointer", outline:"none",
+//                     }}>JUMP</button>
+//                     <button onClick={()=> onRemove(idx)} style={{
+//                       fontFamily:MONO, fontSize:"8px", color:"#fca5a5",
+//                       background:"rgba(239,68,68,0.08)", border:"1px solid rgba(239,68,68,0.2)",
+//                       borderRadius:"5px", padding:"2px 7px", cursor:"pointer", outline:"none",
+//                     }}>✕</button>
+//                   </div>
+//                 </div>
+//                 <div style={{ fontFamily:SANS, fontSize:"11.5px", color:TEXT_SEC, lineHeight:"1.5",
+//                   overflow:"hidden", display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
+//                   {msg.content.slice(0, 140)}{msg.content.length > 140 ? "…" : ""}
+//                 </div>
+//               </div>
+//             );
+//           })}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// }
+
+// // ─────────────────────────────────────────────────────────────────────────────
+// // FOCUS MODE — minimal distraction-free view
+// // ─────────────────────────────────────────────────────────────────────────────
+// function FocusModeBanner({ onExit }) {
+//   return (
+//     <div style={{
+//       padding:"6px 18px",
+//       background:"rgba(251,191,36,0.06)", borderBottom:"1px solid rgba(251,191,36,0.15)",
+//       display:"flex", alignItems:"center", justifyContent:"space-between",
+//       flexShrink:0, zIndex:2, position:"relative",
+//     }}>
+//       <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+//         <span style={{ width:"6px", height:"6px", borderRadius:"50%", background:"#fbbf24",
+//           boxShadow:"0 0 6px #fbbf24", display:"inline-block" }}/>
+//         <span style={{ fontFamily:MONO, fontSize:"9px", color:"#fbbf24", letterSpacing:"0.08em" }}>
+//           FOCUS MODE — NOTIFICATIONS MUTED
+//         </span>
+//       </div>
+//       <button onClick={onExit} style={{
+//         fontFamily:MONO, fontSize:"8px", color:TEXT_DIM,
+//         background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
+//         borderRadius:"5px", padding:"3px 9px", cursor:"pointer", outline:"none",
+//       }}>EXIT FOCUS</button>
+//     </div>
+//   );
+// }
+
+// // ─────────────────────────────────────────────────────────────────────────────
+// // SEARCH OVERLAY
 // // ─────────────────────────────────────────────────────────────────────────────
 // function SearchOverlay({ messages, onClose, onJump }) {
 //   const [query, setQuery] = useState("");
 //   const inputRef = useRef(null);
-
 //   useEffect(() => { setTimeout(()=> inputRef.current?.focus(), 100); }, []);
 
 //   const results = query.trim().length < 2 ? [] : messages
 //     .map((m, i) => ({ ...m, idx: i }))
 //     .filter(m => m.content.toLowerCase().includes(query.toLowerCase()))
 //     .slice(0, 8);
-
-//   const highlight = (text, q) => {
-//     const idx = text.toLowerCase().indexOf(q.toLowerCase());
-//     if (idx === -1) return text.slice(0, 80) + (text.length>80?"…":"");
-//     const start = Math.max(0, idx - 30);
-//     const snip = text.slice(start, start + 120);
-//     return snip + (text.length > start+120 ? "…" : "");
-//   };
 
 //   return (
 //     <div style={{
@@ -540,7 +765,6 @@
 //       animation:"bot-modal-in 0.2s cubic-bezier(0.22,1,0.36,1)",
 //     }} onClick={e=> e.target===e.currentTarget && onClose()}>
 //       <div style={{ width:"100%", maxWidth:"540px" }}>
-//         {/* Search input */}
 //         <div style={{
 //           display:"flex", alignItems:"center", gap:"10px",
 //           background:"rgba(255,255,255,0.04)",
@@ -557,8 +781,7 @@
 //             placeholder="Search messages…"
 //             style={{
 //               flex:1, background:"none", border:"none", outline:"none",
-//               fontFamily:SANS, fontSize:"14px", color:TEXT_PRI,
-//               caretColor:ACCENT3,
+//               fontFamily:SANS, fontSize:"14px", color:TEXT_PRI, caretColor:ACCENT3,
 //             }}
 //           />
 //           {query && (
@@ -574,8 +797,6 @@
 //             cursor:"pointer", outline:"none", letterSpacing:"0.04em",
 //           }}>ESC</button>
 //         </div>
-
-//         {/* Results */}
 //         <div style={{ display:"flex", flexDirection:"column", gap:"6px" }}>
 //           {query.trim().length >= 2 && results.length === 0 && (
 //             <div style={{ textAlign:"center", fontFamily:SANS, fontSize:"13px", color:TEXT_DIM, padding:"24px 0" }}>
@@ -588,8 +809,7 @@
 //               padding:"12px 14px", borderRadius:"12px",
 //               background:"rgba(255,255,255,0.025)",
 //               border:"1px solid rgba(255,255,255,0.06)",
-//               cursor:"pointer", outline:"none", textAlign:"left",
-//               transition:"all 0.15s",
+//               cursor:"pointer", outline:"none", textAlign:"left", transition:"all 0.15s",
 //             }}
 //               onMouseEnter={e=>{ e.currentTarget.style.background="rgba(109,120,250,0.1)"; e.currentTarget.style.borderColor="rgba(109,120,250,0.3)"; }}
 //               onMouseLeave={e=>{ e.currentTarget.style.background="rgba(255,255,255,0.025)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.06)"; }}
@@ -600,13 +820,12 @@
 //                 display:"flex", alignItems:"center", justifyContent:"center",
 //                 fontFamily:MONO, fontSize:"8px",
 //                 color: m.role==="user" ? ACCENT2 : ACCENT3,
-//                 fontWeight:700, letterSpacing:"0.04em",
-//                 marginTop:"1px",
+//                 fontWeight:700, marginTop:"1px",
 //               }}>{m.role==="user"?"U":"AI"}</div>
 //               <div style={{ flex:1, minWidth:0 }}>
 //                 <div style={{ fontFamily:SANS, fontSize:"12px", color:TEXT_SEC, lineHeight:"1.5",
 //                   overflow:"hidden", display:"-webkit-box", WebkitLineClamp:2, WebkitBoxOrient:"vertical" }}>
-//                   {highlight(m.content, query)}
+//                   {m.content.slice(0, 120)}{m.content.length>120?"…":""}
 //                 </div>
 //                 <div style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, marginTop:"4px" }}>
 //                   {m.time} · msg #{m.idx+1}
@@ -615,7 +834,6 @@
 //             </button>
 //           ))}
 //         </div>
-
 //         {query.trim().length < 2 && (
 //           <div style={{ textAlign:"center", fontFamily:MONO, fontSize:"9px", color:TEXT_DIM, marginTop:"20px", letterSpacing:"0.06em" }}>
 //             TYPE TO SEARCH YOUR CONVERSATION
@@ -631,16 +849,17 @@
 // // ─────────────────────────────────────────────────────────────────────────────
 // function ShortcutsModal({ onClose }) {
 //   const shortcuts = [
-//     { keys:["Enter"],            desc:"Send message" },
-//     { keys:["Shift","Enter"],    desc:"New line in message" },
-//     { keys:["Esc"],              desc:"Close chat / dismiss modal" },
-//     { keys:["Ctrl","K"],         desc:"Search conversation" },
-//     { keys:["Ctrl","Shift","E"], desc:"Export conversation" },
-//     { keys:["Ctrl","Shift","C"], desc:"Clear conversation" },
-//     { keys:["Ctrl","Shift","L"], desc:"Change language" },
-//     { keys:["Ctrl","M"],         desc:"Toggle voice input" },
+//     { keys:["Enter"],              desc:"Send message" },
+//     { keys:["Shift","Enter"],      desc:"New line in message" },
+//     { keys:["Esc"],                desc:"Close chat / dismiss modal" },
+//     { keys:["Ctrl","K"],           desc:"Search conversation" },
+//     { keys:["Ctrl","Shift","E"],   desc:"Export conversation" },
+//     { keys:["Ctrl","Shift","C"],   desc:"Clear conversation" },
+//     { keys:["Ctrl","Shift","L"],   desc:"Change language" },
+//     { keys:["Ctrl","M"],           desc:"Toggle voice input" },
+//     { keys:["Ctrl","Shift","B"],   desc:"Show bookmarks" },
+//     { keys:["Ctrl","Shift","F"],   desc:"Toggle focus mode" },
 //   ];
-
 //   return (
 //     <div style={{
 //       position:"absolute", inset:0, zIndex:14,
@@ -662,16 +881,12 @@
 //           color:TEXT_DIM, cursor:"pointer", display:"flex",
 //           alignItems:"center", justifyContent:"center", outline:"none",
 //         }}><IconX size={12}/></button>
-
 //         <div style={{ marginBottom:"20px" }}>
 //           <div style={{ fontFamily:DISPLAY, fontSize:"15px", color:TEXT_PRI, fontWeight:700, letterSpacing:"0.04em", marginBottom:"5px" }}>
 //             Keyboard Shortcuts
 //           </div>
-//           <div style={{ fontFamily:SANS, fontSize:"11.5px", color:TEXT_DIM }}>
-//             Move faster without lifting your hands
-//           </div>
+//           <div style={{ fontFamily:SANS, fontSize:"11.5px", color:TEXT_DIM }}>Move faster without lifting your hands</div>
 //         </div>
-
 //         <div style={{ display:"flex", flexDirection:"column", gap:"4px" }}>
 //           {shortcuts.map((s, i) => (
 //             <div key={i} style={{
@@ -702,21 +917,16 @@
 // // ─────────────────────────────────────────────────────────────────────────────
 // function exportConversation(messages) {
 //   const lines = ["# VisuoSlayer AI — Conversation Export", `Exported: ${new Date().toLocaleString()}`, "", "---", ""];
-//   messages.forEach((m, i) => {
+//   messages.forEach((m) => {
 //     lines.push(`## [${m.time}] ${m.role === "user" ? "You" : "VisuoSlayer AI"}`);
-//     lines.push("");
-//     lines.push(m.content);
-//     lines.push("");
-//     lines.push("---");
-//     lines.push("");
+//     lines.push(""); lines.push(m.content); lines.push(""); lines.push("---"); lines.push("");
 //   });
 //   const blob = new Blob([lines.join("\n")], { type:"text/markdown" });
 //   const url  = URL.createObjectURL(blob);
 //   const a    = document.createElement("a");
 //   a.href = url; a.download = `vsai-conversation-${Date.now()}.md`;
 //   document.body.appendChild(a); a.click();
-//   document.body.removeChild(a);
-//   URL.revokeObjectURL(url);
+//   document.body.removeChild(a); URL.revokeObjectURL(url);
 // }
 
 // // ─────────────────────────────────────────────────────────────────────────────
@@ -725,15 +935,10 @@
 // function useVoiceInput(onTranscript) {
 //   const [listening, setListening] = useState(false);
 //   const recogRef = useRef(null);
-
 //   const toggle = useCallback(() => {
 //     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 //     if (!SR) { alert("Speech recognition not supported in this browser."); return; }
-//     if (listening) {
-//       recogRef.current?.stop();
-//       setListening(false);
-//       return;
-//     }
+//     if (listening) { recogRef.current?.stop(); setListening(false); return; }
 //     const r = new SR();
 //     recogRef.current = r;
 //     r.continuous = false; r.interimResults = false; r.lang = "en-US";
@@ -746,19 +951,58 @@
 //     };
 //     r.start();
 //   }, [listening, onTranscript]);
-
 //   return { listening, toggle };
 // }
 
 // // ─────────────────────────────────────────────────────────────────────────────
-// // MESSAGE BUBBLE — FIX: speed change takes effect instantly
+// // VOICE ENGINE — centralized, fixes speed-change bug
 // // ─────────────────────────────────────────────────────────────────────────────
-// function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed, onSpeedChange }) {
+// function useVoiceEngine(voiceSpeedRef, selectedVoiceRef) {
+//   const [speakingIdx, setSpeakingIdx] = useState(null);
+//   const uttRef = useRef(null);
+
+//   // FIX: speakText now always reads speed/voice from refs (live values), not stale closure
+//   const speakText = useCallback((text, idx, overrideRate) => {
+//     if (!('speechSynthesis' in window)) return;
+//     window.speechSynthesis.cancel();
+//     setSpeakingIdx(idx);
+//     const clean = text.replace(/```[\s\S]*?```/g,"").replace(/\*\*/g,"").replace(/`/g,"").trim();
+//     const utt = new SpeechSynthesisUtterance(clean);
+//     utt.lang = "en-US";
+//     utt.rate = overrideRate ?? voiceSpeedRef.current;
+//     if (selectedVoiceRef.current) utt.voice = selectedVoiceRef.current;
+//     utt.onend  = () => setSpeakingIdx(null);
+//     utt.onerror = () => setSpeakingIdx(null);
+//     uttRef.current = utt;
+//     window.speechSynthesis.speak(utt);
+//   }, []);
+
+//   const stopSpeak = useCallback(() => {
+//     window.speechSynthesis?.cancel();
+//     setSpeakingIdx(null);
+//   }, []);
+
+//   // FIX: change speed while speaking — cancel and restart immediately
+//   const changeSpeedWhileSpeaking = useCallback((newRate, text, idx) => {
+//     if (speakingIdx === idx) {
+//       window.speechSynthesis.cancel();
+//       setTimeout(() => speakText(text, idx, newRate), 80);
+//     }
+//   }, [speakingIdx, speakText]);
+
+//   return { speakingIdx, speakText, stopSpeak, changeSpeedWhileSpeaking };
+// }
+
+// // ─────────────────────────────────────────────────────────────────────────────
+// // MESSAGE BUBBLE
+// // ─────────────────────────────────────────────────────────────────────────────
+// function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed, onSpeedChange, isBookmarked, onBookmark, isStreaming }) {
 //   const isUser = msg.role === "user";
 //   const isSpeaking = speakingIdx === idx;
 //   const [copiedMsg, setCopiedMsg] = useState(false);
 //   const [showSpeeds, setShowSpeeds] = useState(false);
 //   const speedRef = useRef(null);
+//   const [streamDone, setStreamDone] = useState(!isStreaming);
 
 //   useEffect(() => {
 //     if (!showSpeeds) return;
@@ -767,6 +1011,11 @@
 //     return () => document.removeEventListener("mousedown", fn);
 //   }, [showSpeeds]);
 
+//   // When streaming finishes
+//   useEffect(() => {
+//     if (!isStreaming) setStreamDone(true);
+//   }, [isStreaming]);
+
 //   const copyMsg = () => {
 //     navigator.clipboard?.writeText(msg.content).catch(()=>{});
 //     setCopiedMsg(true);
@@ -774,12 +1023,8 @@
 //   };
 
 //   const handleSpeedChange = (rate) => {
-//     onSpeedChange(rate);
+//     onSpeedChange(rate, msg.content, idx);
 //     setShowSpeeds(false);
-//     // FIX: immediately restart with new speed if currently speaking
-//     if (isSpeaking) {
-//       setTimeout(() => onSpeak(msg.content, idx, rate), 50);
-//     }
 //   };
 
 //   return (
@@ -787,7 +1032,7 @@
 //       display:"flex",
 //       flexDirection: isUser ? "row-reverse" : "row",
 //       alignItems:"flex-start", gap:"10px",
-//       animationDelay:`${idx*0.04}s`,
+//       animationDelay:`${Math.min(idx*0.04, 0.3)}s`,
 //     }}>
 //       {!isUser && (
 //         <div style={{
@@ -803,8 +1048,7 @@
 //       )}
 
 //       <div className="bot-bubble" style={{
-//         maxWidth:"min(90%, 700px)",
-//         width:"fit-content",
+//         maxWidth:"min(90%, 700px)", width:"fit-content",
 //         padding: isUser ? "11px 16px" : "14px 17px",
 //         borderRadius: isUser ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
 //         background: isUser
@@ -820,25 +1064,38 @@
 //           position:"absolute", top:0, left:"12px", right:"12px", height:"1px",
 //           background:`linear-gradient(90deg,transparent,${ACCENT}50,transparent)`,
 //         }}/>}
-//         {isUser && <div style={{
-//           position:"absolute", inset:0, borderRadius:"inherit",
-//           background:"linear-gradient(105deg,transparent 40%,rgba(109,120,250,0.08) 50%,transparent 60%)",
-//           backgroundSize:"200% 100%", animation:"bot-shimmer 4s ease-in-out infinite",
-//         }}/>}
 
 //         {!isUser && (
-//           <div style={{
-//             display:"flex", alignItems:"center", justifyContent:"space-between",
-//             marginBottom:"9px", gap:"8px",
-//           }}>
+//           <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"9px", gap:"8px" }}>
 //             <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
 //               <span style={{ fontFamily:MONO, fontSize:"9px", fontWeight:700, color:ACCENT2, letterSpacing:"0.12em" }}>
 //                 VISUOSLAYER AI
 //               </span>
 //               <div style={{ width:"4px", height:"4px", borderRadius:"50%", background:"#34d399", boxShadow:"0 0 5px #34d399" }}/>
+//               {isStreaming && !streamDone && (
+//                 <span style={{ fontFamily:MONO, fontSize:"8px", color:ACCENT3, animation:"bot-antenna-pulse 1s infinite", letterSpacing:"0.06em" }}>
+//                   GENERATING...
+//                 </span>
+//               )}
 //             </div>
 
 //             <div ref={speedRef} style={{ display:"flex", alignItems:"center", gap:"4px", position:"relative" }}>
+//               {/* Bookmark */}
+//               <button onClick={()=> onBookmark(idx)} style={{
+//                 display:"flex", alignItems:"center",
+//                 background: isBookmarked ? "rgba(244,114,182,0.15)" : "none",
+//                 border:`1px solid ${isBookmarked ? "rgba(244,114,182,0.3)" : "transparent"}`,
+//                 borderRadius:"5px", padding:"3px 5px",
+//                 color: isBookmarked ? "#f472b6" : TEXT_DIM,
+//                 cursor:"pointer", outline:"none", transition:"all 0.18s",
+//               }}
+//                 onMouseEnter={e=>{ if(!isBookmarked){ e.currentTarget.style.color="#f472b6"; e.currentTarget.style.background="rgba(244,114,182,0.08)"; }}}
+//                 onMouseLeave={e=>{ if(!isBookmarked){ e.currentTarget.style.color=TEXT_DIM; e.currentTarget.style.background="none"; }}}
+//                 title={isBookmarked?"Remove bookmark":"Bookmark this response"}
+//               >
+//                 <IconBookmark size={11}/>
+//               </button>
+
 //               <button onClick={copyMsg} style={{
 //                 display:"flex", alignItems:"center", gap:"3px",
 //                 background: copiedMsg ? "rgba(52,211,153,0.15)" : "none",
@@ -846,8 +1103,7 @@
 //                 borderRadius:"5px", padding:"3px 7px",
 //                 fontFamily:MONO, fontSize:"8px",
 //                 color: copiedMsg ? "#34d399" : TEXT_DIM,
-//                 cursor:"pointer", outline:"none", transition:"all 0.18s",
-//                 letterSpacing:"0.04em",
+//                 cursor:"pointer", outline:"none", transition:"all 0.18s", letterSpacing:"0.04em",
 //               }}
 //                 onMouseEnter={e=>{ if(!copiedMsg){ e.currentTarget.style.color=TEXT_SEC; e.currentTarget.style.background="rgba(255,255,255,0.05)"; }}}
 //                 onMouseLeave={e=>{ if(!copiedMsg){ e.currentTarget.style.color=TEXT_DIM; e.currentTarget.style.background="none"; }}}
@@ -860,8 +1116,7 @@
 //                   background:"rgba(56,189,248,0.1)", border:"1px solid rgba(56,189,248,0.3)",
 //                   borderRadius:"5px", padding:"2px 7px",
 //                   fontFamily:MONO, fontSize:"8px", color:ACCENT3,
-//                   cursor:"pointer", outline:"none", transition:"all 0.15s",
-//                   letterSpacing:"0.04em",
+//                   cursor:"pointer", outline:"none", transition:"all 0.15s", letterSpacing:"0.04em",
 //                 }}>
 //                   {SPEED_OPTIONS.find(s=>s.rate===voiceSpeed)?.label ?? "1×"}
 //                 </button>
@@ -914,7 +1169,11 @@
 //           color: isUser ? TEXT_PRI : TEXT_SEC,
 //           position:"relative", zIndex:1, fontWeight: isUser ? 500 : 400,
 //         }}>
-//           {isUser ? msg.content : <RichText content={msg.content}/>}
+//           {isUser ? msg.content :
+//             isStreaming && !streamDone ?
+//               <StreamingMessage fullText={msg.content} onDone={()=> setStreamDone(true)}/> :
+//               <RichText content={msg.content}/>
+//           }
 //         </div>
 
 //         <div style={{
@@ -956,9 +1215,6 @@
 //         boxShadow:"0 32px 80px rgba(0,0,0,0.7),inset 0 1px 0 rgba(255,255,255,0.07)",
 //         position:"relative",
 //       }}>
-//         <div style={{ position:"absolute", top:"-40px", left:"50%", transform:"translateX(-50%)",
-//           width:"200px", height:"200px", borderRadius:"50%",
-//           background:"radial-gradient(circle,rgba(109,120,250,0.12) 0%,transparent 70%)", pointerEvents:"none" }}/>
 //         <button onClick={onClose} style={{
 //           position:"absolute", top:"14px", right:"14px",
 //           width:"28px", height:"28px", borderRadius:"8px",
@@ -1074,7 +1330,6 @@
 // function EmptyState({ onSend }) {
 //   const [activeGroup, setActiveGroup] = useState(0);
 //   const group = SUGGESTION_GROUPS[activeGroup];
-
 //   return (
 //     <div style={{
 //       flex:1, display:"flex", flexDirection:"column",
@@ -1118,7 +1373,6 @@
 //           </div>
 //         </div>
 //       </div>
-
 //       <div style={{
 //         display:"flex", gap:"7px", marginBottom:"16px",
 //         width:"100%", maxWidth:"500px",
@@ -1140,7 +1394,6 @@
 //           >{g.group.toUpperCase()}</button>
 //         ))}
 //       </div>
-
 //       <div style={{ display:"flex", flexDirection:"column", gap:"9px", width:"100%", maxWidth:"500px", padding:"0 4px" }}>
 //         {group.items.map((s, i) => (
 //           <button key={`${activeGroup}-${i}`} className="bot-suggestion"
@@ -1174,7 +1427,6 @@
 //           </button>
 //         ))}
 //       </div>
-
 //       <div style={{
 //         marginTop:"22px", display:"flex", alignItems:"center", gap:"12px",
 //         width:"100%", maxWidth:"500px", padding:"0 4px",
@@ -1195,6 +1447,7 @@
 // export default function ChatBot() {
 //   const [open,            setOpen]            = useState(false);
 //   const [messages,        setMessages]        = useState([]);
+//   const [streamingIdx,    setStreamingIdx]    = useState(null); // which msg is streaming
 //   const [input,           setInput]           = useState("");
 //   const [loading,         setLoading]         = useState(false);
 //   const [fabHov,          setFabHov]          = useState(false);
@@ -1209,18 +1462,31 @@
 //   const [showVoiceModal,  setShowVoiceModal]  = useState(false);
 //   const [showSearch,      setShowSearch]      = useState(false);
 //   const [showShortcuts,   setShowShortcuts]   = useState(false);
-//   const [speakingIdx,     setSpeakingIdx]     = useState(null);
+//   const [showBookmarks,   setShowBookmarks]   = useState(false);
+//   const [bookmarks,       setBookmarks]       = useState([]);
+//   const [focusMode,       setFocusMode]       = useState(false);
 //   const [voiceSpeed,      setVoiceSpeed]      = useState(1.0);
 //   const [selectedVoice,   setSelectedVoice]   = useState(null);
 //   const [jumpToIdx,       setJumpToIdx]       = useState(null);
 //   const [exportFlash,     setExportFlash]     = useState(false);
+
+//   // Refs for voice engine (avoid stale closures)
+//   const voiceSpeedRef    = useRef(1.0);
+//   const selectedVoiceRef = useRef(null);
+
+//   // Keep refs in sync
+//   useEffect(() => { voiceSpeedRef.current = voiceSpeed; }, [voiceSpeed]);
+//   useEffect(() => { selectedVoiceRef.current = selectedVoice; }, [selectedVoice]);
 
 //   const messagesEndRef = useRef(null);
 //   const inputRef       = useRef(null);
 //   const textareaRef    = useRef(null);
 //   const msgRefs        = useRef({});
 
-//   // Voice input hook
+//   // Voice engine
+//   const { speakingIdx, speakText, stopSpeak, changeSpeedWhileSpeaking } = useVoiceEngine(voiceSpeedRef, selectedVoiceRef);
+
+//   // Voice input
 //   const { listening, toggle: toggleVoice } = useVoiceInput((transcript) => {
 //     setInput(prev => (prev ? prev + " " : "") + transcript);
 //     setCharCount(prev => prev + transcript.length + 1);
@@ -1254,7 +1520,6 @@
 //   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior:"smooth" }); }, [messages, loading]);
 //   useEffect(() => { if (open) setTimeout(()=> inputRef.current?.focus(), 350); }, [open]);
 
-//   // Jump to message
 //   useEffect(() => {
 //     if (jumpToIdx !== null && msgRefs.current[jumpToIdx]) {
 //       msgRefs.current[jumpToIdx].scrollIntoView({ behavior:"smooth", block:"center" });
@@ -1269,25 +1534,22 @@
 //         if (showSearch) { setShowSearch(false); return; }
 //         if (showShortcuts) { setShowShortcuts(false); return; }
 //         if (showVoiceModal) { setShowVoiceModal(false); return; }
+//         if (showBookmarks) { setShowBookmarks(false); return; }
 //         if (open) closePanel();
 //       }
 //       if (!open) return;
-//       // Ctrl+K → search
 //       if ((e.ctrlKey||e.metaKey) && e.key==="k") { e.preventDefault(); setShowSearch(true); }
-//       // Ctrl+Shift+E → export
 //       if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key==="E") { e.preventDefault(); handleExport(); }
-//       // Ctrl+Shift+C → clear
 //       if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key==="C") { e.preventDefault(); if(messages.length>0) setShowClearModal(true); }
-//       // Ctrl+Shift+L → language
 //       if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key==="L") { e.preventDefault(); setShowLangModal(true); }
-//       // Ctrl+M → voice input
 //       if ((e.ctrlKey||e.metaKey) && e.key==="m") { e.preventDefault(); toggleVoice(); }
-//       // Ctrl+/ → shortcuts
 //       if ((e.ctrlKey||e.metaKey) && e.key==="/") { e.preventDefault(); setShowShortcuts(true); }
+//       if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key==="B") { e.preventDefault(); setShowBookmarks(v=>!v); }
+//       if ((e.ctrlKey||e.metaKey) && e.shiftKey && e.key==="F") { e.preventDefault(); setFocusMode(v=>!v); }
 //     };
 //     window.addEventListener("keydown", h);
 //     return () => window.removeEventListener("keydown", h);
-//   }, [open, showSearch, showShortcuts, showVoiceModal, messages, toggleVoice]);
+//   }, [open, showSearch, showShortcuts, showVoiceModal, showBookmarks, messages, toggleVoice]);
 
 //   useEffect(() => {
 //     if (textareaRef.current) {
@@ -1307,24 +1569,18 @@
 //     setTimeout(()=> setExportFlash(false), 1500);
 //   };
 
-//   // FIX: speakText accepts optional overrideRate to instantly change speed
-//   const speakText = useCallback((text, idx, overrideRate) => {
-//     if (!('speechSynthesis' in window)) return;
-//     window.speechSynthesis.cancel();
-//     setSpeakingIdx(idx);
-//     const clean = text
-//       .replace(/```[\s\S]*?```/g,"")
-//       .replace(/\*\*/g,"").replace(/`/g,"").trim();
-//     const utt = new SpeechSynthesisUtterance(clean);
-//     utt.lang = "en-US";
-//     utt.rate = overrideRate ?? voiceSpeed;
-//     if (selectedVoice) utt.voice = selectedVoice;
-//     utt.onend  = () => setSpeakingIdx(null);
-//     utt.onerror = () => setSpeakingIdx(null);
-//     window.speechSynthesis.speak(utt);
-//   }, [voiceSpeed, selectedVoice]);
+//   const toggleBookmark = (idx) => {
+//     setBookmarks(prev =>
+//       prev.includes(idx) ? prev.filter(b=>b!==idx) : [...prev, idx]
+//     );
+//   };
 
-//   const stopSpeak = () => { window.speechSynthesis?.cancel(); setSpeakingIdx(null); };
+//   // FIX: speed change handler — if message is currently speaking, restart with new speed
+//   const handleSpeedChange = useCallback((newRate, msgContent, msgIdx) => {
+//     setVoiceSpeed(newRate);
+//     voiceSpeedRef.current = newRate;
+//     changeSpeedWhileSpeaking(newRate, msgContent, msgIdx);
+//   }, [changeSpeedWhileSpeaking]);
 
 //   const sendMessage = useCallback(async (text) => {
 //     const userText = (text ?? input).trim();
@@ -1355,11 +1611,23 @@
 //       });
 //       const data = await res.json();
 //       const reply = data.content ?? data.error ?? "Something went wrong.";
-//       setMessages(prev => [...prev, { role:"assistant", content:reply, time:getTime() }]);
+
+//       // Add message and mark it as streaming
+//       const newIdx = messages.length + 1; // user + assistant
+//       setMessages(prev => {
+//         const next = [...prev, { role:"assistant", content:reply, time:getTime() }];
+//         setStreamingIdx(next.length - 1);
+//         return next;
+//       });
 //     } catch {
 //       setMessages(prev => [...prev, { role:"assistant", content:"Connection error. Please try again.", time:getTime() }]);
 //     } finally { setLoading(false); }
 //   }, [input, messages, loading, userLanguage]);
+
+//   // Clear streaming flag after done (via callback from StreamingMessage)
+//   const handleStreamDone = useCallback((idx) => {
+//     setStreamingIdx(prev => prev === idx ? null : prev);
+//   }, []);
 
 //   const handleKey   = (e) => { if (e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } };
 //   const handleInput = (e) => { setInput(e.target.value); setCharCount(e.target.value.length); };
@@ -1482,16 +1750,12 @@
 //         }
 
 //         .bot-msg-in { animation:bot-msg-in 0.3s cubic-bezier(0.22,1,0.36,1) both; }
-
 //         .bot-scroll { scrollbar-width:thin; scrollbar-color:rgba(109,120,250,0.2) transparent; }
 //         .bot-scroll::-webkit-scrollbar { width:3px; }
 //         .bot-scroll::-webkit-scrollbar-thumb { background:rgba(109,120,250,0.2); border-radius:10px; }
 //         .bot-scroll::-webkit-scrollbar-thumb:hover { background:rgba(109,120,250,0.4); }
 
-//         .bot-suggestion {
-//           -webkit-tap-highlight-color:transparent;
-//           transition:all 0.22s cubic-bezier(0.22,1,0.36,1) !important;
-//         }
+//         .bot-suggestion { -webkit-tap-highlight-color:transparent; transition:all 0.22s cubic-bezier(0.22,1,0.36,1) !important; }
 //         .bot-suggestion:hover  { transform:translateX(5px) translateY(-1px) !important; }
 //         .bot-suggestion:active { transform:scale(0.98) !important; }
 
@@ -1501,27 +1765,20 @@
 
 //         @media (max-width:520px) {
 //           .bot-bubble { max-width:92% !important; }
-//           .bot-header-inner { gap:8px !important; padding:11px 12px !important; }
+//           .bot-header-inner { gap:6px !important; padding:10px 11px !important; }
 //           .bot-title-txt { font-size:12px !important; }
 //           .bot-avatar-wrap { width:32px !important; height:32px !important; border-radius:10px !important; }
 //           .bot-msgs-area { padding:10px 10px 6px !important; gap:11px !important; }
 //           .bot-input-area { padding:8px 10px calc(env(safe-area-inset-bottom,0px)+10px) !important; }
-//           .bot-hbtns { gap:3px !important; }
+//           .bot-hbtns { gap:2px !important; }
 //           .bot-hbtn-wrap > button { width:28px !important; height:28px !important; border-radius:8px !important; }
 //           .bot-send-btn { width:32px !important; height:32px !important; }
-//         }
-//         @media (max-width:360px) {
-//           .bot-header-inner { padding:9px 10px !important; gap:6px !important; }
 //         }
 //       `}</style>
 
 //       {/* ── FAB ── */}
 //       {!open && (
-//         <div style={{
-//           position:"fixed",
-//           bottom:`calc(env(safe-area-inset-bottom,0px) + 22px)`,
-//           right:"22px", zIndex:500,
-//         }}>
+//         <div style={{ position:"fixed", bottom:`calc(env(safe-area-inset-bottom,0px) + 22px)`, right:"22px", zIndex:500 }}>
 //           <div style={{
 //             position:"absolute", inset:"-8px", borderRadius:"24px",
 //             background:`radial-gradient(circle,${GLOW_A} 0%,transparent 70%)`,
@@ -1650,46 +1907,55 @@
 //                   <span style={{ color:TEXT_DIM, fontSize:"8px" }}>·</span>
 //                   <span style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_DIM }}>{messages.length} msgs</span>
 //                 </>}
+//                 {focusMode && <>
+//                   <span style={{ color:TEXT_DIM, fontSize:"8px" }}>·</span>
+//                   <span style={{ fontFamily:MONO, fontSize:"9px", color:"#fbbf24" }}>FOCUS</span>
+//                 </>}
 //               </div>
 //             </div>
 
-//             {/* ── HEADER BUTTONS — 4 new + existing ── */}
-//             <div className="bot-hbtns" style={{ display:"flex", gap:"5px", flexShrink:0, alignItems:"center" }}>
+//             {/* ── HEADER BUTTONS ── */}
+//             <div className="bot-hbtns" style={{ display:"flex", gap:"4px", flexShrink:0, alignItems:"center" }}>
 
-//               {/* Search conversation — NEW */}
+//               {/* Search */}
 //               <div className="bot-hbtn-wrap">
-//                 <HeaderBtn icon={<IconSearch size={14}/>}
-//                   tooltip="Search  (Ctrl+K)"
-//                   onClick={()=> setShowSearch(true)}
-//                   variant="search"
-//                   disabled={!hasMessages}/>
+//                 <HeaderBtn icon={<IconSearch size={14}/>} tooltip="Search  (Ctrl+K)"
+//                   onClick={()=> setShowSearch(true)} variant="search" disabled={!hasMessages}/>
 //               </div>
 
-//               {/* Export — NEW */}
+//               {/* Export */}
 //               <div className="bot-hbtn-wrap">
 //                 <HeaderBtn icon={<IconDownload size={14}/>}
 //                   tooltip={exportFlash ? "Exported!" : "Export  (Ctrl+Shift+E)"}
-//                   onClick={handleExport}
-//                   variant="export"
-//                   disabled={!hasMessages}
-//                   active={exportFlash}/>
+//                   onClick={handleExport} variant="export" disabled={!hasMessages} active={exportFlash}/>
 //               </div>
 
-//               {/* Voice & Speed — NEW (replaces per-message only) */}
+//               {/* Bookmarks — NEW */}
+//               <div className="bot-hbtn-wrap">
+//                 <HeaderBtn icon={<IconBookmark size={14}/>}
+//                   tooltip={`Bookmarks${bookmarks.length>0?" ("+bookmarks.length+")":""}  (Ctrl+Shift+B)`}
+//                   onClick={()=> setShowBookmarks(true)} variant="bookmark"
+//                   active={bookmarks.length > 0}/>
+//               </div>
+
+//               {/* Focus Mode — NEW */}
+//               <div className="bot-hbtn-wrap">
+//                 <HeaderBtn icon={<IconPin size={14}/>}
+//                   tooltip={focusMode ? "Exit focus mode  (Ctrl+Shift+F)" : "Focus mode  (Ctrl+Shift+F)"}
+//                   onClick={()=> setFocusMode(v=>!v)} variant="focus" active={focusMode}/>
+//               </div>
+
+//               {/* Voice */}
 //               <div className="bot-hbtn-wrap">
 //                 <HeaderBtn icon={<IconVolume size={14}/>}
 //                   tooltip={selectedVoice ? `Voice: ${selectedVoice.name.split(" ").slice(0,2).join(" ")}` : "Voice settings"}
-//                   onClick={()=> setShowVoiceModal(true)}
-//                   variant="default"
-//                   active={!!selectedVoice}/>
+//                   onClick={()=> setShowVoiceModal(true)} variant="default" active={!!selectedVoice}/>
 //               </div>
 
-//               {/* Keyboard shortcuts — NEW */}
+//               {/* Shortcuts */}
 //               <div className="bot-hbtn-wrap">
-//                 <HeaderBtn icon={<IconKeyboard size={14}/>}
-//                   tooltip="Shortcuts  (Ctrl+/)"
-//                   onClick={()=> setShowShortcuts(true)}
-//                   variant="keys"/>
+//                 <HeaderBtn icon={<IconKeyboard size={14}/>} tooltip="Shortcuts  (Ctrl+/)"
+//                   onClick={()=> setShowShortcuts(true)} variant="keys"/>
 //               </div>
 
 //               <div style={{ width:"1px", height:"20px", background:"rgba(255,255,255,0.07)", flexShrink:0 }}/>
@@ -1698,8 +1964,7 @@
 //               <div className="bot-hbtn-wrap">
 //                 <HeaderBtn icon={<IconGlobe size={14}/>}
 //                   tooltip={userLanguage?`Language: ${userLanguage}`:"Set language"}
-//                   onClick={()=> setShowLangModal(true)}
-//                   variant="lang" active={!!userLanguage}/>
+//                   onClick={()=> setShowLangModal(true)} variant="lang" active={!!userLanguage}/>
 //               </div>
 
 //               {/* Clear */}
@@ -1719,6 +1984,9 @@
 //             </div>
 //           </div>
 
+//           {/* Focus mode banner */}
+//           {focusMode && <FocusModeBanner onExit={()=> setFocusMode(false)}/>}
+
 //           {/* ── MESSAGES ── */}
 //           <div className="bot-scroll bot-msgs-area" style={{
 //             flex:1, overflowY:"auto",
@@ -1726,20 +1994,26 @@
 //             display:"flex", flexDirection:"column", gap:"14px",
 //             position:"relative", zIndex:1,
 //             WebkitOverflowScrolling:"touch",
+//             // Focus mode: dim everything
+//             filter: focusMode ? "none" : "none",
 //           }}>
 //             {messages.length===0 ? (
 //               <EmptyState onSend={sendMessage}/>
 //             ) : (
 //               <>
 //                 {messages.map((msg, i)=>(
-//                   <div key={i} ref={el=> msgRefs.current[i]=el}>
+//                   <div key={i} ref={el=> msgRefs.current[i]=el}
+//                     style={{ opacity: focusMode && i < messages.length-2 ? 0.4 : 1, transition:"opacity 0.3s" }}>
 //                     <MessageBubble
 //                       msg={msg} idx={i}
 //                       speakingIdx={speakingIdx}
 //                       onSpeak={speakText}
 //                       onStopSpeak={stopSpeak}
 //                       voiceSpeed={voiceSpeed}
-//                       onSpeedChange={setVoiceSpeed}
+//                       onSpeedChange={handleSpeedChange}
+//                       isBookmarked={bookmarks.includes(i)}
+//                       onBookmark={toggleBookmark}
+//                       isStreaming={streamingIdx === i}
 //                     />
 //                   </div>
 //                 ))}
@@ -1818,7 +2092,7 @@
 //                 }}>{charCount}</span>
 //               )}
 
-//               {/* Voice input button — NEW */}
+//               {/* Voice input button */}
 //               <button
 //                 onClick={toggleVoice}
 //                 title={listening?"Stop recording (Ctrl+M)":"Voice input (Ctrl+M)"}
@@ -1883,28 +2157,31 @@
 //           {showClearModal && (
 //             <ClearModal
 //               count={messages.length}
-//               onConfirm={()=>{ setMessages([]); setShowClearModal(false); stopSpeak(); }}
+//               onConfirm={()=>{ setMessages([]); setShowClearModal(false); stopSpeak(); setBookmarks([]); setStreamingIdx(null); }}
 //               onCancel={()=> setShowClearModal(false)}
 //             />
 //           )}
 //           {showVoiceModal && (
 //             <VoicePickerModal
 //               currentVoice={selectedVoice}
-//               onSelect={(v)=>{ setSelectedVoice(v); setShowVoiceModal(false); }}
+//               onSelect={(v)=>{ setSelectedVoice(v); selectedVoiceRef.current=v; setShowVoiceModal(false); }}
 //               onClose={()=> setShowVoiceModal(false)}
 //               voiceSpeed={voiceSpeed}
-//               onSpeedChange={setVoiceSpeed}
+//               onSpeedChange={(rate)=>{ setVoiceSpeed(rate); voiceSpeedRef.current=rate; }}
 //             />
 //           )}
 //           {showSearch && (
-//             <SearchOverlay
-//               messages={messages}
-//               onClose={()=> setShowSearch(false)}
-//               onJump={(idx)=>{ setJumpToIdx(idx); }}
-//             />
+//             <SearchOverlay messages={messages} onClose={()=> setShowSearch(false)}
+//               onJump={(idx)=>{ setJumpToIdx(idx); }}/>
 //           )}
-//           {showShortcuts && (
-//             <ShortcutsModal onClose={()=> setShowShortcuts(false)}/>
+//           {showShortcuts && <ShortcutsModal onClose={()=> setShowShortcuts(false)}/>}
+//           {showBookmarks && (
+//             <BookmarksPanel
+//               bookmarks={bookmarks} messages={messages}
+//               onJump={(idx)=>{ setJumpToIdx(idx); }}
+//               onRemove={(idx)=> setBookmarks(prev=>prev.filter(b=>b!==idx))}
+//               onClose={()=> setShowBookmarks(false)}
+//             />
 //           )}
 //         </div>
 //       )}
@@ -1983,39 +2260,6 @@ const SPEED_OPTIONS = [
   { label: "1.25×", rate: 1.25 },
   { label: "1.5×",  rate: 1.5  },
   { label: "2×",    rate: 2.0  },
-];
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PREMIUM VOICE CATALOG — ordered by quality
-// ─────────────────────────────────────────────────────────────────────────────
-const PREMIUM_VOICE_PRIORITY = [
-  // Microsoft Neural (highest quality)
-  "Microsoft Aria Online (Natural) - English (United States)",
-  "Microsoft Jenny Online (Natural) - English (United States)",
-  "Microsoft Guy Online (Natural) - English (United States)",
-  "Microsoft Ana Online (Natural) - English (United States)",
-  "Microsoft Emma Online (Natural) - English (United Kingdom)",
-  "Microsoft Ryan Online (Natural) - English (United Kingdom)",
-  "Microsoft Sonia Online (Natural) - English (United Kingdom)",
-  "Microsoft Neerja Online (Natural) - English (India)",
-  "Microsoft Prabhat Online (Natural) - English (India)",
-  // Google Neural
-  "Google US English",
-  "Google UK English Female",
-  "Google UK English Male",
-  // macOS premium
-  "Samantha (Enhanced)",
-  "Alex",
-  "Karen (Enhanced)",
-  "Daniel (Enhanced)",
-  "Moira (Enhanced)",
-  "Rishi (Enhanced)",
-  "Tessa (Enhanced)",
-  // iOS/macOS standard
-  "Samantha",
-  "Karen",
-  "Daniel",
-  "Moira",
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -2143,7 +2387,6 @@ function IconStop({ size=14 }) {
     <rect x="4" y="4" width="16" height="16" rx="2"/>
   </svg>;
 }
-// NEW ICONS
 function IconBookmark({ size=14 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
@@ -2153,12 +2396,6 @@ function IconPin({ size=14 }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
     <circle cx="12" cy="10" r="3"/>
-  </svg>;
-}
-function IconTheme({ size=14 }) {
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="5"/>
-    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
   </svg>;
 }
 
@@ -2272,7 +2509,7 @@ function CodeBlock({ code }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MARKDOWN RENDERER — supports streaming (partial content)
+// MARKDOWN RENDERER
 // ─────────────────────────────────────────────────────────────────────────────
 function RichText({ content }) {
   const parts = content.split(/(```[\s\S]*?```)/g);
@@ -2329,9 +2566,9 @@ function RichText({ content }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STREAMING TEXT RENDERER — typewriter effect at natural reading speed
+// STREAMING TEXT RENDERER
 // ─────────────────────────────────────────────────────────────────────────────
-function StreamingMessage({ fullText, onDone }) {
+function StreamingMessage({ fullText, onDone, streamKey }) {
   const [displayed, setDisplayed] = useState("");
   const idxRef = useRef(0);
   const rafRef = useRef(null);
@@ -2342,8 +2579,8 @@ function StreamingMessage({ fullText, onDone }) {
     setDisplayed("");
     lastTimeRef.current = 0;
 
-    const CHARS_PER_FRAME = 4; // ~240 chars/sec at 60fps — feels natural, not slow
-    const MIN_INTERVAL = 16;   // 60fps cap
+    const CHARS_PER_FRAME = 4;
+    const MIN_INTERVAL = 16;
 
     const tick = (timestamp) => {
       if (timestamp - lastTimeRef.current >= MIN_INTERVAL) {
@@ -2361,15 +2598,15 @@ function StreamingMessage({ fullText, onDone }) {
 
     rafRef.current = requestAnimationFrame(tick);
     return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
-  }, [fullText]);
+  }, [fullText, streamKey]);
 
   return <RichText content={displayed}/>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VOICE PICKER MODAL — fixed: premium voices listed, speed works instantly
+// VOICE PICKER MODAL
 // ─────────────────────────────────────────────────────────────────────────────
-function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeedChange, onTestVoice }) {
+function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeedChange }) {
   const [availableVoices, setAvailableVoices] = useState([]);
   const [testingIdx, setTestingIdx] = useState(null);
 
@@ -2377,23 +2614,18 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
     const load = () => {
       const all = window.speechSynthesis?.getVoices() || [];
       const enVoices = all.filter(v => v.lang.startsWith("en"));
-
-      // Sort: premium first, then by quality signals
       const isPremium = (v) =>
         v.name.toLowerCase().includes("natural") ||
         v.name.toLowerCase().includes("neural") ||
         v.name.toLowerCase().includes("online") ||
         v.name.toLowerCase().includes("enhanced");
-
       const isGoogle = (v) => v.name.toLowerCase().includes("google");
       const isMicrosoft = (v) => v.name.toLowerCase().includes("microsoft");
-
       const sorted = [
         ...enVoices.filter(v => isPremium(v)),
         ...enVoices.filter(v => !isPremium(v) && (isGoogle(v) || isMicrosoft(v))),
         ...enVoices.filter(v => !isPremium(v) && !isGoogle(v) && !isMicrosoft(v)),
       ].slice(0, 16);
-
       setAvailableVoices(sorted.length ? sorted : enVoices.slice(0, 16));
     };
     load();
@@ -2405,8 +2637,7 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
     setTestingIdx(idx);
     window.speechSynthesis?.cancel();
     const utt = new SpeechSynthesisUtterance("Hello! I am ready to explain algorithms.");
-    utt.voice = v;
-    utt.rate = voiceSpeed;
+    utt.voice = v; utt.rate = voiceSpeed;
     utt.onend = () => setTestingIdx(null);
     utt.onerror = () => setTestingIdx(null);
     window.speechSynthesis?.speak(utt);
@@ -2441,7 +2672,6 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
           color:TEXT_DIM, cursor:"pointer", display:"flex",
           alignItems:"center", justifyContent:"center", outline:"none",
         }}><IconX size={12}/></button>
-
         <div style={{ textAlign:"center", marginBottom:"20px" }}>
           <div style={{ fontFamily:DISPLAY, fontSize:"15px", color:TEXT_PRI, fontWeight:700, letterSpacing:"0.04em", marginBottom:"5px" }}>
             Voice & Speed
@@ -2450,12 +2680,8 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
             Choose a premium voice · click to preview
           </div>
         </div>
-
-        {/* Speed */}
-        <div style={{
-          marginBottom:"18px", padding:"12px 14px", borderRadius:"10px",
-          background:"rgba(56,189,248,0.06)", border:"1px solid rgba(56,189,248,0.15)",
-        }}>
+        <div style={{ marginBottom:"18px", padding:"12px 14px", borderRadius:"10px",
+          background:"rgba(56,189,248,0.06)", border:"1px solid rgba(56,189,248,0.15)" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"8px" }}>
             <span style={{ fontFamily:MONO, fontSize:"9px", color:ACCENT3, letterSpacing:"0.08em" }}>READING SPEED</span>
             <span style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_PRI, fontWeight:700 }}>
@@ -2475,7 +2701,6 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
             ))}
           </div>
         </div>
-
         <div style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_DIM, letterSpacing:"0.08em", marginBottom:"10px" }}>
           AVAILABLE VOICES ({availableVoices.length} found)
         </div>
@@ -2489,9 +2714,7 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
             const quality = getVoiceQuality(v);
             const isSel = currentVoice?.name === v.name;
             const isTesting = testingIdx === i;
-            const qualityColors = {
-              NEURAL: "#34d399", ENHANCED: ACCENT3, ONLINE: ACCENT4, GOOGLE: "#f472b6"
-            };
+            const qualityColors = { NEURAL:"#34d399", ENHANCED:ACCENT3, ONLINE:ACCENT4, GOOGLE:"#f472b6" };
             return (
               <div key={i} style={{
                 display:"flex", alignItems:"center", gap:"8px",
@@ -2513,9 +2736,7 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
                   }}><IconVolume size={13}/></div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontFamily:SANS, fontSize:"12px", color:isSel?TEXT_PRI:TEXT_SEC, fontWeight:600,
-                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-                      {v.name}
-                    </div>
+                      overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{v.name}</div>
                     <div style={{ display:"flex", gap:"5px", alignItems:"center", marginTop:"2px", flexWrap:"wrap" }}>
                       <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM }}>{v.lang}</span>
                       {quality && (
@@ -2529,7 +2750,6 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
                   </div>
                   {isSel && <div style={{ width:"7px", height:"7px", borderRadius:"50%", background:ACCENT3, flexShrink:0 }}/>}
                 </button>
-                {/* Preview button */}
                 <button onClick={()=> testVoice(v, i)} style={{
                   width:"28px", height:"28px", borderRadius:"7px", flexShrink:0,
                   background: isTesting ? "rgba(52,211,153,0.15)" : "rgba(255,255,255,0.04)",
@@ -2537,7 +2757,7 @@ function VoicePickerModal({ currentVoice, onSelect, onClose, voiceSpeed, onSpeed
                   color: isTesting ? "#34d399" : TEXT_DIM,
                   cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
                   outline:"none", transition:"all 0.15s",
-                }} title="Preview voice">
+                }}>
                   {isTesting ? <IconStop size={10}/> : <IconVolume size={11}/>}
                 </button>
               </div>
@@ -2569,12 +2789,8 @@ function BookmarksPanel({ bookmarks, messages, onJump, onRemove, onClose }) {
       }}>
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:"18px" }}>
           <div>
-            <div style={{ fontFamily:DISPLAY, fontSize:"13px", color:TEXT_PRI, fontWeight:700, letterSpacing:"0.04em" }}>
-              Bookmarks
-            </div>
-            <div style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_DIM, marginTop:"3px" }}>
-              {bookmarks.length} saved
-            </div>
+            <div style={{ fontFamily:DISPLAY, fontSize:"13px", color:TEXT_PRI, fontWeight:700, letterSpacing:"0.04em" }}>Bookmarks</div>
+            <div style={{ fontFamily:MONO, fontSize:"9px", color:TEXT_DIM, marginTop:"3px" }}>{bookmarks.length} saved</div>
           </div>
           <button onClick={onClose} style={{
             width:"28px", height:"28px", borderRadius:"8px",
@@ -2632,7 +2848,7 @@ function BookmarksPanel({ bookmarks, messages, onJump, onRemove, onClose }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// FOCUS MODE — minimal distraction-free view
+// FOCUS MODE BANNER
 // ─────────────────────────────────────────────────────────────────────────────
 function FocusModeBanner({ onExit }) {
   return (
@@ -2665,12 +2881,10 @@ function SearchOverlay({ messages, onClose, onJump }) {
   const [query, setQuery] = useState("");
   const inputRef = useRef(null);
   useEffect(() => { setTimeout(()=> inputRef.current?.focus(), 100); }, []);
-
   const results = query.trim().length < 2 ? [] : messages
     .map((m, i) => ({ ...m, idx: i }))
     .filter(m => m.content.toLowerCase().includes(query.toLowerCase()))
     .slice(0, 8);
-
   return (
     <div style={{
       position:"absolute", inset:0, zIndex:15,
@@ -2690,20 +2904,15 @@ function SearchOverlay({ messages, onClose, onJump }) {
         }}>
           <span style={{ color:TEXT_DIM, flexShrink:0 }}><IconSearch size={15}/></span>
           <input
-            ref={inputRef}
-            value={query}
-            onChange={e=> setQuery(e.target.value)}
+            ref={inputRef} value={query} onChange={e=> setQuery(e.target.value)}
             placeholder="Search messages…"
-            style={{
-              flex:1, background:"none", border:"none", outline:"none",
-              fontFamily:SANS, fontSize:"14px", color:TEXT_PRI, caretColor:ACCENT3,
-            }}
+            style={{ flex:1, background:"none", border:"none", outline:"none",
+              fontFamily:SANS, fontSize:"14px", color:TEXT_PRI, caretColor:ACCENT3 }}
           />
           {query && (
-            <button onClick={()=> setQuery("")} style={{
-              background:"none", border:"none", color:TEXT_DIM,
-              cursor:"pointer", outline:"none", display:"flex", alignItems:"center",
-            }}><IconX size={12}/></button>
+            <button onClick={()=> setQuery("")} style={{ background:"none", border:"none", color:TEXT_DIM, cursor:"pointer", outline:"none", display:"flex", alignItems:"center" }}>
+              <IconX size={12}/>
+            </button>
           )}
           <button onClick={onClose} style={{
             background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)",
@@ -2734,8 +2943,7 @@ function SearchOverlay({ messages, onClose, onJump }) {
                 background: m.role==="user" ? "rgba(109,120,250,0.2)" : "rgba(56,189,248,0.15)",
                 display:"flex", alignItems:"center", justifyContent:"center",
                 fontFamily:MONO, fontSize:"8px",
-                color: m.role==="user" ? ACCENT2 : ACCENT3,
-                fontWeight:700, marginTop:"1px",
+                color: m.role==="user" ? ACCENT2 : ACCENT3, fontWeight:700, marginTop:"1px",
               }}>{m.role==="user"?"U":"AI"}</div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontFamily:SANS, fontSize:"12px", color:TEXT_SEC, lineHeight:"1.5",
@@ -2870,13 +3078,12 @@ function useVoiceInput(onTranscript) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// VOICE ENGINE — centralized, fixes speed-change bug
+// VOICE ENGINE
 // ─────────────────────────────────────────────────────────────────────────────
 function useVoiceEngine(voiceSpeedRef, selectedVoiceRef) {
   const [speakingIdx, setSpeakingIdx] = useState(null);
   const uttRef = useRef(null);
 
-  // FIX: speakText now always reads speed/voice from refs (live values), not stale closure
   const speakText = useCallback((text, idx, overrideRate) => {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
@@ -2897,7 +3104,6 @@ function useVoiceEngine(voiceSpeedRef, selectedVoiceRef) {
     setSpeakingIdx(null);
   }, []);
 
-  // FIX: change speed while speaking — cancel and restart immediately
   const changeSpeedWhileSpeaking = useCallback((newRate, text, idx) => {
     if (speakingIdx === idx) {
       window.speechSynthesis.cancel();
@@ -2909,9 +3115,9 @@ function useVoiceEngine(voiceSpeedRef, selectedVoiceRef) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MESSAGE BUBBLE
+// MESSAGE BUBBLE — enhanced for mobile/desktop layouts
 // ─────────────────────────────────────────────────────────────────────────────
-function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed, onSpeedChange, isBookmarked, onBookmark, isStreaming }) {
+function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed, onSpeedChange, isBookmarked, onBookmark, isStreaming, isMobile }) {
   const isUser = msg.role === "user";
   const isSpeaking = speakingIdx === idx;
   const [copiedMsg, setCopiedMsg] = useState(false);
@@ -2926,7 +3132,6 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
     return () => document.removeEventListener("mousedown", fn);
   }, [showSpeeds]);
 
-  // When streaming finishes
   useEffect(() => {
     if (!isStreaming) setStreamDone(true);
   }, [isStreaming]);
@@ -2942,6 +3147,143 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
     setShowSpeeds(false);
   };
 
+  // ── MOBILE LAYOUT: AI messages go full-width, logo above content ──
+  if (!isUser && isMobile) {
+    return (
+      <div className="bot-msg-in" style={{
+        width:"100%",
+        animationDelay:`${Math.min(idx*0.04, 0.3)}s`,
+      }}>
+        {/* Bot header row */}
+        <div style={{ display:"flex", alignItems:"center", gap:"8px", marginBottom:"8px" }}>
+          <div style={{
+            width:"28px", height:"28px", borderRadius:"9px", flexShrink:0,
+            background:"linear-gradient(135deg,#1e1b4b 0%,#0f172a 100%)",
+            display:"flex", alignItems:"center", justifyContent:"center",
+            border:"1px solid rgba(109,120,250,0.35)",
+            boxShadow:`0 4px 16px ${GLOW_A},inset 0 1px 0 rgba(255,255,255,0.1)`,
+          }}>
+            <RobotLogo size={17}/>
+          </div>
+          <div style={{ display:"flex", alignItems:"center", gap:"6px" }}>
+            <span style={{ fontFamily:MONO, fontSize:"9px", fontWeight:700, color:ACCENT2, letterSpacing:"0.12em" }}>
+              VISUOSLAYER AI
+            </span>
+            <div style={{ width:"4px", height:"4px", borderRadius:"50%", background:"#34d399", boxShadow:"0 0 5px #34d399" }}/>
+            {isStreaming && !streamDone && (
+              <span style={{ fontFamily:MONO, fontSize:"8px", color:ACCENT3, animation:"bot-antenna-pulse 1s infinite", letterSpacing:"0.06em" }}>
+                GENERATING...
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Full-width bubble */}
+        <div className="bot-bubble-mobile" style={{
+          width:"100%",
+          padding:"14px 16px",
+          borderRadius:"4px 16px 16px 16px",
+          background:"linear-gradient(145deg,rgba(255,255,255,0.035) 0%,rgba(30,27,75,0.2) 100%)",
+          border:"1px solid rgba(255,255,255,0.06)",
+          boxShadow:"0 2px 12px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.03)",
+          position:"relative", overflow:"hidden",
+        }}>
+          <div style={{
+            position:"absolute", top:0, left:"12px", right:"12px", height:"1px",
+            background:`linear-gradient(90deg,transparent,${ACCENT}50,transparent)`,
+          }}/>
+
+          <div style={{
+            fontFamily:SANS, fontSize:"13.5px", lineHeight:"1.72",
+            color:TEXT_SEC, position:"relative", zIndex:1, fontWeight:400,
+          }}>
+            {isStreaming && !streamDone ?
+              <StreamingMessage fullText={msg.content} onDone={()=> setStreamDone(true)} streamKey={msg.streamKey}/> :
+              <RichText content={msg.content}/>
+            }
+          </div>
+
+          {/* Action row */}
+          <div ref={speedRef} style={{
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            marginTop:"10px", paddingTop:"8px",
+            borderTop:"1px solid rgba(255,255,255,0.04)",
+            position:"relative",
+          }}>
+            <span style={{ fontFamily:MONO, fontSize:"8.5px", color:TEXT_DIM }}>{msg.time}</span>
+            <div style={{ display:"flex", alignItems:"center", gap:"4px" }}>
+              {/* Bookmark */}
+              <button onClick={()=> onBookmark(idx)} style={{
+                display:"flex", alignItems:"center",
+                background: isBookmarked ? "rgba(244,114,182,0.15)" : "none",
+                border:`1px solid ${isBookmarked ? "rgba(244,114,182,0.3)" : "transparent"}`,
+                borderRadius:"6px", padding:"5px 6px",
+                color: isBookmarked ? "#f472b6" : TEXT_DIM,
+                cursor:"pointer", outline:"none", transition:"all 0.18s",
+              }}><IconBookmark size={12}/></button>
+
+              <button onClick={copyMsg} style={{
+                display:"flex", alignItems:"center", gap:"3px",
+                background: copiedMsg ? "rgba(52,211,153,0.15)" : "none",
+                border:`1px solid ${copiedMsg ? "rgba(52,211,153,0.3)" : "transparent"}`,
+                borderRadius:"6px", padding:"5px 8px",
+                fontFamily:MONO, fontSize:"8px",
+                color: copiedMsg ? "#34d399" : TEXT_DIM,
+                cursor:"pointer", outline:"none", transition:"all 0.18s", letterSpacing:"0.04em",
+              }}>
+                {copiedMsg ? <><IconCheck size={10}/>&nbsp;COPIED</> : <><IconCopy size={10}/>&nbsp;COPY</>}
+              </button>
+
+              {isSpeaking && (
+                <button onClick={()=> setShowSpeeds(v=>!v)} style={{
+                  background:"rgba(56,189,248,0.1)", border:"1px solid rgba(56,189,248,0.3)",
+                  borderRadius:"6px", padding:"5px 8px",
+                  fontFamily:MONO, fontSize:"8px", color:ACCENT3,
+                  cursor:"pointer", outline:"none", transition:"all 0.15s", letterSpacing:"0.04em",
+                }}>
+                  {SPEED_OPTIONS.find(s=>s.rate===voiceSpeed)?.label ?? "1×"}
+                </button>
+              )}
+
+              {showSpeeds && (
+                <div style={{
+                  position:"absolute", bottom:"calc(100% + 6px)", right:0, zIndex:60,
+                  background:"rgba(8,11,24,0.98)", border:"1px solid rgba(109,120,250,0.25)",
+                  borderRadius:"10px", overflow:"hidden",
+                  boxShadow:"0 12px 32px rgba(0,0,0,0.6)",
+                  animation:"bot-tip-in 0.15s ease-out", minWidth:"80px",
+                }}>
+                  {SPEED_OPTIONS.map(opt => (
+                    <button key={opt.rate} onClick={()=> handleSpeedChange(opt.rate)} style={{
+                      display:"block", width:"100%", padding:"7px 12px",
+                      background: voiceSpeed===opt.rate ? "rgba(109,120,250,0.15)" : "none",
+                      border:"none", borderBottom:"1px solid rgba(255,255,255,0.04)",
+                      fontFamily:MONO, fontSize:"9px",
+                      color: voiceSpeed===opt.rate ? ACCENT3 : TEXT_SEC,
+                      cursor:"pointer", textAlign:"left", outline:"none", transition:"background 0.12s",
+                    }}>{opt.label}</button>
+                  ))}
+                </div>
+              )}
+
+              <button onClick={()=> isSpeaking ? onStopSpeak() : onSpeak(msg.content, idx)} style={{
+                background: isSpeaking ? "rgba(56,189,248,0.15)" : "none",
+                border:`1px solid ${isSpeaking ? "rgba(56,189,248,0.3)" : "transparent"}`,
+                borderRadius:"6px", padding:"5px 6px",
+                color: isSpeaking ? ACCENT3 : TEXT_DIM,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                cursor:"pointer", outline:"none", transition:"all 0.18s",
+              }}>
+                {isSpeaking ? <IconVolumeOff size={13}/> : <IconVolume size={13}/>}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── DESKTOP LAYOUT (and mobile user messages) ──
   return (
     <div className="bot-msg-in" style={{
       display:"flex",
@@ -2963,7 +3305,8 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
       )}
 
       <div className="bot-bubble" style={{
-        maxWidth:"min(90%, 700px)", width:"fit-content",
+        maxWidth: isUser ? "min(78%, 620px)" : "min(84%, 720px)",
+        width:"fit-content",
         padding: isUser ? "11px 16px" : "14px 17px",
         borderRadius: isUser ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
         background: isUser
@@ -2995,7 +3338,6 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
             </div>
 
             <div ref={speedRef} style={{ display:"flex", alignItems:"center", gap:"4px", position:"relative" }}>
-              {/* Bookmark */}
               <button onClick={()=> onBookmark(idx)} style={{
                 display:"flex", alignItems:"center",
                 background: isBookmarked ? "rgba(244,114,182,0.15)" : "none",
@@ -3006,10 +3348,7 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
               }}
                 onMouseEnter={e=>{ if(!isBookmarked){ e.currentTarget.style.color="#f472b6"; e.currentTarget.style.background="rgba(244,114,182,0.08)"; }}}
                 onMouseLeave={e=>{ if(!isBookmarked){ e.currentTarget.style.color=TEXT_DIM; e.currentTarget.style.background="none"; }}}
-                title={isBookmarked?"Remove bookmark":"Bookmark this response"}
-              >
-                <IconBookmark size={11}/>
-              </button>
+              ><IconBookmark size={11}/></button>
 
               <button onClick={copyMsg} style={{
                 display:"flex", alignItems:"center", gap:"3px",
@@ -3086,7 +3425,7 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
         }}>
           {isUser ? msg.content :
             isStreaming && !streamDone ?
-              <StreamingMessage fullText={msg.content} onDone={()=> setStreamDone(true)}/> :
+              <StreamingMessage fullText={msg.content} onDone={()=> setStreamDone(true)} streamKey={msg.streamKey}/> :
               <RichText content={msg.content}/>
           }
         </div>
@@ -3357,12 +3696,16 @@ function EmptyState({ onSend }) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ABORT CONTROLLER REF — for cancelling in-flight requests
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN COMPONENT
 // ─────────────────────────────────────────────────────────────────────────────
 export default function ChatBot() {
   const [open,            setOpen]            = useState(false);
   const [messages,        setMessages]        = useState([]);
-  const [streamingIdx,    setStreamingIdx]    = useState(null); // which msg is streaming
+  const [streamingIdx,    setStreamingIdx]    = useState(null);
   const [input,           setInput]           = useState("");
   const [loading,         setLoading]         = useState(false);
   const [fabHov,          setFabHov]          = useState(false);
@@ -3384,24 +3727,29 @@ export default function ChatBot() {
   const [selectedVoice,   setSelectedVoice]   = useState(null);
   const [jumpToIdx,       setJumpToIdx]       = useState(null);
   const [exportFlash,     setExportFlash]     = useState(false);
+  const [isMobile,        setIsMobile]        = useState(false);
 
-  // Refs for voice engine (avoid stale closures)
+  // Refs
   const voiceSpeedRef    = useRef(1.0);
   const selectedVoiceRef = useRef(null);
+  const abortRef         = useRef(null); // for cancelling fetch
+  const messagesEndRef   = useRef(null);
+  const inputRef         = useRef(null);
+  const textareaRef      = useRef(null);
+  const msgRefs          = useRef({});
 
-  // Keep refs in sync
   useEffect(() => { voiceSpeedRef.current = voiceSpeed; }, [voiceSpeed]);
   useEffect(() => { selectedVoiceRef.current = selectedVoice; }, [selectedVoice]);
 
-  const messagesEndRef = useRef(null);
-  const inputRef       = useRef(null);
-  const textareaRef    = useRef(null);
-  const msgRefs        = useRef({});
+  // Mobile detection
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 600);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
 
-  // Voice engine
   const { speakingIdx, speakText, stopSpeak, changeSpeedWhileSpeaking } = useVoiceEngine(voiceSpeedRef, selectedVoiceRef);
-
-  // Voice input
   const { listening, toggle: toggleVoice } = useVoiceInput((transcript) => {
     setInput(prev => (prev ? prev + " " : "") + transcript);
     setCharCount(prev => prev + transcript.length + 1);
@@ -3442,7 +3790,6 @@ export default function ChatBot() {
     }
   }, [jumpToIdx]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const h = (e) => {
       if (e.key==="Escape") {
@@ -3485,26 +3832,46 @@ export default function ChatBot() {
   };
 
   const toggleBookmark = (idx) => {
-    setBookmarks(prev =>
-      prev.includes(idx) ? prev.filter(b=>b!==idx) : [...prev, idx]
-    );
+    setBookmarks(prev => prev.includes(idx) ? prev.filter(b=>b!==idx) : [...prev, idx]);
   };
 
-  // FIX: speed change handler — if message is currently speaking, restart with new speed
   const handleSpeedChange = useCallback((newRate, msgContent, msgIdx) => {
     setVoiceSpeed(newRate);
     voiceSpeedRef.current = newRate;
     changeSpeedWhileSpeaking(newRate, msgContent, msgIdx);
   }, [changeSpeedWhileSpeaking]);
 
+  // ── SEND MESSAGE — cancels previous in-flight request ──
   const sendMessage = useCallback(async (text) => {
     const userText = (text ?? input).trim();
-    if (!userText || loading) return;
+    if (!userText) return;
+
+    // Cancel any existing in-flight request
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+
+    // Stop TTS if speaking
+    stopSpeak();
+
     setInput(""); setCharCount(0);
+    setLoading(true);
+    setStreamingIdx(null);
+
+    // Unique key for stream animation
+    const streamKey = Date.now();
 
     const userMsg = { role:"user", content:userText, time:getTime() };
-    setMessages(prev => [...prev, userMsg]);
-    setLoading(true);
+
+    setMessages(prev => {
+      // If was loading (interrupted), don't add partial incomplete assistant msg
+      // Just append the new user message fresh
+      return [...prev, userMsg];
+    });
+
+    const controller = new AbortController();
+    abortRef.current = controller;
 
     try {
       const lang = userLanguage || "Python";
@@ -3519,36 +3886,44 @@ STRICT RULES — never break these:
 6. Always include a working ${lang} code example when explaining algorithms or data structures.
 7. Keep explanations structured: concept → intuition → complexity → code.`;
 
-      const history = [...messages, userMsg].map(m=>({ role:m.role, content:m.content }));
+      // We need the history up to but not including the new user message
+      // (already added to state, but we pass it manually)
+      const historyForApi = [...messages, userMsg].map(m=>({ role:m.role, content:m.content }));
+
       const res = await fetch("/api/chat", {
         method:"POST", headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ messages:[{ role:"system", content:systemPrompt }, ...history] }),
+        body:JSON.stringify({ messages:[{ role:"system", content:systemPrompt }, ...historyForApi] }),
+        signal: controller.signal,
       });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       const reply = data.content ?? data.error ?? "Something went wrong.";
 
-      // Add message and mark it as streaming
-      const newIdx = messages.length + 1; // user + assistant
+      if (controller.signal.aborted) return;
+
       setMessages(prev => {
-        const next = [...prev, { role:"assistant", content:reply, time:getTime() }];
+        const next = [...prev, { role:"assistant", content:reply, time:getTime(), streamKey }];
         setStreamingIdx(next.length - 1);
         return next;
       });
-    } catch {
-      setMessages(prev => [...prev, { role:"assistant", content:"Connection error. Please try again.", time:getTime() }]);
-    } finally { setLoading(false); }
-  }, [input, messages, loading, userLanguage]);
-
-  // Clear streaming flag after done (via callback from StreamingMessage)
-  const handleStreamDone = useCallback((idx) => {
-    setStreamingIdx(prev => prev === idx ? null : prev);
-  }, []);
+    } catch (err) {
+      if (err.name === "AbortError") return; // silently discard
+      setMessages(prev => [...prev, { role:"assistant", content:"Connection error. Please try again.", time:getTime(), streamKey }]);
+    } finally {
+      if (!controller.signal.aborted) setLoading(false);
+      abortRef.current = null;
+    }
+  }, [input, messages, loading, userLanguage, stopSpeak]);
 
   const handleKey   = (e) => { if (e.key==="Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } };
   const handleInput = (e) => { setInput(e.target.value); setCharCount(e.target.value.length); };
 
   if (!mounted) return null;
   const hasMessages = messages.length > 0;
+
+  // ── PC: horizontal padding for chat area (64px sides on desktop) ──
+  const chatPaddingH = isMobile ? "12px" : "clamp(16px, 5vw, 80px)";
 
   return (
     <>
@@ -3678,16 +4053,30 @@ STRICT RULES — never break these:
         .bot-send:hover:not(:disabled)  { transform:scale(1.08) rotate(8deg); }
         .bot-send:active:not(:disabled) { transform:scale(0.92); }
 
-        @media (max-width:520px) {
-          .bot-bubble { max-width:92% !important; }
+        /* PC view: constrain chat content to a comfortable reading width */
+        @media (min-width: 601px) {
+          .bot-msgs-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+          }
+          .bot-input-inner {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+          }
+        }
+
+        /* Mobile enhancements */
+        @media (max-width:600px) {
           .bot-header-inner { gap:6px !important; padding:10px 11px !important; }
           .bot-title-txt { font-size:12px !important; }
           .bot-avatar-wrap { width:32px !important; height:32px !important; border-radius:10px !important; }
-          .bot-msgs-area { padding:10px 10px 6px !important; gap:11px !important; }
-          .bot-input-area { padding:8px 10px calc(env(safe-area-inset-bottom,0px)+10px) !important; }
           .bot-hbtns { gap:2px !important; }
-          .bot-hbtn-wrap > button { width:28px !important; height:28px !important; border-radius:8px !important; }
-          .bot-send-btn { width:32px !important; height:32px !important; }
+          .bot-hbtn-wrap > button { width:30px !important; height:30px !important; border-radius:8px !important; }
+          .bot-send-btn { width:38px !important; height:38px !important; }
+          /* Mobile: AI bubble full width, no float */
+          .bot-bubble-mobile { border-radius: 4px 14px 14px 14px !important; }
         }
       `}</style>
 
@@ -3826,73 +4215,66 @@ STRICT RULES — never break these:
                   <span style={{ color:TEXT_DIM, fontSize:"8px" }}>·</span>
                   <span style={{ fontFamily:MONO, fontSize:"9px", color:"#fbbf24" }}>FOCUS</span>
                 </>}
+                {loading && <>
+                  <span style={{ color:TEXT_DIM, fontSize:"8px" }}>·</span>
+                  <span style={{ fontFamily:MONO, fontSize:"9px", color:ACCENT3, animation:"bot-antenna-pulse 1s infinite" }}>THINKING</span>
+                </>}
               </div>
             </div>
 
             {/* ── HEADER BUTTONS ── */}
             <div className="bot-hbtns" style={{ display:"flex", gap:"4px", flexShrink:0, alignItems:"center" }}>
-
-              {/* Search */}
-              <div className="bot-hbtn-wrap">
-                <HeaderBtn icon={<IconSearch size={14}/>} tooltip="Search  (Ctrl+K)"
-                  onClick={()=> setShowSearch(true)} variant="search" disabled={!hasMessages}/>
-              </div>
-
-              {/* Export */}
-              <div className="bot-hbtn-wrap">
-                <HeaderBtn icon={<IconDownload size={14}/>}
-                  tooltip={exportFlash ? "Exported!" : "Export  (Ctrl+Shift+E)"}
-                  onClick={handleExport} variant="export" disabled={!hasMessages} active={exportFlash}/>
-              </div>
-
-              {/* Bookmarks — NEW */}
+              {/* Hide less-used buttons on mobile to save space */}
+              {!isMobile && (
+                <>
+                  <div className="bot-hbtn-wrap">
+                    <HeaderBtn icon={<IconSearch size={14}/>} tooltip="Search  (Ctrl+K)"
+                      onClick={()=> setShowSearch(true)} variant="search" disabled={!hasMessages}/>
+                  </div>
+                  <div className="bot-hbtn-wrap">
+                    <HeaderBtn icon={<IconDownload size={14}/>}
+                      tooltip={exportFlash ? "Exported!" : "Export  (Ctrl+Shift+E)"}
+                      onClick={handleExport} variant="export" disabled={!hasMessages} active={exportFlash}/>
+                  </div>
+                </>
+              )}
               <div className="bot-hbtn-wrap">
                 <HeaderBtn icon={<IconBookmark size={14}/>}
                   tooltip={`Bookmarks${bookmarks.length>0?" ("+bookmarks.length+")":""}  (Ctrl+Shift+B)`}
                   onClick={()=> setShowBookmarks(true)} variant="bookmark"
                   active={bookmarks.length > 0}/>
               </div>
-
-              {/* Focus Mode — NEW */}
-              <div className="bot-hbtn-wrap">
-                <HeaderBtn icon={<IconPin size={14}/>}
-                  tooltip={focusMode ? "Exit focus mode  (Ctrl+Shift+F)" : "Focus mode  (Ctrl+Shift+F)"}
-                  onClick={()=> setFocusMode(v=>!v)} variant="focus" active={focusMode}/>
-              </div>
-
-              {/* Voice */}
+              {!isMobile && (
+                <div className="bot-hbtn-wrap">
+                  <HeaderBtn icon={<IconPin size={14}/>}
+                    tooltip={focusMode ? "Exit focus mode  (Ctrl+Shift+F)" : "Focus mode  (Ctrl+Shift+F)"}
+                    onClick={()=> setFocusMode(v=>!v)} variant="focus" active={focusMode}/>
+                </div>
+              )}
               <div className="bot-hbtn-wrap">
                 <HeaderBtn icon={<IconVolume size={14}/>}
                   tooltip={selectedVoice ? `Voice: ${selectedVoice.name.split(" ").slice(0,2).join(" ")}` : "Voice settings"}
                   onClick={()=> setShowVoiceModal(true)} variant="default" active={!!selectedVoice}/>
               </div>
-
-              {/* Shortcuts */}
-              <div className="bot-hbtn-wrap">
-                <HeaderBtn icon={<IconKeyboard size={14}/>} tooltip="Shortcuts  (Ctrl+/)"
-                  onClick={()=> setShowShortcuts(true)} variant="keys"/>
-              </div>
-
+              {!isMobile && (
+                <div className="bot-hbtn-wrap">
+                  <HeaderBtn icon={<IconKeyboard size={14}/>} tooltip="Shortcuts  (Ctrl+/)"
+                    onClick={()=> setShowShortcuts(true)} variant="keys"/>
+                </div>
+              )}
               <div style={{ width:"1px", height:"20px", background:"rgba(255,255,255,0.07)", flexShrink:0 }}/>
-
-              {/* Language */}
               <div className="bot-hbtn-wrap">
                 <HeaderBtn icon={<IconGlobe size={14}/>}
                   tooltip={userLanguage?`Language: ${userLanguage}`:"Set language"}
                   onClick={()=> setShowLangModal(true)} variant="lang" active={!!userLanguage}/>
               </div>
-
-              {/* Clear */}
               <div className="bot-hbtn-wrap">
                 <HeaderBtn icon={<IconTrash size={14}/>}
                   tooltip={hasMessages?`Clear ${messages.length} msgs`:"No messages"}
                   onClick={()=> hasMessages && setShowClearModal(true)}
                   variant="danger" disabled={!hasMessages}/>
               </div>
-
               <div style={{ width:"1px", height:"20px", background:"rgba(255,255,255,0.07)", flexShrink:0 }}/>
-
-              {/* Close */}
               <div className="bot-hbtn-wrap">
                 <HeaderBtn icon={<IconX size={14}/>} tooltip="Close  (Esc)" onClick={closePanel} variant="close"/>
               </div>
@@ -3903,64 +4285,68 @@ STRICT RULES — never break these:
           {focusMode && <FocusModeBanner onExit={()=> setFocusMode(false)}/>}
 
           {/* ── MESSAGES ── */}
-          <div className="bot-scroll bot-msgs-area" style={{
+          <div className="bot-scroll" style={{
             flex:1, overflowY:"auto",
-            padding:"16px 18px 8px",
-            display:"flex", flexDirection:"column", gap:"14px",
+            padding:`16px ${chatPaddingH} 8px`,
+            display:"flex", flexDirection:"column",
             position:"relative", zIndex:1,
             WebkitOverflowScrolling:"touch",
-            // Focus mode: dim everything
-            filter: focusMode ? "none" : "none",
           }}>
-            {messages.length===0 ? (
-              <EmptyState onSend={sendMessage}/>
-            ) : (
-              <>
-                {messages.map((msg, i)=>(
-                  <div key={i} ref={el=> msgRefs.current[i]=el}
-                    style={{ opacity: focusMode && i < messages.length-2 ? 0.4 : 1, transition:"opacity 0.3s" }}>
-                    <MessageBubble
-                      msg={msg} idx={i}
-                      speakingIdx={speakingIdx}
-                      onSpeak={speakText}
-                      onStopSpeak={stopSpeak}
-                      voiceSpeed={voiceSpeed}
-                      onSpeedChange={handleSpeedChange}
-                      isBookmarked={bookmarks.includes(i)}
-                      onBookmark={toggleBookmark}
-                      isStreaming={streamingIdx === i}
-                    />
-                  </div>
-                ))}
-                {loading && (
-                  <div className="bot-msg-in" style={{ display:"flex", alignItems:"flex-end", gap:"10px" }}>
-                    <div style={{
-                      width:"32px", height:"32px", borderRadius:"10px", flexShrink:0,
-                      background:"linear-gradient(135deg,#1e1b4b 0%,#0f172a 100%)",
-                      display:"flex", alignItems:"center", justifyContent:"center",
-                      border:"1px solid rgba(109,120,250,0.35)",
-                      boxShadow:`0 4px 16px ${GLOW_A}`, marginBottom:"2px",
-                    }}>
-                      <RobotLogo size={20} animated/>
+            <div className="bot-msgs-inner" style={{
+              display:"flex", flexDirection:"column", gap: isMobile ? "16px" : "14px",
+            }}>
+              {messages.length===0 ? (
+                <EmptyState onSend={sendMessage}/>
+              ) : (
+                <>
+                  {messages.map((msg, i)=>(
+                    <div key={i} ref={el=> msgRefs.current[i]=el}
+                      style={{ opacity: focusMode && i < messages.length-2 ? 0.4 : 1, transition:"opacity 0.3s" }}>
+                      <MessageBubble
+                        msg={msg} idx={i}
+                        speakingIdx={speakingIdx}
+                        onSpeak={speakText}
+                        onStopSpeak={stopSpeak}
+                        voiceSpeed={voiceSpeed}
+                        onSpeedChange={handleSpeedChange}
+                        isBookmarked={bookmarks.includes(i)}
+                        onBookmark={toggleBookmark}
+                        isStreaming={streamingIdx === i}
+                        isMobile={isMobile}
+                      />
                     </div>
-                    <div style={{
-                      padding:"13px 16px", borderRadius:"4px 16px 16px 16px",
-                      background:"linear-gradient(145deg,rgba(255,255,255,0.04),rgba(30,27,75,0.2))",
-                      border:`1px solid ${BORDER}`,
-                    }}>
-                      <TypingDots/>
-                      <div style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, marginTop:"4px" }}>thinking...</div>
+                  ))}
+                  {loading && (
+                    <div className="bot-msg-in" style={{ display:"flex", alignItems:"flex-end", gap:"10px" }}>
+                      <div style={{
+                        width:"32px", height:"32px", borderRadius:"10px", flexShrink:0,
+                        background:"linear-gradient(135deg,#1e1b4b 0%,#0f172a 100%)",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        border:"1px solid rgba(109,120,250,0.35)",
+                        boxShadow:`0 4px 16px ${GLOW_A}`, marginBottom:"2px",
+                      }}>
+                        <RobotLogo size={20} animated/>
+                      </div>
+                      <div style={{
+                        padding:"13px 16px", borderRadius:"4px 16px 16px 16px",
+                        background:"linear-gradient(145deg,rgba(255,255,255,0.04),rgba(30,27,75,0.2))",
+                        border:`1px solid ${BORDER}`,
+                        flex: isMobile ? 1 : undefined,
+                      }}>
+                        <TypingDots/>
+                        <div style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, marginTop:"4px" }}>thinking...</div>
+                      </div>
                     </div>
-                  </div>
-                )}
-              </>
-            )}
-            <div ref={messagesEndRef}/>
+                  )}
+                </>
+              )}
+              <div ref={messagesEndRef}/>
+            </div>
           </div>
 
           {/* ── INPUT ── */}
-          <div className="bot-input-area" style={{
-            padding:`12px 18px calc(env(safe-area-inset-bottom,0px) + 14px)`,
+          <div style={{
+            padding:`12px ${chatPaddingH} calc(env(safe-area-inset-bottom,0px) + 14px)`,
             borderTop:`1px solid ${BORDER}`,
             flexShrink:0, position:"relative", zIndex:2,
             background:"linear-gradient(to top,rgba(109,120,250,0.04) 0%,transparent 100%)",
@@ -3975,43 +4361,41 @@ STRICT RULES — never break these:
               }}/>
             )}
 
-            <div style={{
-              display:"flex", alignItems:"flex-end", gap:"8px",
-              background: inputFoc ? "rgba(109,120,250,0.07)" : "rgba(255,255,255,0.025)",
-              border:`1px solid ${inputFoc?"rgba(109,120,250,0.5)":BORDER2}`,
-              borderRadius:"14px", padding:"10px 10px 10px 12px",
-              transition:"all 0.25s cubic-bezier(0.22,1,0.36,1)",
-              boxShadow: inputFoc ? "0 0 0 3px rgba(109,120,250,0.1),0 4px 20px rgba(109,120,250,0.08)" : "none",
-            }}>
-              <textarea
-                ref={el=>{ inputRef.current=el; textareaRef.current=el; }}
-                value={input} onChange={handleInput} onKeyDown={handleKey}
-                onFocus={()=> setInputFoc(true)} onBlur={()=> setInputFoc(false)}
-                placeholder="Ask any DSA question…"
-                rows={1} disabled={loading}
-                style={{
-                  flex:1, background:"none", border:"none", outline:"none",
-                  fontFamily:SANS, fontSize:"13px", color:TEXT_PRI,
-                  fontWeight:400, resize:"none", lineHeight:"1.55",
-                  maxHeight:"96px", overflow:"auto", minHeight:"22px",
-                  opacity:loading?0.45:1, transition:"opacity 0.2s",
-                  caretColor:ACCENT3, padding:0,
-                }}
-              />
+            <div className="bot-input-inner">
+              <div style={{
+                display:"flex", alignItems:"flex-end", gap:"8px",
+                background: inputFoc ? "rgba(109,120,250,0.07)" : "rgba(255,255,255,0.025)",
+                border:`1px solid ${inputFoc?"rgba(109,120,250,0.5)":BORDER2}`,
+                borderRadius:"14px", padding:"10px 10px 10px 12px",
+                transition:"all 0.25s cubic-bezier(0.22,1,0.36,1)",
+                boxShadow: inputFoc ? "0 0 0 3px rgba(109,120,250,0.1),0 4px 20px rgba(109,120,250,0.08)" : "none",
+              }}>
+                <textarea
+                  ref={el=>{ inputRef.current=el; textareaRef.current=el; }}
+                  value={input} onChange={handleInput} onKeyDown={handleKey}
+                  onFocus={()=> setInputFoc(true)} onBlur={()=> setInputFoc(false)}
+                  placeholder="Ask any DSA question…"
+                  rows={1} disabled={false}
+                  style={{
+                    flex:1, background:"none", border:"none", outline:"none",
+                    fontFamily:SANS, fontSize:"13px", color:TEXT_PRI,
+                    fontWeight:400, resize:"none", lineHeight:"1.55",
+                    maxHeight:"96px", overflow:"auto", minHeight:"22px",
+                    transition:"opacity 0.2s",
+                    caretColor:ACCENT3, padding:0,
+                  }}
+                />
 
-              {charCount>0 && (
-                <span style={{
-                  fontFamily:MONO, fontSize:"8px",
-                  color:charCount>400?"#f472b6":TEXT_DIM,
-                  alignSelf:"center", flexShrink:0, transition:"color 0.2s",
-                }}>{charCount}</span>
-              )}
+                {charCount>0 && (
+                  <span style={{
+                    fontFamily:MONO, fontSize:"8px",
+                    color:charCount>400?"#f472b6":TEXT_DIM,
+                    alignSelf:"center", flexShrink:0, transition:"color 0.2s",
+                  }}>{charCount}</span>
+                )}
 
-              {/* Voice input button */}
-              <button
-                onClick={toggleVoice}
-                title={listening?"Stop recording (Ctrl+M)":"Voice input (Ctrl+M)"}
-                style={{
+                {/* Voice input */}
+                <button onClick={toggleVoice} title={listening?"Stop recording":"Voice input"} style={{
                   width:"34px", height:"34px", borderRadius:"10px", flexShrink:0,
                   background: listening ? "rgba(239,68,68,0.15)" : "rgba(255,255,255,0.03)",
                   border:`1px solid ${listening?"rgba(239,68,68,0.45)":"rgba(255,255,255,0.06)"}`,
@@ -4020,48 +4404,71 @@ STRICT RULES — never break these:
                   outline:"none", alignSelf:"flex-end",
                   animation: listening ? "bot-mic-pulse 1.2s ease-in-out infinite" : "none",
                   transition:"all 0.18s",
-                }}
-              >
-                {listening ? <IconStop size={12}/> : <IconMic size={13}/>}
-              </button>
+                }}>
+                  {listening ? <IconStop size={12}/> : <IconMic size={13}/>}
+                </button>
 
-              <button className="bot-send bot-send-btn"
-                onClick={()=> sendMessage()}
-                disabled={!input.trim()||loading}
-                style={{
-                  width:"36px", height:"36px", borderRadius:"11px", flexShrink:0,
-                  background: input.trim()&&!loading
-                    ? `linear-gradient(135deg,${ACCENT} 0%,${ACCENT3} 100%)`
-                    : "rgba(255,255,255,0.04)",
-                  border:`1px solid ${input.trim()&&!loading?"rgba(109,120,250,0.55)":BORDER}`,
-                  color: input.trim()&&!loading?"#fff":TEXT_DIM,
-                  cursor:input.trim()&&!loading?"pointer":"default",
+                {/* Send / Cancel button */}
+                <button className="bot-send bot-send-btn"
+                  onClick={()=> {
+                    if (loading) {
+                      // Cancel current request
+                      abortRef.current?.abort();
+                      abortRef.current = null;
+                      setLoading(false);
+                    } else {
+                      sendMessage();
+                    }
+                  }}
+                  style={{
+                    width:"36px", height:"36px", borderRadius:"11px", flexShrink:0,
+                    background: loading
+                      ? "linear-gradient(135deg,rgba(239,68,68,0.3),rgba(239,68,68,0.18))"
+                      : input.trim()
+                        ? `linear-gradient(135deg,${ACCENT} 0%,${ACCENT3} 100%)`
+                        : "rgba(255,255,255,0.04)",
+                    border:`1px solid ${loading
+                      ? "rgba(239,68,68,0.4)"
+                      : input.trim()
+                        ? "rgba(109,120,250,0.55)"
+                        : BORDER}`,
+                    color: (loading || input.trim()) ? "#fff" : TEXT_DIM,
+                    cursor: (loading || input.trim()) ? "pointer" : "default",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    fontSize:"15px",
+                    boxShadow: loading
+                      ? "0 4px 18px rgba(239,68,68,0.3)"
+                      : input.trim()
+                        ? "0 4px 18px rgba(109,120,250,0.45)"
+                        : "none",
+                    animation: (!loading && input.trim()) ? "bot-send-ready 2s ease-in-out infinite" : "none",
+                    outline:"none", alignSelf:"flex-end",
+                    transition:"all 0.18s cubic-bezier(0.22,1,0.36,1)",
+                  }}
+                  title={loading ? "Cancel response" : "Send message"}
+                >
+                  {loading ? <IconStop size={12}/> : "↑"}
+                </button>
+              </div>
+
+              {!isMobile && (
+                <div style={{
                   display:"flex", alignItems:"center", justifyContent:"center",
-                  fontSize:"15px",
-                  boxShadow:input.trim()&&!loading?"0 4px 18px rgba(109,120,250,0.45)":"none",
-                  animation:input.trim()&&!loading?"bot-send-ready 2s ease-in-out infinite":"none",
-                  outline:"none", alignSelf:"flex-end",
-                }}
-              >
-                {loading ? (
-                  <span style={{
-                    width:"12px", height:"12px", borderRadius:"50%",
-                    border:`2px solid ${ACCENT2}40`, borderTopColor:ACCENT2,
-                    display:"inline-block", animation:"bot-fab-spin 0.75s linear infinite",
-                  }}/>
-                ) : "↑"}
-              </button>
-            </div>
-
-            <div style={{
-              display:"flex", alignItems:"center", justifyContent:"center",
-              gap:"8px", marginTop:"7px",
-            }}>
-              <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, opacity:0.45 }}>↵ send</span>
-              <span style={{ color:TEXT_DIM, opacity:0.2, fontSize:"8px" }}>·</span>
-              <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, opacity:0.45 }}>shift+↵ newline</span>
-              <span style={{ color:TEXT_DIM, opacity:0.2, fontSize:"8px" }}>·</span>
-              <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, opacity:0.3 }}>ctrl+k search</span>
+                  gap:"8px", marginTop:"7px",
+                }}>
+                  <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, opacity:0.45 }}>↵ send</span>
+                  <span style={{ color:TEXT_DIM, opacity:0.2, fontSize:"8px" }}>·</span>
+                  <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, opacity:0.45 }}>shift+↵ newline</span>
+                  <span style={{ color:TEXT_DIM, opacity:0.2, fontSize:"8px" }}>·</span>
+                  <span style={{ fontFamily:MONO, fontSize:"8px", color:TEXT_DIM, opacity:0.3 }}>ctrl+k search</span>
+                  {loading && (
+                    <>
+                      <span style={{ color:TEXT_DIM, opacity:0.2, fontSize:"8px" }}>·</span>
+                      <span style={{ fontFamily:MONO, fontSize:"8px", color:"#fca5a5", opacity:0.7 }}>■ stop to cancel</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -4072,7 +4479,7 @@ STRICT RULES — never break these:
           {showClearModal && (
             <ClearModal
               count={messages.length}
-              onConfirm={()=>{ setMessages([]); setShowClearModal(false); stopSpeak(); setBookmarks([]); setStreamingIdx(null); }}
+              onConfirm={()=>{ setMessages([]); setShowClearModal(false); stopSpeak(); setBookmarks([]); setStreamingIdx(null); abortRef.current?.abort(); setLoading(false); }}
               onCancel={()=> setShowClearModal(false)}
             />
           )}
