@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 
+// ── Color palette ────────────────────────────────────────────────────────────
 const PALETTE = [
   { g1:"#4facfe", g2:"#00f2fe", glow:"rgba(79,172,254,0.55)",  border:"#4facfe" },
   { g1:"#f093fb", g2:"#f5576c", glow:"rgba(245,87,108,0.55)",  border:"#f5576c" },
@@ -13,15 +14,17 @@ const PALETTE = [
 ];
 const col = (v) => PALETTE[Math.abs(Math.round(v) || 0) % PALETTE.length];
 
+// ── Op styles ────────────────────────────────────────────────────────────────
 const OP = {
-  push:       { label:"push",      icon:"⬇", c:"#4ade80", bg:"rgba(74,222,128,0.08)",  bd:"rgba(74,222,128,0.25)"  },
-  pop:        { label:"pop",       icon:"⬆", c:"#f472b6", bg:"rgba(244,114,182,0.08)", bd:"rgba(244,114,182,0.25)" },
-  pop_error:  { label:"UNDERFLOW", icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.08)",   bd:"rgba(239,68,68,0.25)"   },
-  peek:       { label:"peek",      icon:"👁", c:"#fbbf24", bg:"rgba(251,191,36,0.08)",  bd:"rgba(251,191,36,0.25)"  },
-  peek_error: { label:"EMPTY",     icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.08)",   bd:"rgba(239,68,68,0.25)"   },
-  isEmpty:    { label:"isEmpty",   icon:"∅", c:"#60a5fa", bg:"rgba(96,165,250,0.08)",  bd:"rgba(96,165,250,0.25)"  },
+  push:       { label:"push",      icon:"⬇", c:"#4ade80", bg:"rgba(74,222,128,0.10)",  bd:"rgba(74,222,128,0.35)"  },
+  pop:        { label:"pop",       icon:"⬆", c:"#f472b6", bg:"rgba(244,114,182,0.10)", bd:"rgba(244,114,182,0.35)" },
+  pop_error:  { label:"UNDERFLOW", icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.10)",   bd:"rgba(239,68,68,0.35)"   },
+  peek:       { label:"peek",      icon:"👁", c:"#fbbf24", bg:"rgba(251,191,36,0.10)",  bd:"rgba(251,191,36,0.35)"  },
+  peek_error: { label:"EMPTY",     icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.10)",   bd:"rgba(239,68,68,0.35)"   },
+  isEmpty:    { label:"isEmpty",   icon:"∅", c:"#60a5fa", bg:"rgba(96,165,250,0.10)",  bd:"rgba(96,165,250,0.35)"  },
 };
 
+// ── Languages ────────────────────────────────────────────────────────────────
 const LANGS = {
   javascript:{ name:"JavaScript", ext:"JS",  accent:"#f7df1e" },
   typescript:{ name:"TypeScript", ext:"TS",  accent:"#3178c6" },
@@ -35,6 +38,7 @@ const LANGS = {
 
 const LINE_H = 21;
 
+// ── Templates ────────────────────────────────────────────────────────────────
 const TPL = {
 javascript:`// Stack implementation — JavaScript
 class Stack {
@@ -380,7 +384,7 @@ fn main() {
 }`,
 };
 
-// ── parse helpers ──────────────────────────────────────────────────────────
+// ── Parse helpers ────────────────────────────────────────────────────────────
 function countBraces(line) {
   let o=0,c=0,inS=false,sc="";
   const ci=line.indexOf("//"),cl=ci>=0?line.slice(0,ci):line;
@@ -400,7 +404,7 @@ function extractClassBlock(code,cn){
   return{text:code.slice(m.index,i),start:m.index,end:i};
 }
 
-// ── JS execution ──────────────────────────────────────────────────────────
+// ── JS execution ─────────────────────────────────────────────────────────────
 function runJavaScript(code){
   const cm=/\bclass\s+(\w+)/.exec(code);
   if(!cm)return{steps:[],errors:["No class definition found."]};
@@ -528,6 +532,7 @@ function buildMessage(s){
   }
 }
 
+// ── AI Validation ────────────────────────────────────────────────────────────
 async function validateWithVisuoSlayer(code,lang){
   const prompt=`You are a strict code reviewer for VisuoSlayer, a Stack data-structure visualizer.
 The user wrote a Stack in ${lang}. Check:
@@ -550,23 +555,24 @@ ${code}
     return{valid:!!parsed.valid,reason:parsed.reason??"",errors:Array.isArray(parsed.errors)?parsed.errors:[],apiError:null};
   }catch(e){return{valid:true,reason:"",errors:[],apiError:e.message};}
 }
+
 function runCode(code,lang){
   if(!code.trim())return{steps:[],errors:["Please write some code first."]};
   if(lang==="javascript"||lang==="typescript")return runJavaScript(code);
   return parseScoped(code,lang);
 }
 
-// ── Terminal ───────────────────────────────────────────────────────────────
+// ── Terminal ─────────────────────────────────────────────────────────────────
 function Terminal({lines,sessionId,validating}){
   const bodyRef=useRef(null);
   useEffect(()=>{if(bodyRef.current)bodyRef.current.scrollTop=bodyRef.current.scrollHeight;},[lines,validating]);
   return(
-    <div style={{flex:1,display:"flex",flexDirection:"column",background:"#07090f",minHeight:0,fontFamily:"'JetBrains Mono',monospace",fontSize:"11.5px"}}>
-      <div ref={bodyRef} style={{flex:1,overflowY:"auto",padding:"10px 0 10px",scrollbarWidth:"thin",scrollbarColor:"#151e2e transparent"}}>
+    <div style={{flex:1,display:"flex",flexDirection:"column",background:"#06080f",minHeight:0,fontFamily:"'JetBrains Mono',monospace",fontSize:"11.5px"}}>
+      <div ref={bodyRef} style={{flex:1,overflowY:"auto",padding:"10px 0 10px",scrollbarWidth:"thin",scrollbarColor:"rgba(96,165,250,0.2) transparent"}}>
         {lines.length===0&&!validating&&(
           <div style={{padding:"3px 18px",display:"flex",alignItems:"center",gap:6}}>
             <span style={{color:"#4ade80",userSelect:"none"}}>$</span>
-            <span style={{animation:"cur 1.1s step-end infinite",color:"#1e2a1e",marginLeft:4}}>_</span>
+            <span style={{animation:"cur 1.1s step-end infinite",color:"#1a2a1a",marginLeft:4}}>_</span>
           </div>
         )}
         {lines.map((line,i)=><TermLine key={i} line={line} isLast={i===lines.length-1&&!validating}/>)}
@@ -575,7 +581,7 @@ function Terminal({lines,sessionId,validating}){
             <span style={{display:"inline-block",width:11,height:11,borderRadius:"50%",
               border:"1.5px solid rgba(96,165,250,0.18)",borderTopColor:"#60a5fa",
               animation:"spin 0.7s linear infinite",flexShrink:0}}/>
-            <span style={{color:"#2d3f5a",fontSize:11}}>VisuoSlayer is reviewing your implementation…</span>
+            <span style={{color:"#3a5070",fontSize:11}}>VisuoSlayer is reviewing your implementation…</span>
           </div>
         )}
       </div>
@@ -586,20 +592,22 @@ function Terminal({lines,sessionId,validating}){
 function TermLine({line,isLast}){
   const[vis,setVis]=useState(false);
   useEffect(()=>{const t=setTimeout(()=>setVis(true),15);return()=>clearTimeout(t);},[]);
-  if(line.type==="separator")return<div style={{margin:"5px 18px",borderTop:"1px solid rgba(255,255,255,0.04)",opacity:vis?1:0,transition:"opacity 0.12s"}}/>;
+  if(line.type==="separator")return<div style={{margin:"5px 18px",borderTop:"1px solid rgba(255,255,255,0.05)",opacity:vis?1:0,transition:"opacity 0.12s"}}/>;
   if(line.type==="blank")return<div style={{height:7}}/>;
   if(line.type==="prompt")return(
     <div style={{padding:"2px 18px",display:"flex",alignItems:"center",gap:7,opacity:vis?1:0,transition:"opacity 0.1s"}}>
       <span style={{color:"#4ade80",userSelect:"none",flexShrink:0}}>$</span>
-      <span style={{color:"#1e3318"}}>{line.text}</span>
+      <span style={{color:"#3a6090"}}>{line.text}</span>
     </div>
   );
-  const cm={push:"#4ade80",pop:"#f472b6",peek:"#fbbf24",isEmpty:"#60a5fa",
-    pop_error:"#ef4444",peek_error:"#ef4444",error:"#ef4444",stderr:"#ef4444",
-    success:"#4ade80",warn:"#fbbf24",info:"#60a5fa",output:"#252f42",stdout:"#5a7090"};
+  const cm={
+    push:"#4ade80",pop:"#f472b6",peek:"#fbbf24",isEmpty:"#60a5fa",
+    pop_error:"#f87171",peek_error:"#f87171",error:"#f87171",stderr:"#f87171",
+    success:"#4ade80",warn:"#fbbf24",info:"#60a5fa",output:"#3a4e6a",stdout:"#4a607a"
+  };
   const pm={error:"✗",stderr:"✗",pop_error:"✗",peek_error:"✗",success:"✓",warn:"⚠",info:"·",
     push:"⬇",pop:"⬆",peek:"👁",isEmpty:"∅",output:"",stdout:""};
-  const c=cm[line.type]??"#3a4a62";
+  const c=cm[line.type]??"#3a5070";
   const pfx=pm[line.type]??"";
   return(
     <div style={{padding:"1.5px 18px",display:"flex",alignItems:"flex-start",opacity:vis?1:0,transition:"opacity 0.09s"}}>
@@ -608,23 +616,20 @@ function TermLine({line,isLast}){
         {line.text}
         {isLast&&<span style={{animation:"cur 1.1s step-end infinite",color:"#1e2535"}}> _</span>}
       </span>
-      {line.lineNum&&<span style={{marginLeft:10,color:"#141c28",fontSize:9,flexShrink:0,paddingTop:3}}>:{line.lineNum}</span>}
+      {line.lineNum&&<span style={{marginLeft:10,color:"#2a3a50",fontSize:9,flexShrink:0,paddingTop:3}}>:{line.lineNum}</span>}
     </div>
   );
 }
 
-// ── Code Editor with synced line numbers ───────────────────────────────────
+// ── Code Editor ──────────────────────────────────────────────────────────────
 function CodeEditor({code,setCode,step,errorLineSet,onKeyDown,taRef}){
   const lnRef=useRef(null);
   const lines=code.split("\n");
-
   const syncScroll=useCallback(()=>{
     if(taRef.current&&lnRef.current)lnRef.current.scrollTop=taRef.current.scrollTop;
   },[taRef]);
-
   useEffect(()=>{
-    const ta=taRef.current;
-    if(!ta)return;
+    const ta=taRef.current;if(!ta)return;
     ta.addEventListener("scroll",syncScroll,{passive:true});
     return()=>ta.removeEventListener("scroll",syncScroll);
   },[syncScroll]);
@@ -633,9 +638,8 @@ function CodeEditor({code,setCode,step,errorLineSet,onKeyDown,taRef}){
     <div style={{flex:1,display:"flex",minHeight:0,overflow:"hidden",position:"relative"}}>
       {/* Line gutter */}
       <div ref={lnRef} style={{
-        width:44,flexShrink:0,
-        background:"rgba(4,7,18,0.7)",
-        borderRight:"1px solid rgba(255,255,255,0.04)",
+        width:44,flexShrink:0,background:"rgba(4,7,18,0.75)",
+        borderRight:"1px solid rgba(255,255,255,0.05)",
         overflowY:"hidden",overflowX:"hidden",
         paddingTop:16,paddingBottom:16,
         display:"flex",flexDirection:"column",
@@ -648,26 +652,23 @@ function CodeEditor({code,setCode,step,errorLineSet,onKeyDown,taRef}){
           return(
             <div key={i} style={{
               height:LINE_H,flexShrink:0,
-              display:"flex",alignItems:"center",justifyContent:"flex-end",
-              paddingRight:9,
+              display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:9,
               fontFamily:"'JetBrains Mono',monospace",fontSize:10.5,lineHeight:1,
-              color:isErr?"#ef4444":isAct?"#60a5fa":"#1c2738",
-              background:isErr?"rgba(239,68,68,0.07)":isAct?"rgba(96,165,250,0.06)":"transparent",
-              borderRadius:3,
-              transition:"color 0.12s,background 0.12s",
+              color:isErr?"#f87171":isAct?"#60a5fa":"#2a3a54",
+              background:isErr?"rgba(248,113,113,0.07)":isAct?"rgba(96,165,250,0.07)":"transparent",
+              borderRadius:3,transition:"color 0.15s,background 0.15s",
             }}>{i+1}</div>
           );
         })}
       </div>
-
       {/* Active line overlay */}
       {step&&(
         <div style={{
           position:"absolute",left:44,right:0,height:LINE_H,
           top:16+step.lineNum*LINE_H,
           background:"rgba(96,165,250,0.04)",
-          borderLeft:"2px solid rgba(96,165,250,0.38)",
-          pointerEvents:"none",transition:"top 0.18s ease",zIndex:1,
+          borderLeft:"2px solid rgba(96,165,250,0.4)",
+          pointerEvents:"none",transition:"top 0.2s cubic-bezier(0.4,0,0.2,1)",zIndex:1,
         }}/>
       )}
       {/* Error overlays */}
@@ -675,12 +676,11 @@ function CodeEditor({code,setCode,step,errorLineSet,onKeyDown,taRef}){
         <div key={`e${i}`} style={{
           position:"absolute",left:44,right:0,height:LINE_H,
           top:16+i*LINE_H,
-          background:"rgba(239,68,68,0.05)",
-          borderLeft:"2px solid rgba(239,68,68,0.4)",
+          background:"rgba(248,113,113,0.05)",
+          borderLeft:"2px solid rgba(248,113,113,0.45)",
           pointerEvents:"none",zIndex:1,
         }}/>
       ))}
-
       <textarea ref={taRef} style={{
         flex:1,padding:`16px 16px 16px 12px`,
         background:"transparent",border:"none",outline:"none",
@@ -688,7 +688,7 @@ function CodeEditor({code,setCode,step,errorLineSet,onKeyDown,taRef}){
         fontSize:11.5,lineHeight:`${LINE_H}px`,
         resize:"none",caretColor:"#60a5fa",tabSize:2,whiteSpace:"pre",
         overflowY:"auto",overflowX:"auto",
-        scrollbarWidth:"thin",scrollbarColor:"#151e2e transparent",
+        scrollbarWidth:"thin",scrollbarColor:"rgba(96,165,250,0.2) transparent",
         position:"relative",zIndex:2,
       }}
         value={code}
@@ -701,7 +701,7 @@ function CodeEditor({code,setCode,step,errorLineSet,onKeyDown,taRef}){
   );
 }
 
-// ── Stack Viz ──────────────────────────────────────────────────────────────
+// ── Stack Visualizer ─────────────────────────────────────────────────────────
 function StackViz({step,animKey,idle}){
   const[fly,setFly]=useState(null);
   useEffect(()=>{
@@ -711,32 +711,47 @@ function StackViz({step,animKey,idle}){
     }
     if(step?.type!=="pop")setFly(null);
   },[animKey,step?.type]);
+
   const stack=step?.stack??[];
   const isPush=step?.type==="push",isPeek=step?.type==="peek";
   const isEmpOp=step?.type==="isEmpty";
   const isErr=step?.type==="pop_error"||step?.type==="peek_error";
   const rev=[...stack].reverse();
+
+  const metrics=[
+    {lbl:"SIZE",  val:stack.length,                           c:"#60a5fa"},
+    {lbl:"TOP",   val:stack.length?stack[stack.length-1]:"—", c:"#fbbf24"},
+    {lbl:"EMPTY", val:stack.length===0?"true":"false",        c:stack.length===0?"#f472b6":"#4ade80"},
+    {lbl:"POLICY",val:"LIFO",                                 c:"#a78bfa"},
+  ];
+
   return(
     <div className={`sv${isErr?" sv-err":""}`} key={isErr?`e${animKey}`:"sv"}>
+      {/* Metrics bar */}
       <div className="sv-metrics">
-        {[
-          {lbl:"SIZE",  val:stack.length,                           c:"#60a5fa"},
-          {lbl:"TOP",   val:stack.length?stack[stack.length-1]:"—", c:"#fbbf24"},
-          {lbl:"EMPTY", val:stack.length===0?"true":"false",        c:stack.length===0?"#f472b6":"#4ade80"},
-          {lbl:"POLICY",val:"LIFO",                                 c:"#a78bfa"},
-        ].map(m=>(
-          <div className="sv-m" key={m.lbl}>
+        {metrics.map((m,mi)=>(
+          <div className={`sv-m${step&&mi===0?" sv-m-active":""}`} key={m.lbl}>
             <span className="sv-ml">{m.lbl}</span>
             <span className="sv-mv" style={{color:m.c}}>{String(m.val)}</span>
           </div>
         ))}
       </div>
+
       <div className="sv-col">
+        {/* Ambient blobs */}
+        <div className="sv-blob sv-blob-1"/>
+        <div className="sv-blob sv-blob-2"/>
+
+        {/* Fly-away pop element */}
         {fly&&(
-          <div key={fly.key} className="sv-fly" style={{background:`linear-gradient(135deg,${col(fly.v).g1},${col(fly.v).g2})`,boxShadow:`0 0 34px ${col(fly.v).glow}`}}>
-            <span className="sv-fly-v">{fly.v}</span><span className="sv-fly-tag">↑ POP</span>
+          <div key={fly.key} className="sv-fly"
+            style={{background:`linear-gradient(135deg,${col(fly.v).g1},${col(fly.v).g2})`,
+              boxShadow:`0 0 40px ${col(fly.v).glow},0 0 80px ${col(fly.v).glow}40`}}>
+            <span className="sv-fly-v">{fly.v}</span>
+            <span className="sv-fly-tag">↑ POP</span>
           </div>
         )}
+
         <div className="sv-blocks">
           {stack.length===0&&!fly?(
             <div className={`sv-empty${isErr?" sv-empty-err":""}`}>
@@ -749,13 +764,17 @@ function StackViz({step,animKey,idle}){
             const c=col(v);
             return(
               <div key={`${v}-${ix2}-${isNew?animKey:"s"}`}
-                className={["sv-block",isNew?"sv-push":"",pk?"sv-peek":"",isTop?"sv-top":"",ec?"sv-ec":""].join(" ")}
+                className={["sv-block",isNew?"sv-push":"",pk?"sv-peek":"",isTop?"sv-top":"",ec?"sv-ec":""].filter(Boolean).join(" ")}
                 style={{
                   background:`linear-gradient(135deg,${c.g1},${c.g2})`,
-                  boxShadow:isTop?`0 0 30px ${c.glow},0 5px 16px rgba(0,0,0,0.48),inset 0 1px 0 rgba(255,255,255,0.2)`:`0 3px 10px rgba(0,0,0,0.4),inset 0 1px 0 rgba(255,255,255,0.1)`,
-                  borderColor:isTop?c.border:"rgba(255,255,255,0.07)",
-                  width:`${Math.max(155,196-ri*5)}px`,
+                  boxShadow:isTop
+                    ?`0 0 36px ${c.glow},0 0 72px ${c.glow}40,0 6px 20px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.25)`
+                    :`0 3px 12px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.12)`,
+                  borderColor:isTop?c.border:"rgba(255,255,255,0.08)",
+                  width:`${Math.max(155,200-ri*5)}px`,
                 }}>
+                {/* Inner shine */}
+                <div className="sv-block-shine"/>
                 {pk&&<div className="sv-pr" key={`r1-${animKey}`} style={{borderColor:c.border}}/>}
                 {pk&&<div className="sv-pr2" key={`r2-${animKey}`} style={{borderColor:c.border}}/>}
                 <span className="sv-bidx">[{ix2}]</span>
@@ -765,6 +784,8 @@ function StackViz({step,animKey,idle}){
             );
           })}
         </div>
+
+        {/* Platform */}
         <div className="sv-plat"><div className="sv-plat-shine"/></div>
         <p className="sv-base">▲ BASE OF STACK</p>
       </div>
@@ -772,24 +793,34 @@ function StackViz({step,animKey,idle}){
   );
 }
 
-// ── Main ───────────────────────────────────────────────────────────────────
+// ── Main ─────────────────────────────────────────────────────────────────────
 export default function StackDSPage(){
-  const[lang,      setLang]      =useState("javascript");
-  const[code,      setCode]      =useState(TPL.javascript);
-  const[steps,     setSteps]     =useState([]);
-  const[idx,       setIdx]       =useState(-1);
-  const[error,     setError]     =useState("");
-  const[playing,   setPlaying]   =useState(false);
-  const[speed,     setSpeed]     =useState(1.1);
-  const[animKey,   setAnimKey]   =useState(0);
-  const[done,      setDone]      =useState(false);
-  const[validating,setValidating]=useState(false);
-  const[aiErrors,  setAiErrors]  =useState([]);
-  const[termLines, setTermLines] =useState([]);
-  const[sessionId]               =useState(()=>Math.random().toString(36).slice(2,8).toUpperCase());
+  const[lang,       setLang]      =useState("javascript");
+  const[code,       setCode]      =useState(TPL.javascript);
+  const[steps,      setSteps]     =useState([]);
+  const[idx,        setIdx]       =useState(-1);
+  const[error,      setError]     =useState("");
+  const[playing,    setPlaying]   =useState(false);
+  const[speed,      setSpeed]     =useState(1.1);
+  const[animKey,    setAnimKey]   =useState(0);
+  const[done,       setDone]      =useState(false);
+  const[validating, setValidating]=useState(false);
+  const[aiErrors,   setAiErrors]  =useState([]);
+  const[termLines,  setTermLines] =useState([]);
+  const[sessionId]                =useState(()=>Math.random().toString(36).slice(2,8).toUpperCase());
+  const[toast,      setToast]     =useState(null);
+  const[termOpen,   setTermOpen]  =useState(true);
 
   const timerRef=useRef(null),taRef=useRef(null),listRef=useRef(null);
   const bump=()=>setAnimKey(k=>k+1);
+
+  const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(null),2200);};
+
+  const copyStackState=()=>{
+    if(!step)return;
+    const txt=step.stack.length?`[${step.stack.join(", ")}]  TOP: ${step.stack[step.stack.length-1]}`:"[] (empty)";
+    navigator.clipboard?.writeText(txt).then(()=>showToast("📋 Copied: "+txt)).catch(()=>showToast("📋 "+txt));
+  };
 
   const doReset=useCallback(()=>{
     clearInterval(timerRef.current);
@@ -801,10 +832,10 @@ export default function StackDSPage(){
   const buildTerm=(stps,errs,aiErrs,aiReason)=>{
     const ls=[];
     const ts=new Date().toTimeString().slice(0,8);
-    ls.push({type:"output",text:`VisuoSlayer v1.0  ·  ${ts}  ·  pid:${sessionId}`});
+    ls.push({type:"output",text:`VisuoSlayer v2.0  ·  Stack  ·  ${ts}  ·  pid:${sessionId}`});
     ls.push({type:"separator"});
     if(aiErrs.length>0){
-      ls.push({type:"prompt",text:`visualoslayer validate --lang=${lang}`});
+      ls.push({type:"prompt",text:`visualoslayer validate --lang=${lang} --ds=stack`});
       ls.push({type:"blank"});
       if(aiReason)ls.push({type:"stderr",text:aiReason});
       aiErrs.forEach(e=>ls.push({type:"error",text:`  L${e.line??'?'}  ${e.message}`,lineNum:e.line}));
@@ -821,7 +852,7 @@ export default function StackDSPage(){
       return ls;
     }
     if(stps.length>0){
-      ls.push({type:"prompt",text:`visualoslayer run --lang=${lang}`});
+      ls.push({type:"prompt",text:`visualoslayer run --lang=${lang} --ds=stack`});
       ls.push({type:"blank"});
       stps.forEach(s=>{
         const ie=s.type==="pop_error"||s.type==="peek_error";
@@ -848,7 +879,7 @@ export default function StackDSPage(){
     setValidating(false);
     if(!v.valid){
       setAiErrors(v.errors??[]);
-      setTermLines(buildTerm([],[],v.errors??[],v.reason??"")); return;
+      setTermLines(buildTerm([],[],v.errors??[],v.reason??""));return;
     }
     const{steps:s,errors}=runCode(code,lang);
     if(errors.length){setError(errors.join("\n"));setTermLines(buildTerm([],errors,[],"")); return;}
@@ -884,7 +915,8 @@ export default function StackDSPage(){
     requestAnimationFrame(()=>{if(taRef.current){taRef.current.selectionStart=s+2;taRef.current.selectionEnd=s+2;}});
   };
 
-  const step=steps[idx]??null,os=step?(OP[step.type]??OP.push):null;
+  const step=steps[idx]??null;
+  const os=step?(OP[step.type]??OP.push):null;
   const prog=steps.length?Math.round(((idx+1)/steps.length)*100):0;
   const hasAiErrors=aiErrors.length>0;
   const idle=steps.length===0&&!error&&!hasAiErrors;
@@ -894,210 +926,324 @@ export default function StackDSPage(){
   return(
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
         html,body{height:100%;overflow:hidden}
-        body{background:#030612;color:#e2e8f0;font-family:'DM Sans',sans-serif;}
+        body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
 
+        /* ── TOKENS ── */
+        :root{
+          --cyan:#60a5fa; --cyan-dim:rgba(96,165,250,0.15); --cyan-glow:rgba(96,165,250,0.45);
+          --pink:#f472b6; --pink-dim:rgba(244,114,182,0.15);
+          --green:#4ade80; --green-dim:rgba(74,222,128,0.15); --green-glow:rgba(74,222,128,0.4);
+          --purple:#a78bfa; --yellow:#fbbf24;
+          --text-primary:#d4e4f7; --text-secondary:#6b8aaa; --text-muted:#3d5470;
+          --border-subtle:rgba(255,255,255,0.07); --border-medium:rgba(255,255,255,0.13);
+          --surface-0:#050818; --surface-1:rgba(8,14,36,0.95); --surface-2:rgba(12,20,48,0.8);
+          --surface-3:rgba(16,26,58,0.7);
+        }
+
+        /* ── KEYFRAMES ── */
         @keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
         @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        @keyframes blkDrop{0%{transform:translateY(-80px) scale(0.78);opacity:0}58%{transform:translateY(5px) scale(1.04);opacity:1}78%{transform:translateY(-2px) scale(0.98)}100%{transform:none;opacity:1}}
-        @keyframes flyAway{0%{transform:translateX(-50%) scale(1) rotate(0);opacity:1}35%{opacity:1}100%{transform:translateX(calc(-50% + 65px)) translateY(-110px) scale(0.55) rotate(20deg);opacity:0}}
-        @keyframes pkRing{0%{transform:scale(1);opacity:0.85}100%{transform:scale(1.3);opacity:0}}
-        @keyframes pkPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) saturate(1.35)}}
-        @keyframes ecCheck{0%,100%{transform:scale(1)}35%{transform:scale(1.05) translateY(-4px)}68%{transform:scale(0.97) translateY(2px)}}
-        @keyframes pShine{0%,100%{left:-100%}55%{left:160%}}
-        @keyframes rPulse{0%,100%{box-shadow:0 0 18px rgba(59,130,246,0.35)}50%{box-shadow:0 0 38px rgba(96,165,250,0.65)}}
-        @keyframes svSh{0%,100%{transform:none}18%{transform:translateX(-8px)}36%{transform:translateX(8px)}54%{transform:translateX(-5px)}72%{transform:translateX(5px)}}
+        @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+        @keyframes rPulse{0%,100%{box-shadow:0 0 20px rgba(96,165,250,0.4)}50%{box-shadow:0 0 44px rgba(96,165,250,0.7),0 0 80px rgba(96,165,250,0.2)}}
+        @keyframes stepPop{0%{transform:scale(0.88);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+        @keyframes metricPop{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
+        @keyframes toastIn{0%{opacity:0;transform:translateY(8px) scale(0.94)}100%{opacity:1;transform:none}}
+        @keyframes toastOut{0%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px) scale(0.94)}}
+        @keyframes termSlideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
 
+        /* Stack-specific animations — preserved exactly from original */
+        @keyframes blkDrop{0%{transform:translateY(-80px) scale(0.78);opacity:0;filter:blur(3px)}55%{transform:translateY(6px) scale(1.05);opacity:1;filter:blur(0)}75%{transform:translateY(-2px) scale(0.98)}100%{transform:none;opacity:1}}
+        @keyframes flyAway{0%{transform:translateX(-50%) scale(1) rotate(0);opacity:1}35%{opacity:1}100%{transform:translateX(calc(-50% + 65px)) translateY(-120px) scale(0.5) rotate(22deg);opacity:0}}
+        @keyframes pkRing{0%{transform:scale(1);opacity:0.9}100%{transform:scale(1.35);opacity:0}}
+        @keyframes pkPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.55) saturate(1.4)}}
+        @keyframes ecCheck{0%,100%{transform:scale(1)}35%{transform:scale(1.06) translateY(-5px)}68%{transform:scale(0.97) translateY(2px)}}
+        @keyframes pShine{0%,100%{left:-100%}55%{left:160%}}
+        @keyframes svSh{0%,100%{transform:none}18%{transform:translateX(-9px)}36%{transform:translateX(9px)}54%{transform:translateX(-5px)}72%{transform:translateX(5px)}}
+        @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(22px,-16px) scale(1.06)}66%{transform:translate(-14px,20px) scale(0.95)}}
+        @keyframes blob2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-26px,14px) scale(1.08)}70%{transform:translate(18px,-22px) scale(0.93)}}
+        @keyframes scanline{0%{top:-10%}100%{top:110%}}
+        @keyframes gridScroll{0%{background-position:0 0}100%{background-position:38px 38px}}
+
+        /* ── PAGE ── */
         .pg{height:100vh;display:flex;flex-direction:column;overflow:hidden;
           background:
-            radial-gradient(ellipse 55% 40% at 6% 0%,rgba(59,130,246,0.10) 0%,transparent 58%),
-            radial-gradient(ellipse 45% 38% at 94% 100%,rgba(244,114,182,0.08) 0%,transparent 55%),
-            #030612}
+            radial-gradient(ellipse 60% 45% at 5% 0%,rgba(59,130,246,0.10) 0%,transparent 55%),
+            radial-gradient(ellipse 50% 40% at 95% 100%,rgba(244,114,182,0.08) 0%,transparent 52%),
+            radial-gradient(ellipse 40% 35% at 50% 50%,rgba(167,139,250,0.04) 0%,transparent 60%),
+            #050818}
 
-        /* HEADER */
-        .hd{flex-shrink:0;display:flex;align-items:center;gap:11px;padding:9px 26px;
-          background:rgba(3,6,18,0.97);backdrop-filter:blur(18px);
-          border-bottom:1px solid rgba(255,255,255,0.05)}
-        .hd-logo{width:32px;height:32px;border-radius:8px;flex-shrink:0;
-          background:linear-gradient(135deg,#1d4ed8,#60a5fa);
-          display:flex;align-items:center;justify-content:center;font-size:16px;
-          box-shadow:0 0 16px rgba(59,130,246,0.38)}
-        .hd-brand{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:-0.3px;
-          background:linear-gradient(90deg,#93c5fd,#60a5fa,#c4b5fd);
-          -webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .hd-tagline{font-size:9px;color:#141e2e;font-family:'JetBrains Mono',monospace;margin-top:1px}
-        .hd-r{margin-left:auto;display:flex;align-items:center;gap:7px}
-        .hd-pill{font-family:'JetBrains Mono',monospace;font-size:8.5px;padding:2px 9px;
-          border-radius:20px;letter-spacing:0.06em;white-space:nowrap}
-        .hd-pid{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#141e2e;
-          padding:2px 8px;border-radius:20px;border:1px solid rgba(255,255,255,0.04)}
+        /* ── HEADER ── */
+        .hd{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:9px 24px;
+          background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);
+          border-bottom:1px solid rgba(96,165,250,0.12);
+          box-shadow:0 1px 0 rgba(96,165,250,0.06),0 4px 24px rgba(0,0,0,0.4)}
+        .hd-logo{width:34px;height:34px;border-radius:9px;flex-shrink:0;
+          background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);
+          display:flex;align-items:center;justify-content:center;font-size:17px;
+          box-shadow:0 0 20px rgba(96,165,250,0.5),0 0 40px rgba(96,165,250,0.15);
+          animation:rPulse 3s ease-in-out infinite}
+        .hd-brand{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.4px;
+          background:linear-gradient(90deg,#93c5fd 0%,#a78bfa 50%,#f472b6 100%);
+          background-size:200% auto;
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+          animation:shimmer 4s linear infinite}
+        .hd-tagline{font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;letter-spacing:0.04em}
+        .hd-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+        .hd-pill{font-family:'JetBrains Mono',monospace;font-size:8.5px;padding:3px 10px;border-radius:20px;letter-spacing:0.07em;white-space:nowrap;font-weight:700}
+        .hd-pid{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);padding:3px 9px;border-radius:20px;border:1px solid var(--border-subtle);background:var(--surface-2)}
+        .hd-ds-badge{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--cyan);padding:3px 9px;border-radius:20px;border:1px solid rgba(96,165,250,0.25);background:rgba(96,165,250,0.08);letter-spacing:0.08em}
 
-        /* GRID */
-        .main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:11px;
-          padding:11px 26px 11px;min-height:0;overflow:hidden}
-
-        /* PANELS */
-        .panel{background:rgba(5,9,22,0.88);border:1px solid rgba(255,255,255,0.06);
-          border-radius:13px;display:flex;flex-direction:column;overflow:hidden;
-          box-shadow:0 18px 44px rgba(0,0,0,0.48);min-height:0}
-        .ph{padding:8px 13px;border-bottom:1px solid rgba(255,255,255,0.06);
-          background:rgba(8,13,32,0.75);display:flex;align-items:center;gap:6px;flex-shrink:0}
-        .dot{width:9px;height:9px;border-radius:50%}
-        .ptl{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#141e2e;
-          text-transform:uppercase;letter-spacing:1.4px;margin-left:7px}
-
-        /* LEFT */
+        /* ── LAYOUT ── */
+        .main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 24px;min-height:0;overflow:hidden}
+        .panel{background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:14px;
+          display:flex;flex-direction:column;overflow:hidden;
+          box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);min-height:0}
+        .ph{padding:9px 14px;border-bottom:1px solid var(--border-subtle);
+          background:rgba(8,14,38,0.85);display:flex;align-items:center;gap:7px;flex-shrink:0}
+        .dot{width:9px;height:9px;border-radius:50%;transition:box-shadow 0.3s}
+        .ptl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);
+          text-transform:uppercase;letter-spacing:1.5px;margin-left:8px;font-weight:600}
         .left{display:flex;flex-direction:column;min-height:0}
-        .ed-wrap{flex:0 0 58%;display:flex;flex-direction:column;min-height:0;border-bottom:2px solid rgba(255,255,255,0.04)}
-        .tm-wrap{flex:1;display:flex;flex-direction:column;min-height:110px}
 
-        /* LANG TABS */
-        .lb{display:flex;gap:2px;flex-wrap:wrap;padding:7px 11px;
-          border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(6,10,26,0.7);flex-shrink:0}
-        .lt{padding:3px 9px;border-radius:5px;cursor:pointer;
+        /* ── LANG TABS ── */
+        .lb{display:flex;gap:3px;flex-wrap:wrap;padding:8px 12px;
+          border-bottom:1px solid var(--border-subtle);background:rgba(6,11,30,0.8);flex-shrink:0}
+        .lt{padding:4px 10px;border-radius:6px;cursor:pointer;
           font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;
-          border:1px solid rgba(255,255,255,0.06);background:transparent;color:#141e2e;
-          transition:all 0.13s;letter-spacing:0.04em}
-        .lt:hover{color:#2a3a50;border-color:rgba(255,255,255,0.09)}
-        .lt.la{border-color:transparent;color:#dde8ff}
+          border:1px solid var(--border-subtle);background:transparent;
+          color:var(--text-muted);transition:all 0.15s;letter-spacing:0.05em}
+        .lt:hover{color:var(--text-secondary);border-color:var(--border-medium);background:rgba(255,255,255,0.04)}
+        .lt.la{color:#e8f4ff;background:rgba(255,255,255,0.06);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,0.1)}
 
-        /* ACTIVE LINE BAR */
-        .alb{display:flex;align-items:center;gap:7px;padding:4px 13px;
-          border-left:2px solid;min-height:26px;border-top:1px solid rgba(255,255,255,0.04);flex-shrink:0}
-        .alb-ln{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;white-space:nowrap}
-        .alb-code{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#1a2535;
+        /* ── ACTIVE LINE BAR ── */
+        .alb{display:flex;align-items:center;gap:8px;padding:5px 14px;
+          border-left:2px solid;min-height:28px;border-top:1px solid var(--border-subtle);
+          flex-shrink:0;animation:fadeIn 0.18s ease;backdrop-filter:blur(4px)}
+        .alb-ln{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;white-space:nowrap}
+        .alb-code{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);
           overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 
-        /* RUN BAR */
-        .rr{padding:8px 12px;border-top:1px solid rgba(255,255,255,0.05);
-          display:flex;align-items:center;gap:7px;flex-shrink:0;background:rgba(4,7,18,0.5)}
-        .btn-run{padding:6px 18px;border-radius:7px;
-          background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);border:none;color:#fff;
-          font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;
-          transition:all 0.16s;box-shadow:0 0 16px rgba(59,130,246,0.32);letter-spacing:0.04em}
-        .btn-run:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 0 28px rgba(96,165,250,0.52)}
-        .btn-run.running{animation:rPulse 1s ease-in-out infinite;background:linear-gradient(135deg,#1e3a8a,#1d4ed8)}
-        .btn-run:disabled{opacity:0.45;cursor:not-allowed;transform:none}
-        .btn-rst{padding:6px 12px;border-radius:7px;background:transparent;
-          border:1px solid rgba(255,255,255,0.07);color:#1e2d40;
-          font-family:'JetBrains Mono',monospace;font-size:9.5px;cursor:pointer;transition:all 0.14s}
-        .btn-rst:hover{color:#f87171;border-color:rgba(248,113,113,0.28)}
-        .rr-hint{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:#0d1620;letter-spacing:0.07em}
+        /* ── RUN BAR ── */
+        .rr{padding:9px 13px;border-top:1px solid var(--border-subtle);
+          display:flex;align-items:center;gap:8px;flex-shrink:0;background:rgba(4,8,22,0.6)}
+        .btn-run{padding:7px 20px;border-radius:8px;
+          background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);
+          border:1px solid rgba(96,165,250,0.35);color:#fff;
+          font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;cursor:pointer;
+          transition:all 0.18s;box-shadow:0 0 20px rgba(96,165,250,0.3),0 2px 8px rgba(0,0,0,0.4);
+          letter-spacing:0.04em;position:relative;overflow:hidden}
+        .btn-run::after{content:'';position:absolute;inset:0;
+          background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%);
+          border-radius:inherit;pointer-events:none}
+        .btn-run:hover:not(:disabled){transform:translateY(-2px);
+          box-shadow:0 0 36px rgba(96,165,250,0.55),0 6px 20px rgba(0,0,0,0.5)}
+        .btn-run:active:not(:disabled){transform:translateY(0)}
+        .btn-run.running{animation:rPulse 1.2s ease-in-out infinite;
+          background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#3b82f6)}
+        .btn-run:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+        .btn-rst{padding:7px 13px;border-radius:8px;background:transparent;
+          border:1px solid rgba(248,113,113,0.28);color:#f87171;
+          font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;cursor:pointer;
+          transition:all 0.16s}
+        .btn-rst:hover{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.5);
+          box-shadow:0 0 14px rgba(248,113,113,0.2)}
+        .rr-hint{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);
+          letter-spacing:0.07em;padding:3px 7px;border-radius:5px;
+          border:1px solid var(--border-subtle);background:var(--surface-2)}
 
-        /* TERM TITLEBAR */
-        .term-bar{display:flex;align-items:center;gap:6px;padding:6px 13px;
-          background:rgba(6,9,16,0.9);border-bottom:1px solid rgba(255,255,255,0.04);flex-shrink:0}
+        /* ── TERMINAL ── */
+        .term-bar{display:flex;align-items:center;gap:6px;padding:7px 14px;
+          background:rgba(4,7,18,0.95);border-bottom:1px solid var(--border-subtle);
+          border-top:1px solid var(--border-subtle);flex-shrink:0}
+        .tm-wrap{display:flex;flex-direction:column;min-height:0;
+          transition:flex-basis 0.32s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;overflow:hidden}
+        .tm-wrap.tm-open{flex:1;min-height:110px}
+        .tm-wrap.tm-closed{flex:0 0 0px;min-height:0;opacity:0;pointer-events:none}
+        .term-body-wrap{flex:1;display:flex;flex-direction:column;min-height:0;
+          animation:termSlideDown 0.28s cubic-bezier(0.4,0,0.2,1)}
+        .term-toggle{display:flex;align-items:center;justify-content:center;
+          width:18px;height:18px;border-radius:5px;border:1px solid var(--border-medium);
+          background:rgba(255,255,255,0.04);cursor:pointer;flex-shrink:0;
+          color:var(--text-secondary);font-size:9px;font-weight:700;
+          transition:all 0.15s;margin-left:auto;font-family:'JetBrains Mono',monospace;
+          line-height:1;user-select:none}
+        .term-toggle:hover{background:var(--cyan-dim);color:var(--cyan);
+          border-color:rgba(96,165,250,0.4);box-shadow:0 0 8px var(--cyan-glow)}
+        .term-bar-closed{display:flex;align-items:center;gap:6px;padding:7px 14px;
+          background:rgba(4,7,18,0.95);border-top:1px solid var(--border-subtle);flex-shrink:0;
+          cursor:pointer;transition:background 0.15s}
+        .term-bar-closed:hover{background:rgba(8,14,32,0.95)}
 
-        /* RIGHT */
-        .vb{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-
-        /* STACK VIZ */
-        .sv{display:flex;flex-direction:column;flex:1;min-height:0}
-        .sv.sv-err{animation:svSh 0.38s ease}
-        .sv-metrics{display:flex;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(4,7,20,0.65);flex-shrink:0}
-        .sv-m{flex:1;padding:7px 8px;text-align:center;border-right:1px solid rgba(255,255,255,0.05);display:flex;flex-direction:column;gap:2px}
+        /* ── METRICS ── */
+        .sv-metrics{display:flex;border-bottom:1px solid var(--border-subtle);
+          background:rgba(4,8,26,0.75);flex-shrink:0}
+        .sv-m{flex:1;padding:8px 10px;text-align:center;
+          border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:3px;
+          transition:background 0.2s}
         .sv-m:last-child{border-right:none}
-        .sv-ml{font-family:'JetBrains Mono',monospace;font-size:6px;color:#111925;letter-spacing:0.18em;text-transform:uppercase}
-        .sv-mv{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;line-height:1}
+        .sv-m.sv-m-active{background:rgba(96,165,250,0.05);animation:metricPop 0.3s ease}
+        .sv-ml{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:var(--text-muted);
+          letter-spacing:0.2em;text-transform:uppercase;font-weight:600}
+        .sv-mv{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;line-height:1.1;transition:color 0.3s}
+
+        /* ── STACK VIZ ── */
+        .sv{display:flex;flex-direction:column;flex:1;min-height:0;position:relative}
+        .sv.sv-err{animation:svSh 0.4s ease}
         .sv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
           padding:16px 16px 0;position:relative;overflow:hidden}
+
+        /* Grid background */
+        .sv-col::before{content:'';position:absolute;inset:0;pointer-events:none;
+          background-image:linear-gradient(rgba(96,165,250,0.05) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(96,165,250,0.05) 1px,transparent 1px);
+          background-size:38px 38px;animation:gridScroll 10s linear infinite}
+
+        /* Scanline */
+        .sv-col::after{content:'';position:absolute;left:0;right:0;height:70px;pointer-events:none;z-index:0;
+          background:linear-gradient(to bottom,transparent,rgba(96,165,250,0.025),transparent);
+          animation:scanline 7s ease-in-out infinite}
+
+        /* Ambient blobs */
+        .sv-blob{position:absolute;border-radius:50%;pointer-events:none;filter:blur(65px);mix-blend-mode:screen}
+        .sv-blob-1{width:200px;height:200px;top:-30px;left:-20px;
+          background:radial-gradient(circle,rgba(59,130,246,0.14),transparent 65%);
+          animation:blobFloat 13s ease-in-out infinite}
+        .sv-blob-2{width:160px;height:160px;bottom:20px;right:-10px;
+          background:radial-gradient(circle,rgba(244,114,182,0.10),transparent 65%);
+          animation:blob2 10s ease-in-out infinite}
+
         .sv-fly{position:absolute;top:10px;left:50%;transform:translateX(-50%);
-          width:175px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;
-          z-index:20;pointer-events:none;border:1.5px solid rgba(255,255,255,0.22);
-          animation:flyAway 0.78s cubic-bezier(0.22,1,0.36,1) forwards}
-        .sv-fly-v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#fff}
-        .sv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.6);letter-spacing:0.06em}
-        .sv-blocks{display:flex;flex-direction:column;gap:3px;align-items:center;width:100%}
-        .sv-block{height:42px;border-radius:10px;border:1.5px solid transparent;
-          display:flex;align-items:center;padding:0 11px;gap:7px;position:relative;overflow:hidden;transition:width 0.26s}
-        .sv-block::before{content:'';position:absolute;inset:0;
-          background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 52%);border-radius:inherit;pointer-events:none}
-        .sv-push{animation:blkDrop 0.46s cubic-bezier(0.34,1.56,0.64,1) both}
-        .sv-pr,.sv-pr2{position:absolute;inset:-4px;border-radius:14px;border:2px solid;
-          animation:pkRing 0.72s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none}
-        .sv-pr2{animation-delay:0.14s}
-        .sv-peek{animation:pkPulse 0.55s ease 2 both}
+          width:180px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;gap:8px;
+          z-index:20;pointer-events:none;border:1.5px solid rgba(255,255,255,0.25);
+          animation:flyAway 0.82s cubic-bezier(0.22,1,0.36,1) forwards}
+        .sv-fly-v{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#fff}
+        .sv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:rgba(255,255,255,0.65);letter-spacing:0.06em}
+
+        .sv-blocks{display:flex;flex-direction:column;gap:4px;align-items:center;width:100%;position:relative;z-index:2}
+        .sv-block{height:44px;border-radius:11px;border:1.5px solid transparent;
+          display:flex;align-items:center;padding:0 12px;gap:8px;position:relative;overflow:hidden;
+          transition:width 0.28s,box-shadow 0.28s;cursor:default}
+        .sv-block-shine{position:absolute;inset:0;
+          background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 52%);
+          border-radius:inherit;pointer-events:none}
+        .sv-block:hover{filter:brightness(1.08)}
+        .sv-push{animation:blkDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) both}
+        .sv-pr,.sv-pr2{position:absolute;inset:-4px;border-radius:15px;border:2px solid;
+          animation:pkRing 0.75s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none}
+        .sv-pr2{animation-delay:0.15s}
+        .sv-peek{animation:pkPulse 0.6s ease 2 both}
         .sv-top{z-index:2}
-        .sv-ec{animation:ecCheck 0.44s ease both}
-        .sv-bidx{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.32);flex-shrink:0}
-        .sv-bval{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#fff;flex:1;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,0.28)}
-        .sv-btag{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:rgba(255,255,255,0.55);flex-shrink:0;letter-spacing:0.05em}
+        .sv-ec{animation:ecCheck 0.46s ease both}
+        .sv-bidx{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:rgba(255,255,255,0.35);flex-shrink:0;font-weight:600}
+        .sv-bval{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#fff;flex:1;text-align:center;text-shadow:0 2px 10px rgba(0,0,0,0.35)}
+        .sv-btag{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.6);flex-shrink:0;letter-spacing:0.06em}
+
         .sv-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
-          width:170px;height:72px;border:1px dashed rgba(255,255,255,0.06);border-radius:10px;gap:5px}
-        .sv-empty.sv-empty-err{border-color:rgba(239,68,68,0.28);animation:svSh 0.34s ease}
-        .sv-ei{font-size:18px;opacity:0.38}
-        .sv-et{font-family:'JetBrains Mono',monospace;font-size:8px;color:#111925;letter-spacing:0.07em}
-        .sv-plat{margin-top:3px;width:200px;height:7px;border-radius:5px;
-          background:linear-gradient(90deg,rgba(96,165,250,0.2),rgba(96,165,250,0.09),rgba(96,165,250,0.2));
-          position:relative;overflow:hidden;box-shadow:0 0 14px rgba(96,165,250,0.18)}
+          width:175px;height:78px;border:1px dashed rgba(255,255,255,0.08);border-radius:12px;gap:6px;
+          background:rgba(255,255,255,0.015);z-index:2;position:relative}
+        .sv-empty.sv-empty-err{border-color:rgba(248,113,113,0.3);animation:svSh 0.36s ease;
+          background:rgba(248,113,113,0.03)}
+        .sv-ei{font-size:20px;opacity:0.4}
+        .sv-et{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--text-muted);letter-spacing:0.08em}
+
+        .sv-plat{margin-top:4px;width:210px;height:7px;border-radius:5px;
+          background:linear-gradient(90deg,rgba(96,165,250,0.22),rgba(96,165,250,0.1),rgba(96,165,250,0.22));
+          position:relative;overflow:hidden;box-shadow:0 0 16px rgba(96,165,250,0.22)}
         .sv-plat-shine{position:absolute;top:0;left:-100%;width:55%;height:100%;
-          background:linear-gradient(90deg,transparent,rgba(255,255,255,0.24),transparent);
-          animation:pShine 3.2s ease-in-out infinite}
-        .sv-base{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:#111925;
-          letter-spacing:0.13em;margin-top:3px;margin-bottom:8px}
+          background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);
+          animation:pShine 3.5s ease-in-out infinite}
+        .sv-base{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--text-muted);
+          letter-spacing:0.15em;margin-top:4px;margin-bottom:8px}
 
-        /* OP INFO */
-        .oi{padding:8px 14px;border-top:1px solid rgba(255,255,255,0.05);
-          background:rgba(4,7,20,0.55);min-height:57px;flex-shrink:0}
-        .oi-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;
-          border-radius:20px;margin-bottom:4px;font-family:'JetBrains Mono',monospace;
-          font-size:9px;font-weight:700;animation:fadeIn 0.2s ease;border:1px solid}
-        .oi-msg{font-family:'JetBrains Mono',monospace;font-size:10px;color:"#1e2d40";line-height:1.55;animation:fadeIn 0.22s ease;color:#253550}
-        .oi-idle{display:flex;align-items:center;gap:7px;font-family:'JetBrains Mono',monospace;
-          font-size:9px;color:#111925;letter-spacing:0.04em;padding:5px 0}
+        /* ── OP INFO ── */
+        .oi{padding:9px 15px;border-top:1px solid var(--border-subtle);
+          background:rgba(4,8,24,0.6);min-height:58px;flex-shrink:0}
+        .oi-badge{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;
+          border-radius:20px;margin-bottom:5px;font-family:'JetBrains Mono',monospace;
+          font-size:9.5px;font-weight:700;animation:stepPop 0.22s ease;border:1px solid;letter-spacing:0.04em}
+        .oi-msg{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.6;
+          animation:fadeUp 0.2s ease;color:var(--text-secondary)}
+        .oi-idle{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;
+          font-size:9px;color:var(--text-muted);letter-spacing:0.04em;padding:6px 0}
 
-        /* CONTROLS */
-        .ctrl{display:flex;align-items:center;gap:4px;padding:6px 12px;
-          border-top:1px solid rgba(255,255,255,0.05);background:rgba(3,6,16,0.55);flex-wrap:wrap;flex-shrink:0}
-        .cb{width:27px;height:25px;border-radius:6px;border:1px solid rgba(255,255,255,0.06);
-          background:rgba(255,255,255,0.03);color:#1e2d40;font-size:10px;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;transition:all 0.12s}
-        .cb:hover:not(:disabled){background:rgba(96,165,250,0.09);color:#93c5fd;border-color:rgba(96,165,250,0.22)}
-        .cb:disabled{opacity:0.2;cursor:not-allowed}
-        .cp{height:25px;padding:0 9px;border-radius:6px;
-          background:linear-gradient(135deg,#1d4ed8,#60a5fa);border:none;color:#fff;
-          font-size:10px;cursor:pointer;box-shadow:0 0 11px rgba(59,130,246,0.32);transition:all 0.14s}
-        .cp:hover{transform:scale(1.05);box-shadow:0 0 20px rgba(96,165,250,0.5)}
-        .cp:disabled{opacity:0.28;cursor:not-allowed;transform:none}
-        .csep{width:1px;height:15px;background:rgba(255,255,255,0.05);margin:0 2px}
+        /* ── CONTROLS ── */
+        .ctrl{display:flex;align-items:center;gap:5px;padding:7px 13px;
+          border-top:1px solid var(--border-subtle);background:rgba(3,6,18,0.65);
+          flex-wrap:wrap;flex-shrink:0}
+        .cb{width:29px;height:27px;border-radius:7px;border:1px solid var(--border-medium);
+          background:var(--surface-3);color:var(--text-secondary);font-size:11px;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;transition:all 0.14s;
+          box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+        .cb:hover:not(:disabled){background:var(--cyan-dim);color:var(--cyan);
+          border-color:rgba(96,165,250,0.45);box-shadow:0 0 12px var(--cyan-glow)}
+        .cb:active:not(:disabled){transform:scale(0.93)}
+        .cb:disabled{opacity:0.22;cursor:not-allowed}
+        .cp{height:27px;padding:0 14px;border-radius:7px;
+          background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);
+          border:1px solid rgba(96,165,250,0.35);color:#fff;font-size:11px;font-weight:700;
+          cursor:pointer;box-shadow:0 0 16px rgba(96,165,250,0.35);transition:all 0.15s}
+        .cp:hover{transform:scale(1.06);box-shadow:0 0 28px rgba(96,165,250,0.55)}
+        .cp:active{transform:scale(0.97)}
+        .cp:disabled{opacity:0.25;cursor:not-allowed;transform:none;box-shadow:none}
+        .csep{width:1px;height:16px;background:var(--border-subtle);margin:0 3px}
         .spd{display:flex;gap:2px}
-        .sb{padding:2px 6px;border-radius:4px;cursor:pointer;
-          font-family:'JetBrains Mono',monospace;font-size:7.5px;font-weight:700;
-          border:1px solid rgba(255,255,255,0.05);background:transparent;color:#111925;transition:all 0.1s}
-        .sb:hover{color:#1e2d40}
-        .sb.sa{background:rgba(96,165,250,0.09);border-color:rgba(96,165,250,0.22);color:#93c5fd}
+        .sb{padding:3px 8px;border-radius:5px;cursor:pointer;
+          font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
+          border:1px solid var(--border-subtle);background:transparent;
+          color:var(--text-muted);transition:all 0.12s}
+        .sb:hover{color:var(--text-secondary);border-color:var(--border-medium)}
+        .sb.sa{background:var(--cyan-dim);border-color:rgba(96,165,250,0.4);
+          color:var(--cyan);box-shadow:0 0 8px rgba(96,165,250,0.2)}
 
-        /* PROGRESS */
-        .pr{display:flex;align-items:center;gap:7px;padding:5px 14px;
-          border-top:1px solid rgba(255,255,255,0.04);flex-shrink:0}
-        .pt2{flex:1;height:3px;background:rgba(255,255,255,0.04);border-radius:99px;overflow:hidden}
-        .pf{height:100%;border-radius:99px;transition:width 0.36s ease;
-          background:linear-gradient(90deg,#1d4ed8,#60a5fa,#93c5fd);
-          box-shadow:0 0 6px rgba(96,165,250,0.42)}
-        .ptx{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#111925}
+        /* ── PROGRESS ── */
+        .pr{display:flex;align-items:center;gap:8px;padding:6px 15px;
+          border-top:1px solid var(--border-subtle);flex-shrink:0}
+        .pt2{flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;
+          box-shadow:inset 0 1px 2px rgba(0,0,0,0.3)}
+        .pf{height:100%;border-radius:99px;transition:width 0.4s cubic-bezier(0.4,0,0.2,1);
+          background:linear-gradient(90deg,#1d4ed8,#60a5fa,#a78bfa);
+          box-shadow:0 0 8px rgba(96,165,250,0.5)}
+        .ptx{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);
+          min-width:32px;text-align:right}
 
-        /* OP LOG */
-        .slh{padding:5px 14px 2px;font-family:'JetBrains Mono',monospace;font-size:6.5px;color:#111925;
-          letter-spacing:0.17em;text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.04);flex-shrink:0}
-        .sl{overflow-y:auto;padding:0 8px 7px;display:flex;flex-direction:column;gap:1px;
-          max-height:90px;flex-shrink:0;scrollbar-width:thin;scrollbar-color:#151e2e transparent}
-        .si{display:flex;align-items:center;gap:5px;padding:2px 7px;border-radius:4px;
-          cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8px;color:#111925;
-          transition:all 0.1s;border:1px solid transparent}
-        .si:hover{background:rgba(96,165,250,0.05);color:#1e2d40}
-        .sl-active{background:rgba(96,165,250,0.07)!important;border-color:rgba(96,165,250,0.13)!important;color:#93c5fd!important}
-        .si-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-        .si-v{opacity:0.42;margin-left:1px}
-        .si-ln{margin-left:auto;font-size:7px;color:#111925}
+        /* ── OP LOG ── */
+        .slh{padding:6px 15px 3px;font-family:'JetBrains Mono',monospace;font-size:7px;
+          color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-weight:600;
+          border-top:1px solid var(--border-subtle);flex-shrink:0;
+          display:flex;align-items:center;justify-content:space-between}
+        .slh-count{font-size:7px;color:var(--cyan);opacity:0.7}
+        .sl{overflow-y:auto;padding:3px 8px 8px;display:flex;flex-direction:column;gap:1.5px;
+          max-height:95px;flex-shrink:0;
+          scrollbar-width:thin;scrollbar-color:rgba(96,165,250,0.2) transparent}
+        .si{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;
+          cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8px;
+          color:var(--text-muted);transition:all 0.12s;border:1px solid transparent}
+        .si:hover{background:var(--cyan-dim);color:var(--text-secondary);border-color:rgba(96,165,250,0.12)}
+        .sl-active{background:rgba(96,165,250,0.09)!important;border-color:rgba(96,165,250,0.22)!important;
+          color:var(--cyan)!important;box-shadow:inset 3px 0 0 var(--cyan)}
+        .si-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:all 0.15s}
+        .si-v{opacity:0.55;margin-left:2px}
+        .si-ln{margin-left:auto;font-size:7px;color:var(--text-muted);opacity:0.7}
 
-        ::-webkit-scrollbar{width:3px;height:3px}
+        /* ── TOAST ── */
+        .toast{position:fixed;bottom:24px;right:24px;padding:8px 16px;border-radius:9px;
+          font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+          background:rgba(10,20,50,0.97);border:1px solid var(--border-medium);
+          color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.5),0 0 16px var(--green-glow);
+          z-index:9999;animation:toastIn 0.25s ease,toastOut 0.3s ease 1.8s forwards}
+
+        /* ── SCROLLBARS ── */
+        ::-webkit-scrollbar{width:4px;height:4px}
         ::-webkit-scrollbar-track{background:transparent}
-        ::-webkit-scrollbar-thumb{background:#151e2e;border-radius:3px}
-        textarea::-webkit-scrollbar{width:3px}
-        .ln-col::-webkit-scrollbar{display:none}
+        ::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.2);border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:rgba(96,165,250,0.4)}
+        textarea::-webkit-scrollbar{width:4px}
       `}</style>
 
       <div className="pg">
@@ -1109,27 +1255,27 @@ export default function StackDSPage(){
             <div className="hd-tagline">Stack DS Visualizer · Write · Run · Step through every operation</div>
           </div>
           <div className="hd-r">
-            <div className="hd-pill" style={{color:lm.accent,background:`${lm.accent}0e`,border:`1px solid ${lm.accent}20`}}>{lm.name}</div>
+            <div className="hd-ds-badge">LIFO STACK</div>
+            <div className="hd-pill" style={{color:lm.accent,background:`${lm.accent}12`,border:`1px solid ${lm.accent}28`}}>{lm.name}</div>
             <div className="hd-pid">pid:{sessionId}</div>
           </div>
         </header>
 
         <main className="main">
-
           {/* LEFT: editor + terminal */}
           <div className="panel left">
             <div className="ph">
-              <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f5750"}}/>
-              <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e40"}}/>
-              <span className="dot" style={{background:"#28c840",boxShadow:"0 0 5px #28c84040"}}/>
+              <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 6px #ff5f57"}}/>
+              <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 6px #ffbd2e"}}/>
+              <span className="dot" style={{background:"#28c840",boxShadow:"0 0 6px #28c840"}}/>
               <span className="ptl">Code Editor</span>
-              <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,
-                color:lm.accent,background:`${lm.accent}0e`,border:`1px solid ${lm.accent}22`,
-                padding:"2px 7px",borderRadius:20}}>{lm.name}</span>
+              <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,
+                color:lm.accent,background:`${lm.accent}12`,border:`1px solid ${lm.accent}28`,
+                padding:"2px 8px",borderRadius:20,fontWeight:700}}>{lm.name}</span>
             </div>
 
-            {/* Editor top */}
-            <div className="ed-wrap">
+            <div style={{flex:termOpen?"0 0 58%":"1",display:"flex",flexDirection:"column",minHeight:0,borderBottom:"1px solid var(--border-subtle)"}}>
+              {/* Lang tabs */}
               <div className="lb">
                 {Object.entries(LANGS).map(([k,m])=>(
                   <button key={k} className={`lt${lang===k?" la":""}`}
@@ -1139,10 +1285,8 @@ export default function StackDSPage(){
                 ))}
               </div>
 
-              <CodeEditor
-                code={code} setCode={setCode} step={step}
-                errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}
-              />
+              <CodeEditor code={code} setCode={setCode} step={step}
+                errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
 
               {step&&os&&(
                 <div className="alb" style={{borderColor:os.bd,background:os.bg}}>
@@ -1164,38 +1308,59 @@ export default function StackDSPage(){
               </div>
             </div>
 
-            {/* Terminal bottom */}
-            <div className="tm-wrap">
-              <div className="term-bar">
-                <span className="dot" style={{background:"#ff5f57"}}/>
-                <span className="dot" style={{background:"#ffbd2e"}}/>
-                <span className="dot" style={{background:"#28c840"}}/>
-                <span style={{marginLeft:7,fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"#1a2535",textTransform:"uppercase",letterSpacing:"1.2px",userSelect:"none"}}>
+            {/* Terminal — collapsible */}
+            <div className={`tm-wrap${termOpen?" tm-open":" tm-closed"}`}>
+              <div className="term-body-wrap" key={termOpen?"open":"closed"}>
+                <div className="term-bar">
+                  <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f57"}}/>
+                  <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e"}}/>
+                  <span className="dot" style={{background:"#28c840",boxShadow:"0 0 5px #28c840"}}/>
+                  <span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"1.2px",userSelect:"none"}}>
+                    visualoslayer — bash
+                  </span>
+                  <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--text-muted)",marginLeft:8}}>pid:{sessionId}</span>
+                  <button className="term-toggle" onClick={()=>setTermOpen(false)} title="Collapse terminal">▾</button>
+                </div>
+                <Terminal lines={termLines} sessionId={sessionId} validating={validating}/>
+              </div>
+            </div>
+
+            {!termOpen&&(
+              <div className="term-bar-closed" onClick={()=>setTermOpen(true)} title="Expand terminal">
+                <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 4px #ff5f57"}}/>
+                <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 4px #ffbd2e"}}/>
+                <span className="dot" style={{background:"#28c840",boxShadow:"0 0 4px #28c840"}}/>
+                <span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"1.2px"}}>
                   visualoslayer — bash
                 </span>
-                <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#111925"}}>
-                  pid:{sessionId}
-                </span>
+                {termLines.some(l=>l.type==="error"||l.type==="stderr")&&(
+                  <span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#f87171",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",padding:"1px 7px",borderRadius:10}}>errors</span>
+                )}
+                {termLines.some(l=>l.type==="success")&&(
+                  <span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--green)",background:"var(--green-dim)",border:"1px solid rgba(74,222,128,0.25)",padding:"1px 7px",borderRadius:10}}>ok</span>
+                )}
+                <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"var(--cyan)",fontWeight:700}}>▴ open</span>
               </div>
-              <Terminal lines={termLines} sessionId={sessionId} validating={validating}/>
-            </div>
+            )}
           </div>
 
           {/* RIGHT: viz + info + controls + log */}
           <div className="panel">
             <div className="ph">
-              <span className="dot" style={{background:"#60a5fa",boxShadow:"0 0 5px #60a5fa50"}}/>
-              <span className="dot" style={{background:"#f472b6",boxShadow:"0 0 5px #f472b640"}}/>
-              <span className="dot" style={{background:"#4ade80",boxShadow:"0 0 5px #4ade8040"}}/>
+              <span className="dot" style={{background:"#60a5fa",boxShadow:"0 0 6px #60a5fa"}}/>
+              <span className="dot" style={{background:"#f472b6",boxShadow:"0 0 6px #f472b6"}}/>
+              <span className="dot" style={{background:"#4ade80",boxShadow:"0 0 6px #4ade80"}}/>
               <span className="ptl">Stack Visualization</span>
               {steps.length>0&&(
-                <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,color:"#141e2e"}}>
-                  step {idx+1}/{steps.length}
+                <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,
+                  color:"var(--cyan)",background:"var(--cyan-dim)",border:"1px solid rgba(96,165,250,0.25)",
+                  padding:"2px 9px",borderRadius:20,fontWeight:700}}>
+                  {idx+1} / {steps.length}
                 </span>
               )}
             </div>
 
-            <div className="vb">
+            <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden"}}>
               <StackViz step={step} animKey={animKey} idle={idle}/>
 
               <div className="oi">
@@ -1212,33 +1377,41 @@ export default function StackDSPage(){
                 ):(
                   <div className="oi-idle">
                     <span>📟</span>
-                    <span>{idle?"Write a Stack class, use it below, hit Run":hasAiErrors?"VisuoSlayer found errors — see terminal":error?"Fix errors and run again":validating?"VisuoSlayer reviewing your code…":"Waiting…"}</span>
+                    <span style={{color:"var(--text-muted)"}}>
+                      {idle?"Write a Stack class, use it below, hit Run"
+                        :hasAiErrors?"VisuoSlayer found errors — see terminal"
+                        :error?"Fix errors and run again"
+                        :validating?"VisuoSlayer reviewing your code…"
+                        :"Waiting…"}
+                    </span>
                   </div>
                 )}
               </div>
 
               {steps.length>0&&(
                 <div className="ctrl">
-                  <button className="cb" onClick={()=>goTo(0)} disabled={idx<=0}>⏮</button>
-                  <button className="cb" onClick={()=>goTo(idx-1)} disabled={idx<=0}>◀</button>
-                  <button className="cp"
+                  <button className="cb" title="First step" onClick={()=>goTo(0)} disabled={idx<=0}>⏮</button>
+                  <button className="cb" title="Previous step" onClick={()=>goTo(idx-1)} disabled={idx<=0}>◀</button>
+                  <button className="cp" title={playing?"Pause":done?"Restart":"Play"}
                     onClick={()=>{
                       if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}
                       else{clearInterval(timerRef.current);setPlaying(p=>!p);}
                     }}>
                     {playing?"⏸":done?"↺":"▶"}
                   </button>
-                  <button className="cb" onClick={()=>goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
-                  <button className="cb" onClick={()=>goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
+                  <button className="cb" title="Next step" onClick={()=>goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
+                  <button className="cb" title="Last step" onClick={()=>goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
                   <div className="csep"/>
                   <div className="spd">
                     {[[2,"0.5×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl])=>(
-                      <button key={s} className={`sb${speed===s?" sa":""}`} onClick={()=>setSpeed(s)}>{lbl}</button>
+                      <button key={s} className={`sb${speed===s?" sa":""}`} onClick={()=>setSpeed(s)} title={`Speed ${lbl}`}>{lbl}</button>
                     ))}
                   </div>
                   <div className="csep"/>
-                  <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#111925"}}>
-                    {idx+1} / {steps.length}
+                  <button className="cb" title="Copy current stack state" onClick={copyStackState} style={{fontSize:12}}>📋</button>
+                  <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"var(--text-secondary)",marginLeft:2}}>
+                    <span style={{color:"var(--cyan)",fontWeight:700}}>{idx+1}</span>
+                    <span style={{color:"var(--text-muted)"}}>/{steps.length}</span>
                   </span>
                 </div>
               )}
@@ -1252,7 +1425,10 @@ export default function StackDSPage(){
 
               {steps.length>0&&(
                 <>
-                  <div className="slh">OPERATION LOG — click to jump</div>
+                  <div className="slh">
+                    <span>OPERATION LOG — click to jump</span>
+                    <span className="slh-count">{steps.length} ops</span>
+                  </div>
                   <div className="sl" ref={listRef}>
                     {steps.map((s,i)=>{
                       const sm=OP[s.type]??OP.push;
@@ -1260,16 +1436,16 @@ export default function StackDSPage(){
                       return(
                         <div key={i} className={`si${active?" sl-active":""}`} onClick={()=>goTo(i)}>
                           <span className="si-dot" style={{
-                            background:past?"#4ade80":active?sm.c:"#111925",
-                            boxShadow:active?`0 0 5px ${sm.c}`:"none",
+                            background:past?"var(--green)":active?sm.c:"var(--text-muted)",
+                            boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none",
                           }}/>
-                          <span style={{color:active?sm.c:past?"#1a2535":"#111925"}}>
+                          <span style={{color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)"}}>
                             {sm.label}
                             {s.type==="push"&&<span className="si-v">({s.value})</span>}
                             {s.type==="pop"&&s.value!=null&&<span className="si-v"> → {s.value}</span>}
                             {s.type==="peek"&&s.value!=null&&<span className="si-v"> = {s.value}</span>}
                             {s.type==="isEmpty"&&<span className="si-v"> = {String(s.result)}</span>}
-                            {(s.type==="pop_error"||s.type==="peek_error")&&<span style={{color:"#ef4444",opacity:0.65}}> ⚠</span>}
+                            {(s.type==="pop_error"||s.type==="peek_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
                           </span>
                           <span className="si-ln">L{s.lineNum+1}</span>
                         </div>
@@ -1280,9 +1456,9 @@ export default function StackDSPage(){
               )}
             </div>
           </div>
-
         </main>
       </div>
+      {toast&&<div className="toast">{toast}</div>}
     </>
   );
 }
