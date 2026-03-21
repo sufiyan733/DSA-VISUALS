@@ -151,85 +151,356 @@ function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
     </div>
   );
 }
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
+}
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // STICKY NAV
 // ═══════════════════════════════════════════════════════════════════════════════
-function StickyNav({ active, speaking, speed, setSpeed, onRestart, seenCount }) {
+function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount, open, setOpen }) {
   const [show, setShow] = useState(false);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 600px)');
+
   useEffect(() => {
     const h = () => setShow(window.scrollY > 500);
-    window.addEventListener("scroll", h, { passive:true });
+    window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, []);
 
-  // Navigation handlers
   const goToArray = () => { window.location.href = "/stack-array"; };
   const goToLL = () => { window.location.href = "/stack-ll"; };
 
+  if (!open) {
+    const btnSize = isMobile ? 36 : 40;      // reduced from 48 to 36
+    const btnRight = isMobile ? 12 : 16;
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          right: btnRight,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 950,
+          width: btnSize,
+          height: btnSize,
+          borderRadius: btnSize / 2,
+          background: "rgba(96,165,250,0.2)",
+          border: "1px solid rgba(96,165,250,0.4)",
+          backdropFilter: "blur(12px)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: isMobile ? 18 : 20,
+          color: "#60a5fa",
+          transition: "all 0.2s",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        }}
+      >
+        ◀
+      </button>
+    );
+  }
+
+  // Desktop values (unchanged)
+  const desktopBtnSize = 36;
+  const desktopGap = 4;
+  const desktopPadding = "8px 6px";
+  const desktopFontIcon = 16;
+  const desktopFontText = 8;
+  const desktopCodePadding = "4px 8px";
+  const desktopProgressPillPadding = "3px 6px";
+  const desktopProgressBarWidth = 24;
+  const desktopSpeakingPadding = "3px 6px";
+
+  // Mobile values – reduced width by ~50% from previous large version
+  const mobileBtnSize = 32;                 // was 42 → now 32
+  const mobileGap = 3;                     // was 4
+  const mobilePadding = "8px 6px";         // was 12px 8px
+  const mobileFontIcon = 18;               // was 21 → 18
+  const mobileFontText = 9;                // was 11 → 9
+  const mobileCodePadding = "4px 8px";     // was 8px 12px → matches desktop
+  const mobileProgressPillPadding = "4px 8px";
+  const mobileProgressBarWidth = 24;
+  const mobileSpeakingPadding = "4px 8px";
+
+  const isMobileView = isMobile;
+  const btnSize = isMobileView ? mobileBtnSize : desktopBtnSize;
+  const gap = isMobileView ? mobileGap : desktopGap;
+  const padding = isMobileView ? mobilePadding : desktopPadding;
+  const fontSizeIcon = isMobileView ? mobileFontIcon : desktopFontIcon;
+  const fontSizeText = isMobileView ? mobileFontText : desktopFontText;
+  const codePadding = isMobileView ? mobileCodePadding : desktopCodePadding;
+  const progressPillPadding = isMobileView ? mobileProgressPillPadding : desktopProgressPillPadding;
+  const progressBarWidth = isMobileView ? mobileProgressBarWidth : desktopProgressBarWidth;
+  const speakingPadding = isMobileView ? mobileSpeakingPadding : desktopSpeakingPadding;
+
   return (
-    <nav style={{
-      position:"fixed",top:14,left:"50%",transform:"translateX(-50%)",
-      zIndex:900,display:"flex",alignItems:"center",gap:2,padding:"5px 8px",
-      background:"rgba(3,6,18,0.94)",backdropFilter:"blur(28px) saturate(180%)",
-      borderRadius:22,border:"1px solid rgba(255,255,255,0.07)",
-      boxShadow:"0 12px 48px rgba(0,0,0,0.7)",
-      opacity:show?1:0,pointerEvents:show?"auto":"none",
-      transition:"opacity 0.3s ease",maxWidth:"calc(100vw - 24px)",
-    }}>
-      <div className="nav-pills" style={{ display:"flex",gap:2,flexWrap:"wrap",justifyContent:"center" }}>
-        {NAV_SECTIONS.map(s => (
-          <button key={s.id}
-            onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior:"smooth" })}
-            title={s.label}
-            style={{
-              width:34,height:34,borderRadius:12,border:"none",cursor:"pointer",
-              background:active===s.id?`${s.col}22`:"transparent",
-              outline:active===s.id?`1.5px solid ${s.col}55`:"1.5px solid transparent",
-              fontSize:15,transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:"center",
-              position:"relative",
-            }}>
-            {s.icon}
-          </button>
-        ))}
-      </div>
-      <div style={{ width:1,height:20,background:"rgba(255,255,255,0.08)",margin:"0 4px" }}/>
+    <nav
+      style={{
+        position: "fixed",
+        right: isMobileView ? 12 : 16,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 900,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap,
+        padding,
+        background: "rgba(3,6,18,0.94)",
+        backdropFilter: "blur(28px) saturate(180%)",
+        borderRadius: isMobileView ? 24 : 24,
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? "auto" : "none",
+        transition: "opacity 0.3s ease",
+        width: "auto",
+        maxHeight: isMobileView ? "85vh" : "auto",
+        overflowY: isMobileView ? "auto" : "visible",
+        scrollbarWidth: "thin",
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={() => setOpen(false)}
+        style={{
+          width: btnSize,
+          height: btnSize,
+          borderRadius: 10,
+          border: "none",
+          background: "rgba(255,255,255,0.05)",
+          cursor: "pointer",
+          fontSize: isMobileView ? 14 : 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#94a3b8",
+          marginBottom: 2,
+        }}
+      >
+        ✕
+      </button>
+
+      {/* Section icons */}
+      {NAV_SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
+          title={s.label}
+          style={{
+            width: btnSize,
+            height: btnSize,
+            borderRadius: 8,
+            border: "none",
+            cursor: "pointer",
+            background: active === s.id ? `${s.col}22` : "transparent",
+            outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
+            fontSize: fontSizeIcon,
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            flexShrink: 0,
+          }}
+        >
+          {s.icon}
+        </button>
+      ))}
+
       {/* Progress pill */}
-      <div style={{ padding:"3px 9px",borderRadius:12,background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.2)",display:"flex",alignItems:"center",gap:5 }}>
-        <div style={{ width:28,height:4,borderRadius:99,background:"rgba(255,255,255,0.06)",overflow:"hidden" }}>
-          <div style={{ height:"100%",width:`${(seenCount/NAV_SECTIONS.length)*100}%`,background:"#60a5fa",borderRadius:99,transition:"width 0.5s ease" }}/>
+      <div
+        style={{
+          padding: progressPillPadding,
+          borderRadius: 16,
+          background: "rgba(96,165,250,0.08)",
+          border: "1px solid rgba(96,165,250,0.2)",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          width: "auto",
+        }}
+      >
+        <div
+          style={{
+            width: progressBarWidth,
+            height: isMobileView ? 3 : 4,
+            borderRadius: 99,
+            background: "rgba(255,255,255,0.06)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${(seenCount / NAV_SECTIONS.length) * 100}%`,
+              background: "#60a5fa",
+              borderRadius: 99,
+              transition: "width 0.5s ease",
+            }}
+          />
         </div>
-        <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#60a5fa",fontWeight:700 }}>{seenCount}/{NAV_SECTIONS.length}</span>
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: isMobileView ? 8 : 7,
+            color: "#60a5fa",
+            fontWeight: 700,
+          }}
+        >
+          {seenCount}/{NAV_SECTIONS.length}
+        </span>
       </div>
-      <div style={{ width:1,height:20,background:"rgba(255,255,255,0.08)",margin:"0 4px" }}/>
 
-      {/* Code buttons */}
-      <button onClick={goToArray} style={{
-        padding:"4px 12px",borderRadius:20,cursor:"pointer",
-        background:"rgba(74,222,128,0.12)",border:"1px solid rgba(74,222,128,0.35)",
-        fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
-        color:"#4ade80",transition:"all 0.2s",
-        marginRight:4,
-      }} onMouseEnter={e=>e.currentTarget.style.background="rgba(74,222,128,0.22)"}
-         onMouseLeave={e=>e.currentTarget.style.background="rgba(74,222,128,0.12)"}>
-        📦 Array Stack
+      {/* Code buttons – shortened labels on mobile */}
+      <button
+        onClick={goToArray}
+        style={{
+          padding: codePadding,
+          borderRadius: 16,
+          cursor: "pointer",
+          background: "rgba(74,222,128,0.12)",
+          border: "1px solid rgba(74,222,128,0.35)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: fontSizeText,
+          fontWeight: 700,
+          color: "#4ade80",
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        📦 {isMobileView ? "Array" : "Array Impl."}
       </button>
-      <button onClick={goToLL} style={{
-        padding:"4px 12px",borderRadius:20,cursor:"pointer",
-        background:"rgba(96,165,250,0.12)",border:"1px solid rgba(96,165,250,0.35)",
-        fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
-        color:"#60a5fa",transition:"all 0.2s",
-      }} onMouseEnter={e=>e.currentTarget.style.background="rgba(96,165,250,0.22)"}
-         onMouseLeave={e=>e.currentTarget.style.background="rgba(96,165,250,0.12)"}>
-        🔗 Linked Stack
+      <button
+        onClick={goToLL}
+        style={{
+          padding: codePadding,
+          borderRadius: 16,
+          cursor: "pointer",
+          background: "rgba(96,165,250,0.12)",
+          border: "1px solid rgba(96,165,250,0.35)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: fontSizeText,
+          fontWeight: 700,
+          color: "#60a5fa",
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        🔗 {isMobileView ? "Linked" : "Linked Impl."}
       </button>
 
-      <div style={{ width:1,height:20,background:"rgba(255,255,255,0.08)",margin:"0 4px" }}/>
-      <SpeedPanel speed={speed} setSpeed={setSpeed} speaking={!!speaking} onRestart={onRestart}/>
+      {/* Speed Panel */}
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setSpeedOpen((o) => !o)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: codePadding,
+            borderRadius: 16,
+            cursor: "pointer",
+            background: speedOpen ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.05)",
+            border: `1.5px solid ${speedOpen ? "#60a5fa" : "rgba(255,255,255,0.1)"}`,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: fontSizeText,
+            fontWeight: 700,
+            color: speedOpen ? "#93c5fd" : "#64748b",
+            transition: "all 0.2s",
+          }}
+        >
+          ⚡ {speed}×
+        </button>
+        {speedOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: "calc(100% + 8px)",
+              background: "rgba(5,8,20,0.97)",
+              backdropFilter: "blur(28px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              padding: "4px 4px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              zIndex: 1000,
+              minWidth: 80,
+              boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
+              animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 6,
+                color: "#2d3748",
+                letterSpacing: "0.1em",
+                padding: "1px 5px 3px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              SPEED
+            </div>
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  currentRate = s;
+                  setSpeed(s);
+                  setSpeedOpen(false);
+                  if (speaking) onRestart();
+                }}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: 5,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  background: speed === s ? "rgba(96,165,250,0.2)" : "transparent",
+                  border: `1px solid ${speed === s ? "rgba(96,165,250,0.45)" : "transparent"}`,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  color: speed === s ? "#93c5fd" : "#475569",
+                  transition: "all 0.15s",
+                }}
+              >
+                {s === 1.25 ? `${s}× ★` : `${s}×`}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Speaking indicator */}
       {speaking && (
-        <div style={{ marginLeft:4,display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:14,background:"rgba(96,165,250,0.12)",border:"1px solid rgba(96,165,250,0.3)" }}>
-          <SpeakingWave color="#60a5fa" size={14}/>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#60a5fa",fontWeight:700 }}>ON</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: speakingPadding,
+            borderRadius: 12,
+            background: "rgba(96,165,250,0.12)",
+            border: "1px solid rgba(96,165,250,0.3)",
+          }}
+        >
+          <SpeakingWave color="#60a5fa" size={isMobileView ? 10 : 9} />
         </div>
       )}
     </nav>
@@ -1284,6 +1555,7 @@ function ShortcutsModal({ open, onClose }) {
   );
 }
 
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // CONFETTI (quiz perfect score)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -1322,6 +1594,7 @@ function Quiz({ onDone }) {
     { q:"The Min Stack's getMin() in O(1) requires:",opts:["Binary search","A second parallel min-tracking stack","Sorting on push","A hash map"],ans:1,exp:"A second stack that mirrors the main stack but only pushes when new value ≤ current minimum. getMin() peeks this stack in O(1)." },
     { q:"Monotonic stack solves 'Next Greater Element' in:",opts:["O(n²)","O(n log n)","O(n)","O(log n)"],ans:2,exp:"O(n) — each element is pushed and popped at most once. Total = 2n = O(n)." },
   ];
+  
   const [ans,  setAns]  = useState({});
   const [rev,  setRev]  = useState({});
   const score    = Object.entries(ans).filter(([qi,ai]) => QS[+qi].ans === +ai).length;
@@ -1384,6 +1657,7 @@ function Quiz({ onDone }) {
 export default function StackPage() {
   const [speaking,      setSpeaking]      = useState(null);
   const [active,        setActive]        = useState("intro");
+  const [navOpen, setNavOpen] = useState(true); // true = sidebar visible by default
   const [qScore,        setQScore]        = useState(null);
   const [qTotal,        setQTotal]        = useState(null);
   const [speed,         setSpeed]         = useState(1.25);
@@ -1571,7 +1845,6 @@ export default function StackPage() {
 
       {showConfetti && <Confetti/>}
       <ProgressBar/>
-      <StickyNav active={active} speaking={speaking} speed={speed} setSpeed={setSpeed} onRestart={handleRestart} seenCount={seenSections.size}/>
       <BackToTop/>
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
       <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} speed={speed}/>
@@ -1681,6 +1954,16 @@ export default function StackPage() {
           <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#2d3748",marginBottom:22 }}>{seenSections.size} / {NAV_SECTIONS.length} sections visited</div>
         </div>
       </main>
+      <RightSidebar
+        active={active}
+        speaking={speaking}
+        speed={speed}
+        setSpeed={setSpeed}
+        onRestart={handleRestart}
+        seenCount={seenSections.size}
+        open={navOpen}
+        setOpen={setNavOpen}
+      />
     </div>
   );
 }

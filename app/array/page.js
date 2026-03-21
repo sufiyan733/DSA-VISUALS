@@ -1382,7 +1382,7 @@ function ComplexityTable() {
                   <span style={{ width:7, height:7, borderRadius:"50%", background:r.c, flexShrink:0, boxShadow:hov===i?`0 0 8px ${r.c}`:"none", transition:"box-shadow 0.2s" }}/>
                   <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:700, color:"#e2e8f0" }}>{r.nm}</span>
                 </div>
-              </td>
+               </td>
               <td style={{ padding:"10px 14px", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:r.s.includes("log")||r.s==="O(1)"||r.s==="O(1)*"?700:400, color:r.s==="—"?"#253046":r.s.includes("log")||r.s==="O(1)"||r.s==="O(1)*"?"#4ade80":"#ef4444", whiteSpace:"nowrap" }}>{r.s}</td>
               <td style={{ padding:"10px 14px", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:r.i.includes("log")||r.i==="O(1)"||r.i==="O(1)*"?700:400, color:r.i==="—"?"#253046":r.i.includes("log")||r.i==="O(1)"||r.i==="O(1)*"?"#4ade80":"#ef4444", whiteSpace:"nowrap" }}>{r.i}</td>
               <td style={{ padding:"10px 14px", fontFamily:"'DM Sans',sans-serif", fontSize:11, color:"#475569" }}>{r.n}</td>
