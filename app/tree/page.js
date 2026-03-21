@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VOICE ENGINE — Male human-like voice, variable speed
+// VOICE ENGINE
 // ═══════════════════════════════════════════════════════════════════════════════
 function getMaleVoice() {
   if (typeof window === "undefined") return null;
@@ -16,7 +16,7 @@ function getMaleVoice() {
     v => v.name === "Microsoft Mark - English (United States)",
     v => v.name === "Alex",
     v => v.name === "Daniel",
-    v => /Natural/i.test(v.name) && /male|man|guy|guy|ryan|davis|mark|daniel|alex|james|chris|liam|aaron|arthur|oliver|george/i.test(v.name) && v.lang.startsWith("en"),
+    v => /Natural/i.test(v.name) && /male|man|guy|ryan|davis|mark|daniel|alex|james|chris|liam|aaron|arthur|oliver|george/i.test(v.name) && v.lang.startsWith("en"),
     v => /Neural/i.test(v.name) && v.lang.startsWith("en-US") && !/aria|jenny|zira|hazel|susan|linda|eva|natasha|heather|karen|samantha|victoria/i.test(v.name),
     v => v.lang.startsWith("en-GB"),
     v => v.lang.startsWith("en-AU"),
@@ -61,7 +61,9 @@ const NARR = {
   heap: `A Heap is a complete binary tree with a special property. In a Max Heap, every parent is greater than or equal to its children, so the maximum element always sits at the root — accessible in O one. In a Min Heap, the minimum is always at root. The clever storage trick: heaps live in plain arrays with no pointers. For a node at index i, left child is at 2i plus 1, right at 2i plus 2, and parent at i minus 1 divided by 2. This makes heaps memory-efficient and cache-friendly, perfect for priority queues.`,
   trie: `A Trie stores strings character by character, one letter per edge. Searching for a word of length m takes O m time — completely independent of how many words are stored. Add ten million words: search speed does not change. Type a prefix in autocomplete: traverse to that node, collect every word in the subtree. This is how Google Suggest, browser URL bars, spell checkers, and IP routing tables all work. The name Trie comes from re-TRIE-val.`,
   traversal: `Tree traversal means visiting every node exactly once in a specific order. In-Order visits Left subtree, then the current node, then Right — for any BST this always gives sorted ascending output. Pre-Order visits the current node first, then left, then right — perfect for copying a tree. Post-Order visits left, then right, then the current node — used for safe deletion since children are freed before their parent. Breadth-First Search visits nodes level by level using a queue — essential for shortest path problems.`,
-  quiz: `Outstanding work reaching the quiz! You have learned the complete foundation: what trees are, their anatomy, types of binary trees, Binary Search Trees, AVL self-balancing, Heaps, Tries, and all four traversal methods. Now test yourself honestly. Getting answers wrong is how learning happens. Every expert was once a complete beginner. Take your time, trust what you studied, and let's find out what you know.`,
+  segment: `A Segment Tree is a binary tree built over an array that enables range queries in O log n time. Each node stores the aggregate of a range — typically sum, min, or max. The root covers the entire array. Each leaf is a single element. For an array of n elements, queries and updates both run in O log n — far better than O n brute force. Segment trees are indispensable in competitive programming and database engines for range-sum, range-minimum-query, and lazy propagation updates.`,
+  fenwick: `A Fenwick Tree, also called a Binary Indexed Tree or BIT, is a clever array-based structure for prefix sums. It uses the binary representation of indices to decide which range each position is responsible for. With a single integer array and bitwise operations, prefix sum queries and point updates both run in O log n. Fenwick trees require only half the memory of segment trees and have better cache performance. They are used in inversion counting, order statistics, and frequency tables.`,
+  quiz: `Outstanding work reaching the quiz! You have learned the complete foundation: what trees are, their anatomy, types of binary trees, Binary Search Trees, AVL self-balancing, Heaps, Tries, all four traversal methods, Segment Trees, and Fenwick Trees. Now test yourself honestly. Getting answers wrong is how learning happens. Every expert was once a complete beginner. Take your time, trust what you studied, and let's find out what you know.`,
 };
 
 const NAV_SECTIONS = [
@@ -73,6 +75,8 @@ const NAV_SECTIONS = [
   { id:"heap",      icon:"🏔️", label:"Heap",      col:"#f97316" },
   { id:"trie",      icon:"📝", label:"Trie",      col:"#a855f7" },
   { id:"traversal", icon:"🗺️", label:"Traversal", col:"#34d399" },
+  { id:"segment",   icon:"📊", label:"Segment",   col:"#f43f5e" },
+  { id:"fenwick",   icon:"🔢", label:"Fenwick",   col:"#22d3ee" },
   { id:"quiz",      icon:"🧠", label:"Quiz",      col:"#ec4899" },
 ];
 
@@ -90,6 +94,19 @@ function useVisible(threshold = 0.1) {
     return () => io.disconnect();
   }, []);
   return [ref, vis];
+}
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const media = window.matchMedia(query);
+    setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [query]);
+  return matches;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -118,122 +135,7 @@ function ProgressBar() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SPEED CONTROL PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
-function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div style={{ position:"relative" }}>
-      <button
-        onClick={() => setOpen(o => !o)}
-        title="Playback Speed"
-        style={{
-          display:"flex", alignItems:"center", gap:5,
-          padding:"5px 11px", borderRadius:20, cursor:"pointer",
-          background: open ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.05)",
-          border:`1.5px solid ${open ? "#6366f1" : "rgba(255,255,255,0.1)"}`,
-          fontFamily:"'JetBrains Mono',monospace", fontSize:9, fontWeight:700,
-          color: open ? "#818cf8" : "#64748b", transition:"all 0.2s",
-        }}>
-        ⚡ {speed}×
-      </button>
-      {open && (
-        <div style={{
-          position:"absolute", top:"calc(100% + 8px)", right:0,
-          background:"rgba(8,10,22,0.97)", backdropFilter:"blur(28px)",
-          border:"1px solid rgba(255,255,255,0.1)", borderRadius:14,
-          padding:"8px 6px", display:"flex", flexDirection:"column", gap:3,
-          zIndex:1000, minWidth:100,
-          boxShadow:"0 16px 48px rgba(0,0,0,0.7)",
-          animation:"panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
-        }}>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#2d3748", letterSpacing:"0.1em", padding:"2px 8px 6px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>SPEED</div>
-          {SPEED_OPTIONS.map(s => (
-            <button key={s} onClick={() => {
-              currentRate = s;
-              setSpeed(s);
-              setOpen(false);
-              if (speaking) onRestart();
-            }} style={{
-              padding:"6px 12px", borderRadius:8, cursor:"pointer", textAlign:"left",
-              background: speed === s ? "rgba(99,102,241,0.2)" : "transparent",
-              border:`1px solid ${speed === s ? "rgba(99,102,241,0.45)" : "transparent"}`,
-              fontFamily:"'JetBrains Mono',monospace", fontSize:10, fontWeight:700,
-              color: speed === s ? "#818cf8" : "#475569", transition:"all 0.15s",
-            }}>
-              {s === 1.25 ? `${s}× ★` : `${s}×`}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// STICKY NAV
-// ═══════════════════════════════════════════════════════════════════════════════
-function StickyNav({ active, speaking, speed, setSpeed, onRestart }) {
-  const [show, setShow] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  useEffect(() => {
-    const h = () => setShow(window.scrollY > 500);
-    window.addEventListener("scroll", h, { passive:true });
-    return () => window.removeEventListener("scroll", h);
-  }, []);
-  return (
-    <>
-      <nav style={{
-        position:"fixed", top:14, left:"50%", transform:"translateX(-50%)",
-        zIndex:900, display:"flex", alignItems:"center", gap:2, padding:"5px 8px",
-        background:"rgba(6,8,18,0.92)", backdropFilter:"blur(28px) saturate(180%)",
-        borderRadius:22, border:"1px solid rgba(255,255,255,0.08)",
-        boxShadow:"0 12px 48px rgba(0,0,0,0.6)",
-        opacity: show ? 1 : 0, pointerEvents: show ? "auto" : "none",
-        transition:"opacity 0.3s ease",
-        maxWidth:"calc(100vw - 24px)",
-      }}>
-        {/* Desktop section pills */}
-        <div className="nav-pills" style={{ display:"flex", gap:2, flexWrap:"wrap", justifyContent:"center" }}>
-          {NAV_SECTIONS.map(s => (
-            <button key={s.id}
-              onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior:"smooth" })}
-              title={s.label}
-              style={{
-                width:34, height:34, borderRadius:12, border:"none", cursor:"pointer",
-                background: active===s.id ? `${s.col}22` : "transparent",
-                outline: active===s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
-                fontSize:15, transition:"all 0.2s", display:"flex", alignItems:"center", justifyContent:"center",
-              }}>
-              {s.icon}
-            </button>
-          ))}
-        </div>
-
-        {/* Divider */}
-        <div style={{ width:1, height:20, background:"rgba(255,255,255,0.08)", margin:"0 4px" }}/>
-
-        {/* Speed control */}
-        <SpeedPanel speed={speed} setSpeed={setSpeed} speaking={!!speaking} onRestart={onRestart}/>
-
-        {/* Speaking indicator */}
-        {speaking && (
-          <div style={{
-            marginLeft:4, display:"flex", alignItems:"center", gap:5,
-            padding:"4px 10px", borderRadius:14,
-            background:"rgba(74,222,128,0.12)", border:"1px solid rgba(74,222,128,0.3)",
-          }}>
-            <SpeakingWave color="#4ade80" size={14}/>
-            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#4ade80", fontWeight:700 }}>ON</span>
-          </div>
-        )}
-      </nav>
-    </>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// SPEAKING WAVE ANIMATION
+// SPEAKING WAVE
 // ═══════════════════════════════════════════════════════════════════════════════
 function SpeakingWave({ color = "#4ade80", size = 16 }) {
   return (
@@ -250,7 +152,194 @@ function SpeakingWave({ color = "#4ade80", size = 16 }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// BACK TO TOP BUTTON
+// RIGHT SIDEBAR NAV (matching stack page pattern)
+// ═══════════════════════════════════════════════════════════════════════════════
+function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount, open, setOpen }) {
+  const [show, setShow] = useState(false);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const isMobile = useMediaQuery("(max-width: 600px)");
+  const router = useRouter ? useRouter() : null;
+
+  useEffect(() => {
+    const h = () => setShow(window.scrollY > 500);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+
+  const goTo = (path) => {
+    if (router) router.push(path);
+    else window.location.href = path;
+  };
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          right: isMobile ? 12 : 16,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 950,
+          width: isMobile ? 36 : 40,
+          height: isMobile ? 36 : 40,
+          borderRadius: 20,
+          background: "rgba(99,102,241,0.2)",
+          border: "1px solid rgba(99,102,241,0.4)",
+          backdropFilter: "blur(12px)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: isMobile ? 16 : 18,
+          color: "#818cf8",
+          transition: "all 0.2s",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          opacity: show ? 1 : 0,
+          pointerEvents: show ? "auto" : "none",
+        }}
+      >
+        ◀
+      </button>
+    );
+  }
+
+  const btnSize = isMobile ? 32 : 36;
+  const gap = isMobile ? 3 : 4;
+  const codePad = isMobile ? "4px 8px" : "4px 8px";
+  const fontSize = isMobile ? 9 : 8;
+
+  return (
+    <nav style={{
+      position: "fixed",
+      right: isMobile ? 12 : 16,
+      top: "50%",
+      transform: "translateY(-50%)",
+      zIndex: 900,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap,
+      padding: isMobile ? "8px 6px" : "8px 6px",
+      background: "rgba(6,8,18,0.95)",
+      backdropFilter: "blur(28px) saturate(180%)",
+      borderRadius: 24,
+      border: "1px solid rgba(255,255,255,0.07)",
+      boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
+      opacity: show ? 1 : 0,
+      pointerEvents: show ? "auto" : "none",
+      transition: "opacity 0.3s ease",
+      maxHeight: "90vh",
+      overflowY: "auto",
+      overflowX: "visible",
+      scrollbarWidth: "thin",
+    }}>
+      {/* Close */}
+      <button onClick={() => setOpen(false)} style={{
+        width: btnSize, height: btnSize, borderRadius: 10, border: "none",
+        background: "rgba(255,255,255,0.05)", cursor: "pointer", fontSize: 12,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#94a3b8", marginBottom: 2, flexShrink: 0,
+      }}>✕</button>
+
+      {/* Section icons */}
+      {NAV_SECTIONS.map((s) => (
+        <button key={s.id}
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
+          title={s.label}
+          style={{
+            width: btnSize, height: btnSize, borderRadius: 8, border: "none",
+            cursor: "pointer",
+            background: active === s.id ? `${s.col}22` : "transparent",
+            outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
+            fontSize: isMobile ? 16 : 15,
+            transition: "all 0.2s",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >{s.icon}</button>
+      ))}
+
+      {/* Progress bar */}
+      <div style={{
+        padding: "3px 6px", borderRadius: 16,
+        background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)",
+        display: "flex", alignItems: "center", gap: 4, flexShrink: 0,
+      }}>
+        <div style={{ width: 24, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+          <div style={{ height: "100%", width: `${(seenCount / NAV_SECTIONS.length) * 100}%`, background: "#818cf8", borderRadius: 99, transition: "width 0.5s ease" }}/>
+        </div>
+        <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize: 7, color: "#818cf8", fontWeight: 700 }}>
+          {seenCount}/{NAV_SECTIONS.length}
+        </span>
+      </div>
+
+      {/* Implementation links */}
+      {[
+        { label: isMobile ? "BST" : "BST Impl.",     path: "/bs-tree",       col: "#06b6d4" },
+        { label: isMobile ? "AVL" : "AVL Impl.",     path: "/avl-tree",      col: "#fbbf24" },
+        { label: isMobile ? "Trie" : "Trie Impl.",   path: "/trie-tree",     col: "#a855f7" },
+        { label: isMobile ? "Seg" : "Seg Impl.",     path: "/segment-tree",  col: "#f43f5e" },
+        { label: isMobile ? "BIT" : "Fenwick Impl.", path: "/fenwick-tree",  col: "#22d3ee" },
+      ].map(({ label, path, col }) => (
+        <button key={path} onClick={() => goTo(path)} style={{
+          padding: codePad, borderRadius: 16, cursor: "pointer",
+          background: `${col}12`, border: `1px solid ${col}35`,
+          fontFamily: "'JetBrains Mono',monospace", fontSize, fontWeight: 700,
+          color: col, transition: "all 0.2s", whiteSpace: "nowrap", flexShrink: 0,
+        }}>💻 {label}</button>
+      ))}
+
+      {/* Speed panel */}
+      <div style={{ position: "relative", flexShrink: 0 }}>
+        <button onClick={() => setSpeedOpen(o => !o)} style={{
+          display: "flex", alignItems: "center", gap: 3, padding: codePad,
+          borderRadius: 16, cursor: "pointer",
+          background: speedOpen ? "rgba(99,102,241,0.2)" : "rgba(255,255,255,0.05)",
+          border: `1.5px solid ${speedOpen ? "#818cf8" : "rgba(255,255,255,0.1)"}`,
+          fontFamily: "'JetBrains Mono',monospace", fontSize, fontWeight: 700,
+          color: speedOpen ? "#818cf8" : "#64748b", transition: "all 0.2s",
+        }}>⚡ {speed}×</button>
+        {speedOpen && (
+          <div style={{
+            position: "absolute", top: 0, right: "calc(100% + 8px)",
+            background: "rgba(6,8,18,0.97)", backdropFilter: "blur(28px)",
+            border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12,
+            padding: "4px 4px", display: "flex", flexDirection: "column", gap: 2,
+            zIndex: 1000, minWidth: 80, boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
+            animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
+          }}>
+            <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize: 6, color:"#2d3748", letterSpacing:"0.1em", padding:"1px 5px 3px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>SPEED</div>
+            {SPEED_OPTIONS.map(s => (
+              <button key={s} onClick={() => { currentRate = s; setSpeed(s); setSpeedOpen(false); if (speaking) onRestart(); }} style={{
+                padding: "3px 8px", borderRadius: 5, cursor: "pointer", textAlign: "left",
+                background: speed === s ? "rgba(99,102,241,0.2)" : "transparent",
+                border: `1px solid ${speed === s ? "rgba(99,102,241,0.45)" : "transparent"}`,
+                fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700,
+                color: speed === s ? "#818cf8" : "#475569", transition: "all 0.15s",
+              }}>{s === 1.25 ? `${s}× ★` : `${s}×`}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Speaking indicator */}
+      {speaking && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 3,
+          padding: "3px 6px", borderRadius: 12,
+          background: "rgba(74,222,128,0.12)", border: "1px solid rgba(74,222,128,0.3)",
+          flexShrink: 0,
+        }}>
+          <SpeakingWave color="#4ade80" size={isMobile ? 10 : 9} />
+        </div>
+      )}
+    </nav>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// BACK TO TOP
 // ═══════════════════════════════════════════════════════════════════════════════
 function BackToTop() {
   const [show, setShow] = useState(false);
@@ -294,6 +383,37 @@ function CompletedBadge({ seen }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// MINI PLAYER
+// ═══════════════════════════════════════════════════════════════════════════════
+function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
+  if (!speaking) return null;
+  return (
+    <div style={{
+      position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)",
+      zIndex:850, display:"flex", alignItems:"center", gap:12,
+      padding:"10px 20px", borderRadius:99,
+      background:"rgba(8,12,24,0.94)", backdropFilter:"blur(24px)",
+      border:"1px solid rgba(74,222,128,0.3)",
+      boxShadow:"0 8px 36px rgba(74,222,128,0.15), 0 2px 12px rgba(0,0,0,0.6)",
+      animation:"slideUp 0.35s cubic-bezier(0.22,1,0.36,1) both",
+      maxWidth:"calc(100vw - 48px)",
+    }}>
+      <SpeakingWave color="#4ade80" size={16}/>
+      <div>
+        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:600, color:"#e2e8f0", lineHeight:1 }}>{speakingLabel}</div>
+        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#4ade80", marginTop:2 }}>{speed}× speed · male voice</div>
+      </div>
+      <button onClick={onStop} style={{
+        background:"rgba(239,68,68,0.15)", border:"1px solid rgba(239,68,68,0.35)",
+        borderRadius:20, cursor:"pointer", padding:"4px 12px",
+        fontFamily:"'JetBrains Mono',monospace", fontSize:9, fontWeight:700, color:"#f87171",
+        transition:"all 0.2s",
+      }}>⏹ STOP</button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // HERO
 // ═══════════════════════════════════════════════════════════════════════════════
 function Hero({ onStart, onVoice, speed }) {
@@ -326,12 +446,10 @@ function Hero({ onStart, onVoice, speed }) {
         backgroundSize:"38px 38px" }}/>
       <div style={{ position:"absolute",top:"8%",left:"5%",width:420,height:420,borderRadius:"50%",
         background:"radial-gradient(circle,rgba(99,102,241,0.14) 0%,transparent 68%)",
-        filter:"blur(72px)",pointerEvents:"none",
-        animation:"hOrb1 22s ease-in-out infinite" }}/>
+        filter:"blur(72px)",pointerEvents:"none",animation:"hOrb1 22s ease-in-out infinite" }}/>
       <div style={{ position:"absolute",bottom:"10%",right:"4%",width:320,height:320,borderRadius:"50%",
         background:"radial-gradient(circle,rgba(56,189,248,0.11) 0%,transparent 68%)",
-        filter:"blur(60px)",pointerEvents:"none",
-        animation:"hOrb2 28s ease-in-out infinite" }}/>
+        filter:"blur(60px)",pointerEvents:"none",animation:"hOrb2 28s ease-in-out infinite" }}/>
 
       <div style={{ width:"100%",maxWidth:440,marginBottom:36 }}>
         <svg viewBox="0 0 440 268" width="100%">
@@ -417,7 +535,6 @@ function Hero({ onStart, onVoice, speed }) {
           </button>
         </div>
 
-        {/* Speed selector row under hero buttons */}
         <div style={{ display:"flex",gap:6,justifyContent:"center",alignItems:"center",marginTop:20,flexWrap:"wrap" }}>
           <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",letterSpacing:"0.08em" }}>VOICE SPEED:</span>
           {SPEED_OPTIONS.map(s => (
@@ -432,7 +549,7 @@ function Hero({ onStart, onVoice, speed }) {
         </div>
 
         <div style={{ display:"flex",gap:28,justifyContent:"center",marginTop:44,flexWrap:"wrap" }}>
-          {[["9","Sections"],["7+","Animations"],["6","Quiz Qs"],["♂","Male Voice"]].map(([n,l]) => (
+          {[["11","Sections"],["9+","Animations"],["8","Quiz Qs"],["♂","Male Voice"]].map(([n,l]) => (
             <div key={l} style={{ textAlign:"center" }}>
               <div style={{
                 fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,
@@ -461,7 +578,6 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
       transform:vis?"none":"translateY(52px)",
       transition:"opacity 0.78s cubic-bezier(0.22,1,0.36,1),transform 0.78s cubic-bezier(0.22,1,0.36,1)",
     }}>
-      {/* Header */}
       <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:24,flexWrap:"wrap" }}>
         <div style={{
           width:50,height:50,borderRadius:16,flexShrink:0,
@@ -490,7 +606,6 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
         </div>
       </div>
 
-      {/* Grid — stacks on mobile */}
       <div className="sg" style={{
         display:"grid",
         gridTemplateColumns:"minmax(0,1.12fr) minmax(0,0.88fr)",
@@ -528,7 +643,7 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Animated Binary Tree
+// VISUAL: Animated Binary Tree (Intro)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisIntro() {
   const [p, setP] = useState(0);
@@ -1085,17 +1200,396 @@ function VisTraversal() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Segment Tree
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisSegmentTree() {
+  const ARR = [1, 3, 5, 7, 9, 11];
+  const [queryL, setQueryL] = useState(1);
+  const [queryR, setQueryR] = useState(4);
+  const [opType, setOpType] = useState("sum");
+  const [activeNodes, setActiveNodes] = useState(new Set());
+  const [animKey, setAnimKey] = useState(0);
+
+  // Build segment tree nodes
+  // Tree layout: idx 0=root covering [0,5]
+  const NODES = [
+    // Level 0
+    { id:0, x:200, y:30,  l:0, r:5 },
+    // Level 1
+    { id:1, x:110, y:95,  l:0, r:2 },
+    { id:2, x:290, y:95,  l:3, r:5 },
+    // Level 2
+    { id:3, x:60,  y:160, l:0, r:1 },
+    { id:4, x:160, y:160, l:2, r:2 },
+    { id:5, x:240, y:160, l:3, r:4 },
+    { id:6, x:340, y:160, l:5, r:5 },
+    // Level 3
+    { id:7, x:35,  y:220, l:0, r:0 },
+    { id:8, x:85,  y:220, l:1, r:1 },
+    { id:9, x:215, y:220, l:3, r:3 },
+    { id:10,x:265, y:220, l:4, r:4 },
+  ];
+  const EDGES = [[0,1],[0,2],[1,3],[1,4],[2,5],[2,6],[3,7],[3,8],[5,9],[5,10]];
+
+  const compute = (l, r) => {
+    const slice = ARR.slice(l, r+1);
+    if (opType === "sum") return slice.reduce((a,b)=>a+b,0);
+    if (opType === "min") return Math.min(...slice);
+    return Math.max(...slice);
+  };
+
+  const nodeVal = (n) => compute(n.l, n.r);
+
+  const runQuery = () => {
+    const ql = Math.min(queryL, queryR), qr = Math.max(queryL, queryR);
+    const hit = new Set();
+    const query = (nid) => {
+      const n = NODES[nid];
+      if (n.l > qr || n.r < ql) return;
+      if (n.l >= ql && n.r <= qr) { hit.add(nid); return; }
+      const children = EDGES.filter(([p]) => p === nid).map(([,c]) => c);
+      children.forEach(c => query(c));
+    };
+    query(0);
+    setActiveNodes(hit);
+    setAnimKey(k => k+1);
+  };
+
+  const col = "#f43f5e";
+
+  return (
+    <div>
+      <div style={{ display:"flex",gap:6,justifyContent:"center",marginBottom:8,flexWrap:"wrap" }}>
+        {["sum","min","max"].map(op => (
+          <button key={op} onClick={() => setOpType(op)} style={{
+            padding:"4px 12px",borderRadius:20,cursor:"pointer",
+            background:opType===op?`${col}22`:"rgba(255,255,255,0.04)",
+            border:`1px solid ${opType===op?col:"rgba(255,255,255,0.1)"}`,
+            fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
+            color:opType===op?col:"#475569",transition:"all 0.2s",
+          }}>{op.toUpperCase()}</button>
+        ))}
+      </div>
+      {/* Array display */}
+      <div style={{ display:"flex",gap:3,justifyContent:"center",marginBottom:8,alignItems:"flex-end" }}>
+        <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2d3748",alignSelf:"center",marginRight:4 }}>ARR:</span>
+        {ARR.map((v,i) => {
+          const inQ = i >= Math.min(queryL,queryR) && i <= Math.max(queryL,queryR);
+          return (
+            <div key={i} style={{
+              width:30,height:30,borderRadius:6,cursor:"pointer",
+              background:inQ?`${col}20`:"rgba(255,255,255,0.04)",
+              border:`1.5px solid ${inQ?col:"rgba(255,255,255,0.1)"}`,
+              display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
+              transition:"all 0.2s",
+            }} onClick={() => {
+              if (i < Math.min(queryL,queryR)) setQueryL(i);
+              else if (i > Math.max(queryL,queryR)) setQueryR(i);
+              else if (i === Math.min(queryL,queryR)) setQueryL(Math.min(i+1,queryR));
+              else setQueryR(Math.max(i-1,queryL));
+            }}>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:inQ?col:"#94a3b8" }}>{v}</span>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#2d3748" }}>[{i}]</span>
+            </div>
+          );
+        })}
+      </div>
+      <div style={{ display:"flex",gap:6,justifyContent:"center",alignItems:"center",marginBottom:8,flexWrap:"wrap" }}>
+        <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2d3748" }}>RANGE:</span>
+        {[0,1,2,3,4,5].map(i=>(
+          <button key={`l${i}`} onClick={()=>setQueryL(i)} style={{
+            width:22,height:22,borderRadius:6,cursor:"pointer",
+            background:queryL===i?`${col}22`:"rgba(255,255,255,0.03)",
+            border:`1px solid ${queryL===i?col:"rgba(255,255,255,0.08)"}`,
+            fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,
+            color:queryL===i?col:"#475569",
+          }}>{i}</button>
+        ))}
+        <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2d3748" }}>–</span>
+        {[0,1,2,3,4,5].map(i=>(
+          <button key={`r${i}`} onClick={()=>setQueryR(i)} style={{
+            width:22,height:22,borderRadius:6,cursor:"pointer",
+            background:queryR===i?`${col}22`:"rgba(255,255,255,0.03)",
+            border:`1px solid ${queryR===i?col:"rgba(255,255,255,0.08)"}`,
+            fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,
+            color:queryR===i?col:"#475569",
+          }}>{i}</button>
+        ))}
+        <button onClick={runQuery} style={{
+          padding:"4px 12px",borderRadius:20,cursor:"pointer",
+          background:`${col}18`,border:`1px solid ${col}55`,
+          fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:col,
+        }}>RUN →</button>
+      </div>
+      <svg viewBox="0 0 400 248" width="100%" style={{ maxHeight:240 }} key={animKey}>
+        {EDGES.map(([a,b],i) => {
+          const isActive = activeNodes.has(a)||activeNodes.has(b);
+          return <line key={i} x1={NODES[a].x} y1={NODES[a].y} x2={NODES[b].x} y2={NODES[b].y}
+            stroke={isActive?`${col}80`:"rgba(255,255,255,0.1)"} strokeWidth={isActive?2:1.5}
+            style={{transition:"stroke 0.3s"}}/>;
+        })}
+        {NODES.map((n,i) => {
+          const isA = activeNodes.has(n.id);
+          const val = nodeVal(n);
+          const isLeaf = !EDGES.some(([p]) => p === n.id);
+          const r = n.id===0?22:isLeaf?14:18;
+          return (
+            <g key={n.id} style={{ animation:`vPp 0.4s cubic-bezier(0.22,1,0.36,1) ${i*0.04}s both` }}>
+              {isA && <circle cx={n.x} cy={n.y} r={r+10} fill="none" stroke={col} strokeWidth="1" strokeOpacity="0.3" style={{animation:"vRip 0.7s ease-out forwards"}}/>}
+              <circle cx={n.x} cy={n.y} r={r}
+                fill={isA?`${col}28`:n.id===0?"rgba(244,63,94,0.18)":"rgba(255,255,255,0.04)"}
+                stroke={isA?col:n.id===0?col:"rgba(255,255,255,0.18)"}
+                strokeWidth={isA?2.5:1.5} style={{transition:"all 0.3s"}}/>
+              <text x={n.x} y={n.y-2} textAnchor="middle" dominantBaseline="middle"
+                fill={isA?col:n.id===0?col:"#94a3b8"} fontSize={n.id===0?11:9}
+                fontFamily="'JetBrains Mono',monospace" fontWeight="700">{val}</text>
+              <text x={n.x} y={n.y+8} textAnchor="middle" dominantBaseline="middle"
+                fill="rgba(255,255,255,0.2)" fontSize="7"
+                fontFamily="'JetBrains Mono',monospace">[{n.l},{n.r}]</text>
+            </g>
+          );
+        })}
+        {activeNodes.size>0&&(
+          <text x={200} y={242} textAnchor="middle"
+            fill={col} fontSize="10" fontFamily="'JetBrains Mono',monospace" fontWeight="700">
+            {opType}([{Math.min(queryL,queryR)},{Math.max(queryL,queryR)}]) = {compute(Math.min(queryL,queryR),Math.max(queryL,queryR))} — {activeNodes.size} node{activeNodes.size>1?"s":""} visited
+          </text>
+        )}
+        <style>{`@keyframes vPp{from{opacity:0;transform-origin:50% 50%;transform:scale(0)}to{opacity:1;transform:scale(1)}}@keyframes vRip{from{r:20;opacity:0.5}to{r:38;opacity:0}}`}</style>
+      </svg>
+      <div style={{ textAlign:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",marginTop:4 }}>
+        Click array indices or range buttons, then RUN →
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Fenwick Tree (BIT)
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisFenwick() {
+  const [arr, setArr] = useState([0, 3, 2, -1, 6, 5, 4, -3, 3]); // 1-indexed, arr[0] unused
+  const [queryIdx, setQueryIdx] = useState(6);
+  const [updateIdx, setUpdateIdx] = useState(3);
+  const [updateDelta, setUpdateDelta] = useState(2);
+  const [highlighted, setHighlighted] = useState([]);
+  const [mode, setMode] = useState("query"); // "query" | "update"
+  const [result, setResult] = useState(null);
+  const col = "#22d3ee";
+  const n = arr.length - 1; // 8
+
+  // Build BIT
+  const buildBIT = (a) => {
+    const bit = new Array(a.length).fill(0);
+    for (let i = 1; i < a.length; i++) {
+      let j = i;
+      while (j < a.length) { bit[j] += a[i]; j += j & (-j); }
+    }
+    return bit;
+  };
+
+  const bit = buildBIT(arr);
+
+  const prefixSum = (i, b) => {
+    let s = 0, path = [];
+    while (i > 0) { s += b[i]; path.push(i); i -= i & (-i); }
+    return { sum: s, path };
+  };
+
+  const runQuery = () => {
+    const { sum, path } = prefixSum(queryIdx, bit);
+    setHighlighted(path);
+    setResult(`prefix_sum(${queryIdx}) = ${sum}`);
+  };
+
+  const runUpdate = () => {
+    const newArr = [...arr];
+    newArr[updateIdx] += updateDelta;
+    const newBIT = buildBIT(newArr);
+    // Find update path
+    let path = [], i = updateIdx;
+    while (i <= n) { path.push(i); i += i & (-i); }
+    setArr(newArr);
+    setHighlighted(path);
+    setResult(`update(${updateIdx}, +${updateDelta}) done`);
+  };
+
+  // Visual: draw BIT as array with responsibility ranges
+  const BAR_W = 36, BAR_GAP = 4;
+  const totalW = n * (BAR_W + BAR_GAP);
+  const offsetX = (400 - totalW) / 2;
+
+  return (
+    <div>
+      <div style={{ display:"flex",gap:6,justifyContent:"center",marginBottom:10 }}>
+        {["query","update"].map(m=>(
+          <button key={m} onClick={()=>{setMode(m);setHighlighted([]);setResult(null);}} style={{
+            padding:"5px 14px",borderRadius:20,cursor:"pointer",
+            background:mode===m?`${col}20`:"rgba(255,255,255,0.04)",
+            border:`1px solid ${mode===m?col:"rgba(255,255,255,0.1)"}`,
+            fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
+            color:mode===m?col:"#475569",transition:"all 0.2s",
+          }}>{m.toUpperCase()}</button>
+        ))}
+      </div>
+
+      <svg viewBox="0 0 400 220" width="100%" style={{ maxHeight:220 }}>
+        {/* Original array row */}
+        {arr.slice(1).map((v,i) => {
+          const idx = i+1;
+          const isHl = highlighted.includes(idx);
+          const x = offsetX + i*(BAR_W+BAR_GAP);
+          return (
+            <g key={`orig-${idx}`}>
+              <rect x={x} y={10} width={BAR_W} height={30} rx={6}
+                fill={isHl?`${col}25`:"rgba(255,255,255,0.04)"}
+                stroke={isHl?col:"rgba(255,255,255,0.1)"}
+                strokeWidth={isHl?2:1} style={{transition:"all 0.3s"}}/>
+              <text x={x+BAR_W/2} y={30} textAnchor="middle" dominantBaseline="middle"
+                fill={isHl?col:"#94a3b8"} fontSize="11"
+                fontFamily="'JetBrains Mono',monospace" fontWeight="700">{v>0?`+${v}`:v}</text>
+              <text x={x+BAR_W/2} y={52} textAnchor="middle" fill="#2d3748"
+                fontSize="9" fontFamily="'JetBrains Mono',monospace">[{idx}]</text>
+            </g>
+          );
+        })}
+        <text x={offsetX-4} y={30} textAnchor="end" fill="#2d3748" fontSize="8" fontFamily="'JetBrains Mono',monospace">arr</text>
+
+        {/* BIT array row */}
+        {bit.slice(1).map((v,i) => {
+          const idx = i+1;
+          const isHl = highlighted.includes(idx);
+          // Responsibility range: lowbit = idx & (-idx)
+          const lb = idx & (-idx);
+          const x = offsetX + i*(BAR_W+BAR_GAP);
+          return (
+            <g key={`bit-${idx}`}>
+              {/* Responsibility arc */}
+              {isHl && (
+                <line x1={x+BAR_W/2} y1={100} x2={x+BAR_W/2} y2={68}
+                  stroke={col} strokeWidth="1.5" strokeDasharray="3,2" opacity="0.5"/>
+              )}
+              <rect x={x} y={68} width={BAR_W} height={30} rx={6}
+                fill={isHl?`${col}28`:"rgba(34,211,238,0.06)"}
+                stroke={isHl?col:`${col}30`}
+                strokeWidth={isHl?2:1} style={{transition:"all 0.3s"}}/>
+              <text x={x+BAR_W/2} y={88} textAnchor="middle" dominantBaseline="middle"
+                fill={isHl?col:`${col}80`} fontSize="10"
+                fontFamily="'JetBrains Mono',monospace" fontWeight="700">{v}</text>
+              {/* Lowbit label */}
+              <text x={x+BAR_W/2} y={110} textAnchor="middle" fill={`${col}60`}
+                fontSize="7" fontFamily="'JetBrains Mono',monospace">±{lb}</text>
+            </g>
+          );
+        })}
+        <text x={offsetX-4} y={88} textAnchor="end" fill={`${col}80`} fontSize="8" fontFamily="'JetBrains Mono',monospace">bit</text>
+
+        {/* Binary representations */}
+        {arr.slice(1).map((v,i) => {
+          const idx = i+1;
+          const isHl = highlighted.includes(idx);
+          const x = offsetX + i*(BAR_W+BAR_GAP);
+          const bin = idx.toString(2).padStart(4,"0");
+          return (
+            <text key={`bin-${idx}`} x={x+BAR_W/2} y={128} textAnchor="middle"
+              fill={isHl?col:"#1e2a38"} fontSize="7"
+              fontFamily="'JetBrains Mono',monospace">{bin}</text>
+          );
+        })}
+        <text x={offsetX-4} y={128} textAnchor="end" fill="#1e2a38" fontSize="7" fontFamily="'JetBrains Mono',monospace">bin</text>
+
+        {/* Path arrows */}
+        {highlighted.slice(0,-1).map((idx,i) => {
+          const nextIdx = highlighted[i+1];
+          const x1 = offsetX + (idx-1)*(BAR_W+BAR_GAP) + BAR_W/2;
+          const x2 = offsetX + (nextIdx-1)*(BAR_W+BAR_GAP) + BAR_W/2;
+          return (
+            <g key={`arrow-${idx}`}>
+              <line x1={x1} y1={148} x2={x2} y2={148} stroke={col} strokeWidth="1.5"
+                strokeDasharray="4,2" markerEnd="url(#fenwArr)" opacity="0.7"/>
+            </g>
+          );
+        })}
+        <defs>
+          <marker id="fenwArr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L6,3 z" fill={col} opacity="0.7"/>
+          </marker>
+        </defs>
+
+        {result && (
+          <text x={200} y={175} textAnchor="middle" fill={col} fontSize="11"
+            fontFamily="'JetBrains Mono',monospace" fontWeight="700">{result}</text>
+        )}
+
+        <text x={200} y={210} textAnchor="middle" fill="#1e2a38" fontSize="8"
+          fontFamily="'JetBrains Mono',monospace">Each BIT[i] covers {"{"}lowbit(i){"}"} elements · lowbit = i & (-i)</text>
+      </svg>
+
+      {mode === "query" ? (
+        <div style={{ display:"flex",gap:5,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6 }}>
+          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2d3748" }}>PREFIX SUM UP TO INDEX:</span>
+          {[1,2,3,4,5,6,7,8].map(i=>(
+            <button key={i} onClick={()=>setQueryIdx(i)} style={{
+              width:24,height:24,borderRadius:6,cursor:"pointer",
+              background:queryIdx===i?`${col}22`:"rgba(255,255,255,0.03)",
+              border:`1px solid ${queryIdx===i?col:"rgba(255,255,255,0.08)"}`,
+              fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
+              color:queryIdx===i?col:"#475569",
+            }}>{i}</button>
+          ))}
+          <button onClick={runQuery} style={{
+            padding:"4px 12px",borderRadius:20,cursor:"pointer",
+            background:`${col}18`,border:`1px solid ${col}55`,
+            fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:col,
+          }}>QUERY →</button>
+        </div>
+      ) : (
+        <div style={{ display:"flex",gap:6,justifyContent:"center",alignItems:"center",flexWrap:"wrap",marginTop:6 }}>
+          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2d3748" }}>IDX:</span>
+          {[1,2,3,4,5,6,7,8].map(i=>(
+            <button key={i} onClick={()=>setUpdateIdx(i)} style={{
+              width:24,height:24,borderRadius:6,cursor:"pointer",
+              background:updateIdx===i?`${col}22`:"rgba(255,255,255,0.03)",
+              border:`1px solid ${updateIdx===i?col:"rgba(255,255,255,0.08)"}`,
+              fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
+              color:updateIdx===i?col:"#475569",
+            }}>{i}</button>
+          ))}
+          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2d3748" }}>Δ:</span>
+          {[-2,-1,1,2,3].map(d=>(
+            <button key={d} onClick={()=>setUpdateDelta(d)} style={{
+              padding:"3px 8px",borderRadius:6,cursor:"pointer",
+              background:updateDelta===d?`${col}22`:"rgba(255,255,255,0.03)",
+              border:`1px solid ${updateDelta===d?col:"rgba(255,255,255,0.08)"}`,
+              fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
+              color:updateDelta===d?col:"#475569",
+            }}>{d>0?`+${d}`:d}</button>
+          ))}
+          <button onClick={runUpdate} style={{
+            padding:"4px 12px",borderRadius:20,cursor:"pointer",
+            background:`${col}18`,border:`1px solid ${col}55`,
+            fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:col,
+          }}>UPDATE →</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // COMPLEXITY TABLE
 // ═══════════════════════════════════════════════════════════════════════════════
 function ComplexityTable() {
   const [hov,setHov]=useState(null);
   const rows=[
-    {nm:"Binary Tree",   c:"#818cf8",s:"O(n)",     i:"O(n)",     d:"O(n)",     n:"No ordering — must scan all nodes"},
-    {nm:"BST (balanced)",c:"#06b6d4",s:"O(log n)", i:"O(log n)", d:"O(log n)", n:"Ordered + balanced = fast always"},
-    {nm:"BST (skewed)",  c:"#ef4444",s:"O(n)",     i:"O(n)",     d:"O(n)",     n:"Sorted input → degrades to linked list"},
-    {nm:"AVL Tree",      c:"#4ade80",s:"O(log n)", i:"O(log n)", d:"O(log n)", n:"Guaranteed balance — always O(log n)"},
-    {nm:"Max/Min Heap",  c:"#f97316",s:"O(n)",     i:"O(log n)", d:"O(log n)", n:"Min/Max at root O(1) · array-backed"},
-    {nm:"Trie",          c:"#a855f7",s:"O(m)",     i:"O(m)",     d:"O(m)",     n:"m=word length · n-independent search"},
+    {nm:"Binary Tree",    c:"#818cf8",s:"O(n)",     i:"O(n)",     d:"O(n)",     n:"No ordering — must scan all nodes"},
+    {nm:"BST (balanced)", c:"#06b6d4",s:"O(log n)", i:"O(log n)", d:"O(log n)", n:"Ordered + balanced = fast always"},
+    {nm:"BST (skewed)",   c:"#ef4444",s:"O(n)",     i:"O(n)",     d:"O(n)",     n:"Sorted input → degrades to linked list"},
+    {nm:"AVL Tree",       c:"#4ade80",s:"O(log n)", i:"O(log n)", d:"O(log n)", n:"Guaranteed balance — always O(log n)"},
+    {nm:"Max/Min Heap",   c:"#f97316",s:"O(n)",     i:"O(log n)", d:"O(log n)", n:"Min/Max at root O(1) · array-backed"},
+    {nm:"Trie",           c:"#a855f7",s:"O(m)",     i:"O(m)",     d:"O(m)",     n:"m=word length · n-independent search"},
+    {nm:"Segment Tree",   c:"#f43f5e",s:"O(log n)", i:"O(log n)", d:"O(log n)", n:"Range query + point update O(log n)"},
+    {nm:"Fenwick Tree",   c:"#22d3ee",s:"O(log n)", i:"O(log n)", d:"O(log n)", n:"Prefix sums with O(n) space, cache-friendly"},
   ];
   return (
     <div style={{overflowX:"auto",WebkitOverflowScrolling:"touch"}}>
@@ -1128,7 +1622,7 @@ function ComplexityTable() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// KEYBOARD SHORTCUTS HELP MODAL
+// SHORTCUTS MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
 function ShortcutsModal({ open, onClose }) {
   if (!open) return null;
@@ -1170,32 +1664,30 @@ function ShortcutsModal({ open, onClose }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function Quiz({ onDone }) {
   const QS = [
-    {q:"Which BST traversal ALWAYS produces sorted output?",opts:["Pre-order","In-order","Post-order","Level-order"],ans:1,exp:"In-order (L→Root→R) visits BST nodes in ascending order — this is a fundamental and frequently tested property."},
+    {q:"Which BST traversal ALWAYS produces sorted output?",opts:["Pre-order","In-order","Post-order","Level-order"],ans:1,exp:"In-order (L→Root→R) visits BST nodes in ascending order — a fundamental and frequently tested property."},
     {q:"What is the worst-case height of a BST built by inserting 1, 2, 3, 4, 5, 6, 7 in order?",opts:["3","6","4","log₂(7) ≈ 3"],ans:1,exp:"Inserting sorted data creates a right-skewed chain. Height = n−1 = 6. This is the degenerate BST case."},
     {q:"AVL balance factor is defined as:",opts:["Value of node","height(left) − height(right)","Number of children","Depth from root"],ans:1,exp:"BF = height(left subtree) − height(right subtree). AVL guarantees |BF| ≤ 1 at every single node."},
     {q:"In a heap stored as an array, what is the index of the LEFT child of node at index i?",opts:["i + 1","2i","2i + 1","(i − 1) / 2"],ans:2,exp:"Left child = 2i+1, Right = 2i+2, Parent = ⌊(i−1)/2⌋. No pointers needed — this is what makes heaps memory-efficient."},
     {q:"Trie search for a word of length m has complexity:",opts:["O(n)","O(m · log n)","O(m)","O(log n)"],ans:2,exp:"O(m) — completely independent of n (total words stored). Add a million more words: search speed is unchanged."},
-    {q:"Which structure gives O(1) access to the maximum element?",opts:["AVL Tree","BST","Max Heap","Trie"],ans:2,exp:"Max Heap always keeps the maximum at the root. Peek = O(1). Extract = O(log n). Perfect for priority queues."},
+    {q:"A Segment Tree range query runs in:",opts:["O(n)","O(1)","O(log n)","O(n log n)"],ans:2,exp:"O(log n) — each level of the tree contributes at most 4 nodes to any query, giving O(log n) total."},
+    {q:"In a Fenwick Tree, lowbit(i) = i & (-i) determines:",opts:["Depth of node","The range of elements BIT[i] covers","The parent index","The prefix sum value"],ans:1,exp:"lowbit(i) = i & (-i) gives the number of elements that BIT[i] is responsible for — the length of its coverage range."},
+    {q:"Which structure gives O(1) access to the maximum element?",opts:["AVL Tree","BST","Max Heap","Segment Tree"],ans:2,exp:"Max Heap always keeps the maximum at the root. Peek = O(1). Extract = O(log n). Perfect for priority queues."},
   ];
   const [ans,setAns]=useState({});
   const [rev,setRev]=useState({});
   const score=Object.entries(ans).filter(([qi,ai])=>QS[+qi].ans===+ai).length;
-  useEffect(()=>{if(Object.keys(rev).length===QS.length)onDone?.(score,QS.length);},[rev]);
-
-  // Progress indicator
   const answered = Object.keys(rev).length;
-  const pct = (answered / QS.length) * 100;
+  useEffect(()=>{if(answered===QS.length)onDone?.(score,QS.length);},[rev]);
 
   return (
     <div>
-      {/* Quiz progress bar */}
       <div style={{ marginBottom:20 }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8 }}>
           <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#2d3748", letterSpacing:"0.08em" }}>PROGRESS</span>
           <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#818cf8", fontWeight:700 }}>{answered}/{QS.length}</span>
         </div>
         <div style={{ height:4, background:"rgba(255,255,255,0.06)", borderRadius:99, overflow:"hidden" }}>
-          <div style={{ height:"100%", width:`${pct}%`, background:"linear-gradient(90deg,#6366f1,#38bdf8)", borderRadius:99, transition:"width 0.5s cubic-bezier(0.22,1,0.36,1)" }}/>
+          <div style={{ height:"100%", width:`${(answered/QS.length)*100}%`, background:"linear-gradient(90deg,#6366f1,#38bdf8)", borderRadius:99, transition:"width 0.5s cubic-bezier(0.22,1,0.36,1)" }}/>
         </div>
       </div>
 
@@ -1261,43 +1753,13 @@ function Quiz({ onDone }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FLOATING VOICE MINI PLAYER
-// ═══════════════════════════════════════════════════════════════════════════════
-function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
-  if (!speaking) return null;
-  return (
-    <div style={{
-      position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)",
-      zIndex:850, display:"flex", alignItems:"center", gap:12,
-      padding:"10px 20px", borderRadius:99,
-      background:"rgba(8,12,24,0.94)", backdropFilter:"blur(24px)",
-      border:"1px solid rgba(74,222,128,0.3)",
-      boxShadow:"0 8px 36px rgba(74,222,128,0.15), 0 2px 12px rgba(0,0,0,0.6)",
-      animation:"slideUp 0.35s cubic-bezier(0.22,1,0.36,1) both",
-      maxWidth:"calc(100vw - 48px)",
-    }}>
-      <SpeakingWave color="#4ade80" size={16}/>
-      <div>
-        <div style={{ fontFamily:"'DM Sans',sans-serif", fontSize:12, fontWeight:600, color:"#e2e8f0", lineHeight:1 }}>{speakingLabel}</div>
-        <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#4ade80", marginTop:2 }}>{speed}× speed · male voice</div>
-      </div>
-      <button onClick={onStop} style={{
-        background:"rgba(239,68,68,0.15)", border:"1px solid rgba(239,68,68,0.35)",
-        borderRadius:20, cursor:"pointer", padding:"4px 12px",
-        fontFamily:"'JetBrains Mono',monospace", fontSize:9, fontWeight:700, color:"#f87171",
-        transition:"all 0.2s",
-      }}>⏹ STOP</button>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function TreePage() {
   const router = useRouter();
   const [speaking, setSpeaking] = useState(null);
   const [active,   setActive]   = useState("intro");
+  const [navOpen,  setNavOpen]  = useState(true);
   const [qScore,   setQScore]   = useState(null);
   const [qTotal,   setQTotal]   = useState(null);
   const [speed,    setSpeed]    = useState(1.25);
@@ -1305,7 +1767,6 @@ export default function TreePage() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const currentNarr = useRef(null);
 
-  /* Load fonts + warm-up voices */
   useEffect(() => {
     const lk = document.createElement("link");
     lk.rel  = "stylesheet";
@@ -1316,7 +1777,6 @@ export default function TreePage() {
     return () => { try { document.head.removeChild(lk); } catch {} };
   }, []);
 
-  /* Active section tracker — marks section as seen */
   useEffect(() => {
     const io = new IntersectionObserver(
       entries => entries.forEach(e => {
@@ -1331,12 +1791,11 @@ export default function TreePage() {
     return () => io.disconnect();
   }, []);
 
-  /* Keyboard shortcuts */
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
       if (e.key === "?" || e.key === "/") { e.preventDefault(); setShortcutsOpen(o => !o); }
-      if (e.key === "Escape") { setShortcutsOpen(false); }
+      if (e.key === "Escape") setShortcutsOpen(false);
       if (e.key === "s" || e.key === "S") { voiceStop(); setSpeaking(null); }
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -1378,7 +1837,6 @@ export default function TreePage() {
     ? (NAV_SECTIONS.find(s => s.id === speaking)?.label ?? (speaking === "__hero__" ? "Introduction" : speaking))
     : null;
 
-  const goStack = () => router.push("/bs-tree");
   const goIntro = () => document.getElementById("intro")?.scrollIntoView({ behavior:"smooth" });
 
   const SECTS = [
@@ -1393,10 +1851,10 @@ export default function TreePage() {
     { id:"anatomy", icon:"🔬", title:"Anatomy of a Tree", color:"#818cf8", voice:NARR.anatomy,
       visual:<VisAnatomy/>,
       cards:[
-        {lbl:"ROOT",            body:"The single entry point with no parent. All operations — search, insert, delete — begin by visiting the root."},
+        {lbl:"ROOT",              body:"The single entry point with no parent. All operations — search, insert, delete — begin by visiting the root."},
         {lbl:"LEAVES & INTERNAL", body:"Leaves have no children: they are the endpoints. Internal nodes have at least one child and sit in the middle of the tree."},
-        {lbl:"DEPTH vs HEIGHT", body:"Depth counts edges from root to a specific node (root depth = 0). Height is the maximum depth of any node in the entire tree."},
-        {lbl:"SUBTREE & DEGREE", body:"Any node plus all descendants forms a subtree. Degree = number of children. Binary trees enforce degree ≤ 2 per node."},
+        {lbl:"DEPTH vs HEIGHT",   body:"Depth counts edges from root to a specific node (root depth = 0). Height is the maximum depth of any node in the entire tree."},
+        {lbl:"SUBTREE & DEGREE",  body:"Any node plus all descendants forms a subtree. Degree = number of children. Binary trees enforce degree ≤ 2 per node."},
       ]},
     { id:"types", icon:"🌿", title:"Types of Trees", color:"#38bdf8", voice:NARR.types,
       visual:<VisTypes/>,
@@ -1417,34 +1875,50 @@ export default function TreePage() {
     { id:"avl", icon:"⚖️", title:"AVL Tree — Self-Balancing", color:"#fbbf24", voice:NARR.avl,
       visual:<VisAVL/>,
       cards:[
-        {lbl:"BALANCE FACTOR",  body:"BF = height(left) − height(right). AVL enforces |BF| ≤ 1 at every node. Any violation immediately triggers a rotation."},
-        {lbl:"4 ROTATION TYPES",body:"LL case → Right Rotation. RR case → Left Rotation. LR case → Left then Right. RL case → Right then Left."},
+        {lbl:"BALANCE FACTOR",    body:"BF = height(left) − height(right). AVL enforces |BF| ≤ 1 at every node. Any violation immediately triggers a rotation."},
+        {lbl:"4 ROTATION TYPES",  body:"LL case → Right Rotation. RR case → Left Rotation. LR case → Left then Right. RL case → Right then Left."},
         {lbl:"GUARANTEED HEIGHT", body:"AVL height ≤ 1.44 × log₂(n+2). Every single search is O(log n) no matter what order you inserted values."},
-        {lbl:"TRADE-OFF",       body:"Insertions and deletions are slightly slower due to rebalancing. Worth it for read-heavy systems needing consistent speed."},
+        {lbl:"TRADE-OFF",         body:"Insertions and deletions are slightly slower due to rebalancing. Worth it for read-heavy systems needing consistent speed."},
       ]},
     { id:"heap", icon:"🏔️", title:"Heap", color:"#f97316", voice:NARR.heap,
       visual:<VisHeap/>,
       cards:[
-        {lbl:"MAX HEAP",        body:"Every parent ≥ both children. The maximum element always sits at root. No search needed — just read root in O(1)."},
-        {lbl:"MIN HEAP",        body:"Every parent ≤ both children. Minimum always at root. Powers Dijkstra's shortest path, A* search, Prim's MST."},
-        {lbl:"HEAPIFY",         body:"Insert: add at end, bubble up swapping with parent. Delete root: move last to root, bubble down. Both are O(log n)."},
-        {lbl:"ARRAY TRICK",     body:"Node at i: left=2i+1, right=2i+2, parent=⌊(i-1)/2⌋. No pointers at all. Cache-friendly, memory-efficient storage."},
+        {lbl:"MAX HEAP",    body:"Every parent ≥ both children. The maximum element always sits at root. No search needed — just read root in O(1)."},
+        {lbl:"MIN HEAP",    body:"Every parent ≤ both children. Minimum always at root. Powers Dijkstra's shortest path, A* search, Prim's MST."},
+        {lbl:"HEAPIFY",     body:"Insert: add at end, bubble up swapping with parent. Delete root: move last to root, bubble down. Both are O(log n)."},
+        {lbl:"ARRAY TRICK", body:"Node at i: left=2i+1, right=2i+2, parent=⌊(i-1)/2⌋. No pointers at all. Cache-friendly, memory-efficient storage."},
       ]},
     { id:"trie", icon:"📝", title:"Trie — Prefix Tree", color:"#a855f7", voice:NARR.trie,
       visual:<VisTrie/>,
       cards:[
-        {lbl:"STRUCTURE",       body:"Each edge represents one character. To find a word, follow edges letter by letter. End-of-word nodes are marked."},
-        {lbl:"O(m) SEARCH",     body:"m = word length. Adding 1 million more words does not slow search at all. Total words stored (n) is completely irrelevant."},
-        {lbl:"AUTOCOMPLETE",    body:"Type prefix → reach its node → collect all words in the subtree below. This is exactly how Google Search suggestions work."},
-        {lbl:"APPLICATIONS",    body:"Spell checkers, browser URL bars, IP routing tables (longest prefix match), T9 keyboards, DNA sequence searching."},
+        {lbl:"STRUCTURE",      body:"Each edge represents one character. To find a word, follow edges letter by letter. End-of-word nodes are marked."},
+        {lbl:"O(m) SEARCH",    body:"m = word length. Adding 1 million more words does not slow search at all. Total words stored (n) is completely irrelevant."},
+        {lbl:"AUTOCOMPLETE",   body:"Type prefix → reach its node → collect all words in the subtree below. This is exactly how Google Search suggestions work."},
+        {lbl:"APPLICATIONS",   body:"Spell checkers, browser URL bars, IP routing tables (longest prefix match), T9 keyboards, DNA sequence searching."},
       ]},
     { id:"traversal", icon:"🗺️", title:"Tree Traversal", color:"#34d399", voice:NARR.traversal,
       visual:<VisTraversal/>,
       cards:[
-        {lbl:"IN-ORDER (L→N→R)", body:"Visits left subtree, then current node, then right subtree. For any BST, this always outputs all values in sorted ascending order."},
+        {lbl:"IN-ORDER (L→N→R)",  body:"Visits left subtree, then current node, then right subtree. For any BST, this always outputs all values in sorted ascending order."},
         {lbl:"PRE-ORDER (N→L→R)", body:"Current node first, then subtrees. Used to serialize and copy a tree. Output mirrors the top-down tree structure."},
-        {lbl:"POST-ORDER (L→R→N)", body:"Both children before parent. Used for safe deletion (children freed first) and evaluating postfix expression trees."},
+        {lbl:"POST-ORDER (L→R→N)",body:"Both children before parent. Used for safe deletion (children freed first) and evaluating postfix expression trees."},
         {lbl:"BFS / LEVEL-ORDER", body:"Uses a queue. Visits all nodes at depth 0, then 1, then 2… Essential for shortest path in unweighted trees."},
+      ]},
+    { id:"segment", icon:"📊", title:"Segment Tree", color:"#f43f5e", voice:NARR.segment,
+      visual:<VisSegmentTree/>,
+      cards:[
+        {lbl:"CONCEPT",          body:"A binary tree where each node stores an aggregate (sum, min, max) over a contiguous range of an array. Leaf = single element."},
+        {lbl:"RANGE QUERY O(log n)", body:"Query any subarray in O(log n): at each node, if its range fits inside the query, return its value. Otherwise split and recurse."},
+        {lbl:"POINT UPDATE O(log n)", body:"Update one element: change the leaf, then update all ancestors up the path. Exactly log n updates total."},
+        {lbl:"LAZY PROPAGATION",  body:"For range updates (e.g., add 5 to all elements in [l,r]), 'lazy' tags delay propagation to children — still O(log n) per update."},
+      ]},
+    { id:"fenwick", icon:"🔢", title:"Fenwick Tree (BIT)", color:"#22d3ee", voice:NARR.fenwick,
+      visual:<VisFenwick/>,
+      cards:[
+        {lbl:"CORE TRICK",       body:"Uses binary representation of indices. BIT[i] is responsible for lowbit(i) = i & (-i) elements. This makes prefix sums O(log n)."},
+        {lbl:"PREFIX SUM QUERY", body:"To get sum[1..i]: repeatedly subtract lowbit(i) from i and sum BIT values. At most log n steps."},
+        {lbl:"POINT UPDATE",     body:"To add δ to position i: repeatedly add lowbit(i) to i and update BIT values. At most log n steps."},
+        {lbl:"VS SEGMENT TREE",  body:"Fenwick uses half the memory, simpler code, faster in practice. Segment Tree is more flexible (range updates, custom operations)."},
       ]},
   ];
 
@@ -1461,7 +1935,6 @@ export default function TreePage() {
 
         @keyframes hOrb1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(22px,-16px) scale(1.06)}66%{transform:translate(-12px,9px) scale(0.96)}}
         @keyframes hOrb2{0%,100%{transform:translate(0,0)}42%{transform:translate(-20px,14px)}84%{transform:translate(14px,-9px)}}
-        @keyframes sPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.62;transform:scale(1.07)}}
         @keyframes sRight{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:translateX(0)}}
         @keyframes fUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
         @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -1472,7 +1945,6 @@ export default function TreePage() {
 
         @media(max-width:760px){
           .sg{grid-template-columns:1fr !important}
-          .nav-pills button{width:30px !important;height:30px !important;font-size:13px !important}
         }
         @media(max-width:480px){
           .sg{gap:12px !important}
@@ -1480,10 +1952,19 @@ export default function TreePage() {
       `}</style>
 
       <ProgressBar/>
-      <StickyNav active={active} speaking={speaking} speed={speed} setSpeed={setSpeed} onRestart={handleRestart}/>
       <BackToTop/>
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
       <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} speed={speed}/>
+      <RightSidebar
+        active={active}
+        speaking={speaking}
+        speed={speed}
+        setSpeed={setSpeed}
+        onRestart={handleRestart}
+        seenCount={seenSections.size}
+        open={navOpen}
+        setOpen={setNavOpen}
+      />
 
       <Hero
         onStart={goIntro}
@@ -1491,7 +1972,6 @@ export default function TreePage() {
         speed={speed}
       />
 
-      {/* Keyboard shortcut hint */}
       <div style={{
         textAlign:"center", marginBottom:32,
         fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#1e2a38", letterSpacing:"0.1em",
@@ -1508,7 +1988,7 @@ export default function TreePage() {
             seen={seenSections.has(s.id)}/>
         ))}
 
-        {/* ── Complexity Cheat Sheet ─────────────────────────────── */}
+        {/* Complexity Cheat Sheet */}
         <section id="complexity" style={{ marginBottom:80 }}>
           <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:22,flexWrap:"wrap" }}>
             <div style={{ width:50,height:50,borderRadius:16,flexShrink:0,
@@ -1532,7 +2012,7 @@ export default function TreePage() {
           </div>
         </section>
 
-        {/* ── Quiz Section ───────────────────────────────────────── */}
+        {/* Quiz */}
         <section id="quiz" style={{ marginBottom:80 }}>
           <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:8,flexWrap:"wrap" }}>
             <div style={{ width:50,height:50,borderRadius:16,flexShrink:0,
@@ -1541,7 +2021,7 @@ export default function TreePage() {
               boxShadow:"0 0 28px rgba(236,72,153,0.15)" }}>🧠</div>
             <div style={{ flex:1,minWidth:0 }}>
               <h2 style={{ fontFamily:"'Syne',sans-serif",fontSize:"clamp(19px,3.8vw,30px)",fontWeight:800,color:"#f8fafc" }}>Test Your Knowledge</h2>
-              <p style={{ fontFamily:"'DM Sans',sans-serif",fontSize:13,color:"#475569",marginTop:3 }}>6 questions · covers every section · some are tricky</p>
+              <p style={{ fontFamily:"'DM Sans',sans-serif",fontSize:13,color:"#475569",marginTop:3 }}>8 questions · covers every section · some are tricky</p>
             </div>
             <button onClick={()=>handleVoice("quiz",NARR.quiz)} style={{
               display:"flex",alignItems:"center",gap:7,
@@ -1562,39 +2042,27 @@ export default function TreePage() {
           {qScore !== null && (
             <div style={{
               marginTop:30,padding:"36px 24px",borderRadius:24,textAlign:"center",
-              background:`linear-gradient(138deg,${qScore>=5?"rgba(74,222,128,0.1)":qScore>=3?"rgba(251,191,36,0.1)":"rgba(239,68,68,0.1)"} 0%,rgba(0,0,0,0) 100%)`,
-              border:`1px solid ${qScore>=5?"rgba(74,222,128,0.32)":qScore>=3?"rgba(251,191,36,0.32)":"rgba(239,68,68,0.32)"}`,
+              background:`linear-gradient(138deg,${qScore>=6?"rgba(74,222,128,0.1)":qScore>=4?"rgba(251,191,36,0.1)":"rgba(239,68,68,0.1)"} 0%,rgba(0,0,0,0) 100%)`,
+              border:`1px solid ${qScore>=6?"rgba(74,222,128,0.32)":qScore>=4?"rgba(251,191,36,0.32)":"rgba(239,68,68,0.32)"}`,
               animation:"fUp 0.5s ease",
             }}>
-              <div style={{ fontSize:52,marginBottom:12 }}>{qScore>=5?"🏆":qScore>=3?"🌟":"💪"}</div>
+              <div style={{ fontSize:52,marginBottom:12 }}>{qScore>=6?"🏆":qScore>=4?"🌟":"💪"}</div>
               <div style={{ fontFamily:"'Syne',sans-serif",fontSize:40,fontWeight:800,
-                color:qScore>=5?"#4ade80":qScore>=3?"#fbbf24":"#f87171" }}>
+                color:qScore>=6?"#4ade80":qScore>=4?"#fbbf24":"#f87171" }}>
                 {qScore} / {qTotal}
               </div>
               <p style={{ fontFamily:"'DM Sans',sans-serif",fontSize:15,color:"#94a3b8",margin:"10px 0 24px",lineHeight:1.55 }}>
-                {qScore>=5
+                {qScore>=6
                   ? "Exceptional! You have genuinely mastered tree data structures."
-                  : qScore>=3
+                  : qScore>=4
                   ? "Solid work. Review the sections you missed, then retry."
                   : "Keep going — re-read the sections above and come back stronger."}
               </p>
-              <button onClick={goStack} style={{
-                padding:"14px 34px",borderRadius:16,cursor:"pointer",
-                background:"linear-gradient(135deg,#6366f1 0%,#38bdf8 100%)",
-                border:"none",fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:700,
-                color:"#fff",boxShadow:"0 8px 32px rgba(99,102,241,0.42)",
-                transition:"all 0.25s",display:"inline-flex",alignItems:"center",gap:11,
-              }}
-                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 14px 44px rgba(99,102,241,0.58)";}}
-                onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 8px 32px rgba(99,102,241,0.42)";}}>
-                <span>Next: Stack Data Structure</span>
-                <span style={{ fontSize:20 }}>→</span>
-              </button>
             </div>
           )}
         </section>
 
-        {/* ── Footer CTA ─────────────────────────────────────────── */}
+        {/* Footer CTA */}
         <div style={{
           textAlign:"center",padding:"48px 24px",borderRadius:26,
           background:"linear-gradient(140deg,rgba(99,102,241,0.09) 0%,rgba(56,189,248,0.07) 50%,rgba(74,222,128,0.06) 100%)",
@@ -1607,11 +2075,10 @@ export default function TreePage() {
             You have completed the Tree guide!
           </h3>
           <p style={{ fontFamily:"'DM Sans',sans-serif",fontSize:14,color:"#64748b",maxWidth:440,margin:"0 auto 28px",lineHeight:1.72 }}>
-            Implement these yourself. Start with a BST, then add AVL balancing.
+            Implement these yourself. Start with a BST, then add AVL balancing, then Segment and Fenwick trees.
             Writing the code makes every concept permanent.
           </p>
 
-          {/* Section completion progress */}
           <div style={{ display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:24 }}>
             {NAV_SECTIONS.map(s => (
               <div key={s.id} style={{
@@ -1627,21 +2094,6 @@ export default function TreePage() {
           </div>
           <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#2d3748",marginBottom:22 }}>
             {seenSections.size} / {NAV_SECTIONS.length} sections visited
-          </div>
-
-          <div style={{ display:"flex",gap:9,justifyContent:"center",flexWrap:"wrap",marginBottom:20 }}>
-            {["💻 Code a BST","💻 Code AVL Tree","💻 Code Max Heap","💻 Code a Trie"].map(t=>(
-              <button key={t} onClick={goStack} style={{
-                padding:"8px 16px",borderRadius:22,cursor:"pointer",
-                background:"rgba(99,102,241,0.1)",border:"1px solid rgba(99,102,241,0.24)",
-                fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#818cf8",
-                letterSpacing:"0.04em",transition:"all 0.22s",
-              }}
-                onMouseEnter={e=>{e.currentTarget.style.background="rgba(99,102,241,0.2)";e.currentTarget.style.borderColor="rgba(99,102,241,0.45)";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="rgba(99,102,241,0.1)";e.currentTarget.style.borderColor="rgba(99,102,241,0.24)";}}>
-                {t}
-              </button>
-            ))}
           </div>
 
           <button onClick={() => setShortcutsOpen(true)} style={{

@@ -1,9 +1,31 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VOICE ENGINE
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── Helper hooks ────────────────────────────────────────────────────────────
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener("change", listener);
+    return () => media.removeEventListener("change", listener);
+  }, [matches, query]);
+  return matches;
+}
+
+function useVisible(threshold = 0.07) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); }, { threshold });
+    if (ref.current) io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+  return [ref, vis];
+}
+
+// ── VOICE ENGINE ────────────────────────────────────────────────────────────
 function getMaleVoice() {
   if (typeof window === "undefined") return null;
   const all = window.speechSynthesis.getVoices();
@@ -40,9 +62,7 @@ function voiceSpeak(text, onEnd, rate) {
 }
 function voiceStop() { typeof window !== "undefined" && window.speechSynthesis?.cancel(); }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// NARRATIONS
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── NARRATIONS ──────────────────────────────────────────────────────────────
 const NARR = {
   intro: `A queue is a fundamental data structure that follows the First In, First Out — FIFO — principle. Imagine a line of people waiting at a ticket counter: the first person to arrive is the first to be served. That is exactly how a queue works. Elements are added at the rear and removed from the front. This simple rule makes queues perfect for managing tasks in order, processing requests, and ensuring fairness.`,
   ops: `A queue has four core operations. Enqueue adds an element to the rear in O(1). Dequeue removes and returns the front element in O(1). Front returns the element at the front without removing it in O(1). isEmpty checks if the queue is empty in O(1). Every operation is constant time — no loops, no searching.`,
@@ -66,23 +86,7 @@ const NAV_SECTIONS = [
 ];
 const SPEED_OPTIONS = [0.75, 1.0, 1.25, 1.5, 2.0];
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// HOOKS
-// ═══════════════════════════════════════════════════════════════════════════════
-function useVisible(threshold = 0.07) {
-  const ref = useRef(null);
-  const [vis, setVis] = useState(false);
-  useEffect(() => {
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); }, { threshold });
-    if (ref.current) io.observe(ref.current);
-    return () => io.disconnect();
-  }, []);
-  return [ref, vis];
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// PROGRESS BAR
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── PROGRESS BAR ────────────────────────────────────────────────────────────
 function ProgressBar() {
   const [p, setP] = useState(0);
   useEffect(() => {
@@ -100,9 +104,7 @@ function ProgressBar() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SPEAKING WAVE
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── SPEAKING WAVE ───────────────────────────────────────────────────────────
 function SpeakingWave({ color="#4ade80", size=16 }) {
   return (
     <div style={{ display:"flex",alignItems:"center",gap:2,height:size }}>
@@ -113,9 +115,7 @@ function SpeakingWave({ color="#4ade80", size=16 }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SPEED PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── SPEED PANEL ─────────────────────────────────────────────────────────────
 function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
   const [open, setOpen] = useState(false);
   return (
@@ -152,63 +152,342 @@ function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// STICKY NAV
-// ═══════════════════════════════════════════════════════════════════════════════
-function StickyNav({ active, speaking, speed, setSpeed, onRestart, seenCount }) {
+// ── RIGHT SIDEBAR (collapsible, responsive) ─────────────────────────────────
+function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount, open, setOpen }) {
   const [show, setShow] = useState(false);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 600px)');
+
   useEffect(() => {
     const h = () => setShow(window.scrollY > 500);
-    window.addEventListener("scroll", h, { passive:true });
+    window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, []);
+
+  // Replace with actual implementation pages if you have them
+  const goToArray = () => { window.location.href = "/queue-vis"; };
+  const goToLL = () => { window.location.href = "/queue-vis"; };
+
+  if (!open) {
+    const btnSize = isMobile ? 36 : 40;
+    const btnRight = isMobile ? 12 : 16;
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          right: btnRight,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 950,
+          width: btnSize,
+          height: btnSize,
+          borderRadius: btnSize / 2,
+          background: "rgba(96,165,250,0.2)",
+          border: "1px solid rgba(96,165,250,0.4)",
+          backdropFilter: "blur(12px)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: isMobile ? 18 : 20,
+          color: "#60a5fa",
+          transition: "all 0.2s",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        }}
+      >
+        ◀
+      </button>
+    );
+  }
+
+  const desktopBtnSize = 36;
+  const desktopGap = 4;
+  const desktopPadding = "8px 6px";
+  const desktopFontIcon = 16;
+  const desktopFontText = 8;
+  const desktopCodePadding = "4px 8px";
+  const desktopProgressPillPadding = "3px 6px";
+  const desktopProgressBarWidth = 24;
+  const desktopSpeakingPadding = "3px 6px";
+
+  const mobileBtnSize = 32;
+  const mobileGap = 3;
+  const mobilePadding = "8px 6px";
+  const mobileFontIcon = 18;
+  const mobileFontText = 9;
+  const mobileCodePadding = "4px 8px";
+  const mobileProgressPillPadding = "4px 8px";
+  const mobileProgressBarWidth = 24;
+  const mobileSpeakingPadding = "4px 8px";
+
+  const isMobileView = isMobile;
+  const btnSize = isMobileView ? mobileBtnSize : desktopBtnSize;
+  const gap = isMobileView ? mobileGap : desktopGap;
+  const padding = isMobileView ? mobilePadding : desktopPadding;
+  const fontSizeIcon = isMobileView ? mobileFontIcon : desktopFontIcon;
+  const fontSizeText = isMobileView ? mobileFontText : desktopFontText;
+  const codePadding = isMobileView ? mobileCodePadding : desktopCodePadding;
+  const progressPillPadding = isMobileView ? mobileProgressPillPadding : desktopProgressPillPadding;
+  const progressBarWidth = isMobileView ? mobileProgressBarWidth : desktopProgressBarWidth;
+  const speakingPadding = isMobileView ? mobileSpeakingPadding : desktopSpeakingPadding;
+
   return (
-    <nav style={{
-      position:"fixed",top:14,left:"50%",transform:"translateX(-50%)",
-      zIndex:900,display:"flex",alignItems:"center",gap:2,padding:"5px 8px",
-      background:"rgba(3,6,18,0.94)",backdropFilter:"blur(28px) saturate(180%)",
-      borderRadius:22,border:"1px solid rgba(255,255,255,0.07)",
-      boxShadow:"0 12px 48px rgba(0,0,0,0.7)",
-      opacity:show?1:0,pointerEvents:show?"auto":"none",
-      transition:"opacity 0.3s ease",maxWidth:"calc(100vw - 24px)",
-    }}>
-      <div className="nav-pills" style={{ display:"flex",gap:2,flexWrap:"wrap",justifyContent:"center" }}>
-        {NAV_SECTIONS.map(s => (
-          <button key={s.id}
-            onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior:"smooth" })}
-            title={s.label}
+    <nav
+      style={{
+        position: "fixed",
+        right: isMobileView ? 12 : 16,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 900,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap,
+        padding,
+        background: "rgba(3,6,18,0.94)",
+        backdropFilter: "blur(28px) saturate(180%)",
+        borderRadius: isMobileView ? 24 : 24,
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? "auto" : "none",
+        transition: "opacity 0.3s ease",
+        width: "auto",
+        maxHeight: isMobileView ? "85vh" : "auto",
+        overflowY: isMobileView ? "auto" : "visible",
+        scrollbarWidth: "thin",
+      }}
+    >
+      <button
+        onClick={() => setOpen(false)}
+        style={{
+          width: btnSize,
+          height: btnSize,
+          borderRadius: 10,
+          border: "none",
+          background: "rgba(255,255,255,0.05)",
+          cursor: "pointer",
+          fontSize: isMobileView ? 14 : 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#94a3b8",
+          marginBottom: 2,
+        }}
+      >
+        ✕
+      </button>
+
+      {NAV_SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
+          title={s.label}
+          style={{
+            width: btnSize,
+            height: btnSize,
+            borderRadius: 8,
+            border: "none",
+            cursor: "pointer",
+            background: active === s.id ? `${s.col}22` : "transparent",
+            outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
+            fontSize: fontSizeIcon,
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            flexShrink: 0,
+          }}
+        >
+          {s.icon}
+        </button>
+      ))}
+
+      <div
+        style={{
+          padding: progressPillPadding,
+          borderRadius: 16,
+          background: "rgba(96,165,250,0.08)",
+          border: "1px solid rgba(96,165,250,0.2)",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          width: "auto",
+        }}
+      >
+        <div
+          style={{
+            width: progressBarWidth,
+            height: isMobileView ? 3 : 4,
+            borderRadius: 99,
+            background: "rgba(255,255,255,0.06)",
+            overflow: "hidden",
+          }}
+        >
+          <div
             style={{
-              width:34,height:34,borderRadius:12,border:"none",cursor:"pointer",
-              background:active===s.id?`${s.col}22`:"transparent",
-              outline:active===s.id?`1.5px solid ${s.col}55`:"1.5px solid transparent",
-              fontSize:15,transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:"center",
-            }}>
-            {s.icon}
-          </button>
-        ))}
-      </div>
-      <div style={{ width:1,height:20,background:"rgba(255,255,255,0.08)",margin:"0 4px" }}/>
-      <div style={{ padding:"3px 9px",borderRadius:12,background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.2)",display:"flex",alignItems:"center",gap:5 }}>
-        <div style={{ width:28,height:4,borderRadius:99,background:"rgba(255,255,255,0.06)",overflow:"hidden" }}>
-          <div style={{ height:"100%",width:`${(seenCount/NAV_SECTIONS.length)*100}%`,background:"#60a5fa",borderRadius:99,transition:"width 0.5s ease" }}/>
+              height: "100%",
+              width: `${(seenCount / NAV_SECTIONS.length) * 100}%`,
+              background: "#60a5fa",
+              borderRadius: 99,
+              transition: "width 0.5s ease",
+            }}
+          />
         </div>
-        <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#60a5fa",fontWeight:700 }}>{seenCount}/{NAV_SECTIONS.length}</span>
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: isMobileView ? 8 : 7,
+            color: "#60a5fa",
+            fontWeight: 700,
+          }}
+        >
+          {seenCount}/{NAV_SECTIONS.length}
+        </span>
       </div>
-      <div style={{ width:1,height:20,background:"rgba(255,255,255,0.08)",margin:"0 4px" }}/>
-      <SpeedPanel speed={speed} setSpeed={setSpeed} speaking={!!speaking} onRestart={onRestart}/>
+
+      <button
+        onClick={goToArray}
+        style={{
+          padding: codePadding,
+          borderRadius: 16,
+          cursor: "pointer",
+          background: "rgba(74,222,128,0.12)",
+          border: "1px solid rgba(74,222,128,0.35)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: fontSizeText,
+          fontWeight: 700,
+          color: "#4ade80",
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        📦 {isMobileView ? "Array" : "Array Queue"}
+      </button>
+      <button
+        onClick={goToLL}
+        style={{
+          padding: codePadding,
+          borderRadius: 16,
+          cursor: "pointer",
+          background: "rgba(96,165,250,0.12)",
+          border: "1px solid rgba(96,165,250,0.35)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: fontSizeText,
+          fontWeight: 700,
+          color: "#60a5fa",
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        🔗 {isMobileView ? "Linked" : "Linked Queue"}
+      </button>
+
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setSpeedOpen((o) => !o)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: codePadding,
+            borderRadius: 16,
+            cursor: "pointer",
+            background: speedOpen ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.05)",
+            border: `1.5px solid ${speedOpen ? "#60a5fa" : "rgba(255,255,255,0.1)"}`,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: fontSizeText,
+            fontWeight: 700,
+            color: speedOpen ? "#93c5fd" : "#64748b",
+            transition: "all 0.2s",
+          }}
+        >
+          ⚡ {speed}×
+        </button>
+        {speedOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: "calc(100% + 8px)",
+              background: "rgba(5,8,20,0.97)",
+              backdropFilter: "blur(28px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              padding: "4px 4px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              zIndex: 1000,
+              minWidth: 80,
+              boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
+              animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 6,
+                color: "#2d3748",
+                letterSpacing: "0.1em",
+                padding: "1px 5px 3px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              SPEED
+            </div>
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  currentRate = s;
+                  setSpeed(s);
+                  setSpeedOpen(false);
+                  if (speaking) onRestart();
+                }}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: 5,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  background: speed === s ? "rgba(96,165,250,0.2)" : "transparent",
+                  border: `1px solid ${speed === s ? "rgba(96,165,250,0.45)" : "transparent"}`,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  color: speed === s ? "#93c5fd" : "#475569",
+                  transition: "all 0.15s",
+                }}
+              >
+                {s === 1.25 ? `${s}× ★` : `${s}×`}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {speaking && (
-        <div style={{ marginLeft:4,display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:14,background:"rgba(96,165,250,0.12)",border:"1px solid rgba(96,165,250,0.3)" }}>
-          <SpeakingWave color="#60a5fa" size={14}/>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#60a5fa",fontWeight:700 }}>ON</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: speakingPadding,
+            borderRadius: 12,
+            background: "rgba(96,165,250,0.12)",
+            border: "1px solid rgba(96,165,250,0.3)",
+          }}
+        >
+          <SpeakingWave color="#60a5fa" size={isMobileView ? 10 : 9} />
         </div>
       )}
     </nav>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// BACK TO TOP
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── BACK TO TOP ─────────────────────────────────────────────────────────────
 function BackToTop() {
   const [show, setShow] = useState(false);
   useEffect(() => {
@@ -230,9 +509,7 @@ function BackToTop() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// COMPLETED BADGE
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── COMPLETED BADGE ─────────────────────────────────────────────────────────
 function CompletedBadge({ seen }) {
   if (!seen) return null;
   return (
@@ -245,9 +522,7 @@ function CompletedBadge({ seen }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MINI PLAYER
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── MINI PLAYER ─────────────────────────────────────────────────────────────
 function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
   if (!speaking) return null;
   return (
@@ -275,181 +550,233 @@ function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// HERO — Animated FIFO Queue
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── HERO (animated FIFO queue, fixed height, responsive) ────────────────────
+const MAX_SLOTS = 6;
 function Hero({ onStart, onVoice }) {
-  const [queue, setQueue] = useState([
-    { id:1, v:10, col:"#60a5fa" },
-    { id:2, v:25, col:"#4ade80" },
-    { id:3, v:37, col:"#f472b6" },
-  ]);
-  const [animating, setAnimating] = useState(null); // 'enqueue' or 'dequeue'
-  const [opLabel, setOpLabel] = useState(null);
-  const [paused, setPaused] = useState(false);
-  const counter = useRef(4);
-  const values = [42, 55, 68, 81, 99];
-  const vIdx = useRef(0);
-  const pausedRef = useRef(paused);
+  const isMobile = useMediaQuery("(max-width: 600px)");
+  const slotSize    = isMobile ? 56 : 72;
+  const slotGap     = isMobile ? 4 : 8;
+  const fontSize    = isMobile ? 18 : 22;
+  const labelOffset = isMobile ? 18 : 22;
+  const railHeight  = slotSize + 16;
+  const showArrows  = !isMobile;
+
+  const makeSlots = (items) => {
+    const s = Array(MAX_SLOTS).fill(null);
+    items.forEach((it, i) => { s[i] = { ...it, state: "idle" }; });
+    return s;
+  };
+  const INITIAL = [
+    { id: 1, v: 10, col: "#60a5fa" },
+    { id: 2, v: 25, col: "#4ade80" },
+    { id: 3, v: 37, col: "#f472b6" },
+  ];
+
+  const [slots, setSlots]       = useState(() => makeSlots(INITIAL));
+  const [opLabel, setOpLabel]   = useState(null);
+  const [paused, setPaused]     = useState(false);
+  const counterRef  = useRef(4);
+  const vIdxRef     = useRef(0);
+  const pausedRef   = useRef(false);
+  const busyRef     = useRef(false);
+  const VALUES      = [42, 55, 68, 81, 99, 17, 63, 28];
+  const COLORS      = ["#60a5fa", "#4ade80", "#f472b6", "#f59e0b", "#a78bfa", "#34d399", "#fb923c"];
+
   useEffect(() => { pausedRef.current = paused; }, [paused]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (pausedRef.current) return;
-      if (queue.length >= 6) {
-        // Dequeue
-        const front = queue[0];
-        setAnimating("dequeue");
-        setOpLabel({ text:`DEQUEUE → ${front.v}`, col:"#f472b6" });
-        setTimeout(() => {
-          setQueue(q => q.slice(1));
-          setAnimating(null);
-          setTimeout(() => setOpLabel(null), 600);
-        }, 500);
-      } else {
-        // Enqueue
-        const val = values[vIdx.current % values.length];
-        vIdx.current++;
-        const newItem = { id: counter.current++, v: val, col: ["#60a5fa","#4ade80","#f472b6","#f59e0b","#a78bfa"][counter.current % 5] };
-        setAnimating("enqueue");
-        setOpLabel({ text:`ENQUEUE ${val}`, col:"#4ade80" });
-        setTimeout(() => {
-          setQueue(q => [...q, newItem]);
-          setAnimating(null);
-          setTimeout(() => setOpLabel(null), 600);
-        }, 500);
-      }
-    }, 2500);
+    const tick = () => {
+      if (pausedRef.current || busyRef.current) return;
+
+      setSlots((prev) => {
+        const live = prev.filter(Boolean);
+        if (live.length >= 5) {
+          // Dequeue
+          const frontIdx = prev.findIndex(Boolean);
+          if (frontIdx === -1) return prev;
+          const front = prev[frontIdx];
+          busyRef.current = true;
+          setOpLabel({ text: `DEQUEUE → ${front.v}`, col: "#f472b6", icon: "⬆" });
+          const s1 = [...prev];
+          s1[frontIdx] = { ...front, state: "leaving" };
+          setTimeout(() => {
+            setSlots((cur) => {
+              const filled = cur.filter((x) => x && x.state !== "leaving");
+              const fresh  = Array(MAX_SLOTS).fill(null);
+              filled.forEach((it, i) => { fresh[i] = { ...it, state: "idle" }; });
+              return fresh;
+            });
+            setTimeout(() => {
+              setOpLabel(null);
+              busyRef.current = false;
+            }, 400);
+          }, 520);
+          return s1;
+        } else {
+          // Enqueue
+          const live2 = prev.filter(Boolean);
+          const rearSlot = live2.length;
+          if (rearSlot >= MAX_SLOTS) return prev;
+          const val = VALUES[vIdxRef.current % VALUES.length];
+          vIdxRef.current++;
+          const col = COLORS[counterRef.current % COLORS.length];
+          const id  = counterRef.current++;
+          busyRef.current = true;
+          setOpLabel({ text: `ENQUEUE ${val}`, col: "#4ade80", icon: "⬇" });
+          const s1 = [...prev];
+          s1[rearSlot] = { id, v: val, col, state: "entering" };
+          setTimeout(() => {
+            setSlots((cur) => {
+              const s2 = [...cur];
+              const idx2 = s2.findIndex((x) => x && x.id === id);
+              if (idx2 !== -1) s2[idx2] = { ...s2[idx2], state: "idle" };
+              return s2;
+            });
+            setTimeout(() => {
+              setOpLabel(null);
+              busyRef.current = false;
+            }, 300);
+          }, 500);
+          return s1;
+        }
+      });
+    };
+    const interval = setInterval(tick, 2200);
     return () => clearInterval(interval);
-  }, [queue.length]);
+  }, []);
+
+  const liveSlots   = slots.filter(Boolean);
+  const frontItem   = liveSlots[0];
+  const rearItem    = liveSlots[liveSlots.length - 1];
 
   return (
     <div style={{
-      minHeight:"100vh",display:"flex",flexDirection:"column",
-      alignItems:"center",justifyContent:"center",
-      padding:"80px 24px 48px",textAlign:"center",position:"relative",overflow:"hidden",
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: isMobile ? "48px 16px 32px" : "64px 24px 48px",
+      textAlign: "center",
+      position: "relative",
+      overflow: "hidden",
     }}>
-      {/* Background elements */}
-      <div style={{ position:"absolute",inset:0,pointerEvents:"none",backgroundImage:"radial-gradient(circle,rgba(96,165,250,0.05) 1px,transparent 1px)",backgroundSize:"36px 36px" }}/>
-      <div style={{ position:"absolute",top:"6%",left:"3%",width:440,height:440,borderRadius:"50%",background:"radial-gradient(circle,rgba(96,165,250,0.13) 0%,transparent 70%)",filter:"blur(80px)",pointerEvents:"none",animation:"orb1 24s ease-in-out infinite" }}/>
-      <div style={{ position:"absolute",bottom:"8%",right:"3%",width:360,height:360,borderRadius:"50%",background:"radial-gradient(circle,rgba(244,114,182,0.1) 0%,transparent 70%)",filter:"blur(68px)",pointerEvents:"none",animation:"orb2 30s ease-in-out infinite" }}/>
+      <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:"radial-gradient(circle,rgba(96,165,250,0.045) 1px,transparent 1px)", backgroundSize:"38px 38px" }}/>
+      <div style={{ position:"absolute", top:"4%", left:"2%", width:isMobile?300:500, height:isMobile?300:500, borderRadius:"50%", background:"radial-gradient(circle,rgba(96,165,250,0.11) 0%,transparent 68%)", filter:"blur(90px)", pointerEvents:"none", animation:"orb1 24s ease-in-out infinite" }}/>
+      <div style={{ position:"absolute", bottom:"6%", right:"2%", width:isMobile?250:400, height:isMobile?250:400, borderRadius:"50%", background:"radial-gradient(circle,rgba(244,114,182,0.09) 0%,transparent 68%)", filter:"blur(75px)", pointerEvents:"none", animation:"orb2 30s ease-in-out infinite" }}/>
 
-      {/* Queue visualization */}
-      <div style={{ marginBottom:40, width:"100%", maxWidth:600, position:"relative" }}>
-        {opLabel && (
-          <div style={{ textAlign:"center", marginBottom:12 }}>
+      <div style={{ width:"100%", maxWidth:isMobile?"100%":620, marginBottom:isMobile?24:40, position:"relative" }}>
+        <div style={{ height:36, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:4 }}>
+          {opLabel && (
             <span style={{
-              padding:"4px 16px",borderRadius:20, background:`${opLabel.col}18`, border:`1px solid ${opLabel.col}50`,
-              fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:700, color:opLabel.col,
-              animation:"opLabelIn 0.3s cubic-bezier(0.22,1,0.36,1) both",
-            }}>{opLabel.text}</span>
-          </div>
-        )}
-
-        <div style={{ display:"flex", justifyContent:"center", gap:8, flexWrap:"wrap", alignItems:"center", minHeight:120 }}>
-          {queue.map((item, idx) => {
-            const isFront = idx === 0;
-            const isRear = idx === queue.length-1;
-            const isNew = animating === "enqueue" && idx === queue.length-1;
-            const isLeaving = animating === "dequeue" && idx === 0;
-            return (
-              <div key={item.id} style={{
-                width:64, height:64, borderRadius:12,
-                background: `linear-gradient(145deg, ${item.col}22, ${item.col}08)`,
-                border: `2px solid ${isFront ? item.col : `${item.col}80`}`,
-                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-                position:"relative",
-                transform: isNew ? "scale(1.1)" : isLeaving ? "scale(0.9) translateX(-20px)" : "scale(1)",
-                opacity: isLeaving ? 0 : 1,
-                transition: "all 0.4s cubic-bezier(0.34,1.56,0.64,1)",
-                boxShadow: isFront ? `0 0 20px ${item.col}60` : "none",
-              }}>
-                <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:20, fontWeight:700, color:item.col }}>{item.v}</span>
-                {isFront && <span style={{ position:"absolute", bottom:-24, fontSize:9, fontFamily:"'JetBrains Mono',monospace", color:item.col }}>FRONT</span>}
-                {isRear && <span style={{ position:"absolute", top:-24, fontSize:9, fontFamily:"'JetBrains Mono',monospace", color:item.col }}>REAR</span>}
-              </div>
-            );
-          })}
-          {queue.length === 0 && (
-            <div style={{ width:200, padding:20, borderRadius:12, border:"2px dashed rgba(255,255,255,0.2)", textAlign:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:12, color:"#475569" }}>EMPTY QUEUE</div>
+              display:"inline-flex", alignItems:"center", gap:7, padding:"4px 14px", borderRadius:20,
+              background:`${opLabel.col}16`, border:`1px solid ${opLabel.col}48`,
+              fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?9:11, fontWeight:700,
+              color:opLabel.col, animation:"opLabelIn 0.28s cubic-bezier(0.22,1,0.36,1) both",
+              backdropFilter:"blur(8px)", boxShadow:`0 0 20px ${opLabel.col}22`,
+            }}>
+              <span style={{ fontSize:isMobile?10:12 }}>{opLabel.icon}</span>{opLabel.text}
+            </span>
           )}
         </div>
 
-        <div style={{ marginTop:24, display:"flex", justifyContent:"center", gap:12 }}>
+        <div style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:slotGap, height:slotSize, position:"relative" }}>
+          {showArrows && (
+            <div style={{ position:"absolute", left:-8, top:"50%", transform:"translateY(-50%)", display:"flex", flexDirection:"column", alignItems:"center", gap:3, opacity:0.45, pointerEvents:"none" }}>
+              <div style={{ width:20, height:20, borderRadius:6, background:"rgba(244,114,182,0.15)", border:"1px solid rgba(244,114,182,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#f472b6" }}>←</div>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:7, color:"#f472b6", letterSpacing:"0.05em" }}>OUT</span>
+            </div>
+          )}
+          {slots.map((item, si) => {
+            if (!item) return <div key={`slot-${si}`} style={{ width:slotSize, height:slotSize, borderRadius:14, flexShrink:0, opacity:0, pointerEvents:"none" }} />;
+            const isFront = item.id === frontItem?.id && item.state !== "leaving";
+            const isRear = item.id === rearItem?.id && item.state !== "leaving";
+            const isLeaving = item.state === "leaving";
+            const isEntering = item.state === "entering";
+            return (
+              <div key={item.id} style={{
+                width:slotSize, height:slotSize, borderRadius:14, flexShrink:0, position:"relative",
+                opacity: isLeaving ? 0 : isEntering ? 0 : 1,
+                transform: isLeaving ? `translateX(-${slotGap*2}px) scale(0.78)` : isEntering ? "translateY(-18px) scale(0.82)" : "translateX(0) scale(1)",
+                filter: isLeaving ? "blur(2px)" : "blur(0)",
+                transition: "opacity 0.42s cubic-bezier(0.4,0,0.2,1), transform 0.42s cubic-bezier(0.34,1.28,0.64,1), filter 0.3s ease",
+                background: `linear-gradient(145deg, ${item.col}1a, ${item.col}08)`,
+                border: `1.5px solid ${isFront ? item.col : `${item.col}55`}`,
+                boxShadow: isFront ? `0 0 24px ${item.col}50, 0 4px 16px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.08)` : `0 2px 8px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04)`,
+                display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", backdropFilter:"blur(4px)",
+              }}>
+                <div style={{ position:"absolute", inset:0, borderRadius:13, background:"linear-gradient(145deg, rgba(255,255,255,0.07) 0%, transparent 55%)", pointerEvents:"none" }}/>
+                <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize, fontWeight:700, color:item.col, lineHeight:1, position:"relative", zIndex:1 }}>{item.v}</span>
+                {isFront && <span style={{ position:"absolute", bottom:-labelOffset, fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?7:8, fontWeight:700, color:item.col, letterSpacing:"0.06em", opacity:0.85, animation:"fadeIn 0.3s ease", whiteSpace:"nowrap" }}>FRONT</span>}
+                {isRear && !isFront && <span style={{ position:"absolute", top:-labelOffset, fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?7:8, fontWeight:700, color:item.col, letterSpacing:"0.06em", opacity:0.85, animation:"fadeIn 0.3s ease", whiteSpace:"nowrap" }}>REAR</span>}
+              </div>
+            );
+          })}
+          {showArrows && (
+            <div style={{ position:"absolute", right:-8, top:"50%", transform:"translateY(-50%)", display:"flex", flexDirection:"column", alignItems:"center", gap:3, opacity:0.45, pointerEvents:"none" }}>
+              <div style={{ width:20, height:20, borderRadius:6, background:"rgba(74,222,128,0.15)", border:"1px solid rgba(74,222,128,0.35)", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#4ade80" }}>→</div>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:7, color:"#4ade80", letterSpacing:"0.05em" }}>IN</span>
+            </div>
+          )}
+        </div>
+        <div style={{ height: labelOffset + 4 }} />
+        <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%, -50%)", width:"calc(100% - 32px)", height:railHeight, borderRadius:18, border:"1px solid rgba(255,255,255,0.04)", background:"rgba(255,255,255,0.012)", pointerEvents:"none", zIndex:-1, marginTop:22 }} />
+        <div style={{ display:"flex", justifyContent:"center", gap:10, marginTop:isMobile?8:12 }}>
           <button onClick={() => setPaused(p => !p)} style={{
-            padding:"5px 14px", borderRadius:20, cursor:"pointer",
-            background:paused?"rgba(251,191,36,0.15)":"rgba(255,255,255,0.04)",
-            border:`1px solid ${paused?"rgba(251,191,36,0.4)":"rgba(255,255,255,0.1)"}`,
-            fontFamily:"'JetBrains Mono',monospace", fontSize:9, fontWeight:700,
-            color:paused?"#fbbf24":"#334155", transition:"all 0.2s",
+            padding:isMobile?"4px 14px":"6px 18px", borderRadius:22, cursor:"pointer",
+            background:paused?"rgba(251,191,36,0.13)":"rgba(255,255,255,0.04)",
+            border:`1px solid ${paused?"rgba(251,191,36,0.4)":"rgba(255,255,255,0.09)"}`,
+            fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?8:9, fontWeight:700,
+            color:paused?"#fbbf24":"#334155", transition:"all 0.2s", display:"flex", alignItems:"center", gap:6, letterSpacing:"0.06em",
           }}>{paused?"▶ RESUME":"⏸ PAUSE"}</button>
         </div>
-        <div style={{ marginTop:12, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#2d3748", textAlign:"center" }}>
-          FIFO — First In, First Out
-        </div>
+        <div style={{ marginTop:10, fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?7:8, color:"#1e2a38", textAlign:"center", letterSpacing:"0.14em" }}>FIFO — FIRST IN, FIRST OUT</div>
       </div>
 
-      {/* Hero text */}
-      <div style={{ maxWidth:620,position:"relative" }}>
-        <div style={{
-          display:"inline-flex",alignItems:"center",gap:8,marginBottom:20,
-          padding:"5px 18px",borderRadius:40,
-          background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.2)",
-          fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#60a5fa",letterSpacing:"0.1em",
-        }}>📋 INTERACTIVE VISUAL GUIDE · FOR COMPLETE BEGINNERS</div>
-
-        <h1 style={{
-          margin:"0 0 16px",fontFamily:"'Syne',sans-serif",
-          fontSize:"clamp(38px,7.5vw,78px)",fontWeight:800,letterSpacing:"-0.035em",lineHeight:1.02,
-          background:"linear-gradient(145deg,#f8fafc 0%,#bfdbfe 30%,#86efac 65%,#f9a8d4 100%)",
-          WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text",
-        }}>Queue Data<br/>Structures</h1>
-
-        <p style={{ margin:"0 auto 32px",fontFamily:"'DM Sans',sans-serif",fontSize:"clamp(14px,2.2vw,18px)",color:"#64748b",lineHeight:1.68,maxWidth:500 }}>
+      <div style={{ maxWidth:620, position:"relative", width:"100%", padding:isMobile?"0 8px":0 }}>
+        <div style={{ display:"inline-flex", alignItems:"center", gap:6, marginBottom:isMobile?16:20, padding:isMobile?"3px 12px":"5px 18px", borderRadius:40, background:"rgba(96,165,250,0.08)", border:"1px solid rgba(96,165,250,0.2)", fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?8:10, color:"#60a5fa", letterSpacing:"0.1em" }}>
+          📋 {isMobile ? "INTERACTIVE GUIDE" : "INTERACTIVE VISUAL GUIDE · FOR COMPLETE BEGINNERS"}
+        </div>
+        <h1 style={{ margin:"0 0 12px", fontFamily:"'Syne', sans-serif", fontSize:"clamp(32px, 8vw, 78px)", fontWeight:800, letterSpacing:"-0.035em", lineHeight:1.02, background:"linear-gradient(145deg,#f8fafc 0%,#bfdbfe 30%,#86efac 65%,#f9a8d4 100%)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>
+          Queue Data<br />Structures
+        </h1>
+        <p style={{ margin:"0 auto 24px", fontFamily:"'DM Sans', sans-serif", fontSize:"clamp(13px, 3.5vw, 18px)", color:"#64748b", lineHeight:1.6, maxWidth:500 }}>
           Every queue concept — animated, explained, narrated with a <strong style={{ color:"#93c5fd" }}>natural male voice</strong>. FIFO to circular queues and deques.
         </p>
-
-        <div style={{ display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:isMobile?10:12, justifyContent:"center", flexWrap:"wrap" }}>
           <button onClick={onStart} style={{
-            padding:"15px 36px",borderRadius:16,cursor:"pointer",
-            background:"linear-gradient(135deg,#3b82f6 0%,#ec4899 100%)",
-            border:"none",fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:700,
-            color:"#fff",boxShadow:"0 8px 36px rgba(59,130,246,0.45)",transition:"all 0.25s",
-          }}
-            onMouseEnter={e => { e.currentTarget.style.transform="translateY(-3px) scale(1.02)"; e.currentTarget.style.boxShadow="0 14px 48px rgba(59,130,246,0.6)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="0 8px 36px rgba(59,130,246,0.45)"; }}>
-            Begin Learning ↓
-          </button>
+            padding:isMobile?"10px 24px":"15px 36px", borderRadius:16, cursor:"pointer",
+            background:"linear-gradient(135deg,#3b82f6 0%,#ec4899 100%)", border:"none",
+            fontFamily:"'Syne', sans-serif", fontSize:isMobile?14:16, fontWeight:700, color:"#fff",
+            boxShadow:"0 8px 36px rgba(59,130,246,0.45)", transition:"all 0.25s",
+          }} onMouseEnter={(e) => { e.currentTarget.style.transform="translateY(-3px) scale(1.02)"; e.currentTarget.style.boxShadow="0 14px 48px rgba(59,130,246,0.6)"; }}
+             onMouseLeave={(e) => { e.currentTarget.style.transform="none"; e.currentTarget.style.boxShadow="0 8px 36px rgba(59,130,246,0.45)"; }}>Begin Learning ↓</button>
           <button onClick={onVoice} style={{
-            padding:"15px 26px",borderRadius:16,cursor:"pointer",
-            background:"rgba(255,255,255,0.05)",border:"1.5px solid rgba(255,255,255,0.15)",
-            fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:600,
-            color:"#94a3b8",transition:"all 0.25s",display:"flex",alignItems:"center",gap:9,
-          }}
-            onMouseEnter={e => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.color="#f8fafc"; }}
-            onMouseLeave={e => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.color="#94a3b8"; }}>
-            <span style={{ fontSize:18 }}>🔊</span> Hear Intro
+            padding:isMobile?"10px 20px":"15px 26px", borderRadius:16, cursor:"pointer",
+            background:"rgba(255,255,255,0.05)", border:"1.5px solid rgba(255,255,255,0.15)",
+            fontFamily:"'Syne', sans-serif", fontSize:isMobile?14:16, fontWeight:600, color:"#94a3b8",
+            transition:"all 0.25s", display:"flex", alignItems:"center", gap:6,
+          }} onMouseEnter={(e) => { e.currentTarget.style.background="rgba(255,255,255,0.1)"; e.currentTarget.style.color="#f8fafc"; }}
+             onMouseLeave={(e) => { e.currentTarget.style.background="rgba(255,255,255,0.05)"; e.currentTarget.style.color="#94a3b8"; }}>
+            <span style={{ fontSize:isMobile?16:18 }}>🔊</span> Hear Intro
           </button>
         </div>
-
-        <div style={{ display:"flex",gap:6,justifyContent:"center",alignItems:"center",marginTop:20,flexWrap:"wrap" }}>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",letterSpacing:"0.08em" }}>VOICE SPEED:</span>
-          {SPEED_OPTIONS.map(s => (
-            <button key={s} onClick={() => { currentRate=s; }} style={{
-              padding:"4px 11px",borderRadius:20,cursor:"pointer",
+        <div style={{ display:"flex", gap:4, justifyContent:"center", alignItems:"center", marginTop:16, flexWrap:"wrap" }}>
+          <span style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?8:9, color:"#2d3748", letterSpacing:"0.08em" }}>VOICE SPEED:</span>
+          {[0.75,1.0,1.25,1.5,2.0].map(s => (
+            <button key={s} onClick={() => { currentRate = s; }} style={{
+              padding:isMobile?"2px 8px":"4px 11px", borderRadius:20, cursor:"pointer",
               background:currentRate===s?"rgba(96,165,250,0.18)":"rgba(255,255,255,0.04)",
               border:`1px solid ${currentRate===s?"rgba(96,165,250,0.5)":"rgba(255,255,255,0.08)"}`,
-              fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
-              color:currentRate===s?"#93c5fd":"#2d3748",transition:"all 0.18s",
+              fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?8:9, fontWeight:700,
+              color:currentRate===s?"#93c5fd":"#2d3748", transition:"all 0.18s",
             }}>{s}×</button>
           ))}
         </div>
-
-        <div style={{ display:"flex",gap:28,justifyContent:"center",marginTop:44,flexWrap:"wrap" }}>
+        <div style={{ display:"flex", gap:isMobile?16:28, justifyContent:"center", marginTop:isMobile?24:44, flexWrap:"wrap" }}>
           {[["8","Sections"],["6+","Animations"],["6","Quiz Qs"],["O(1)","All Ops"]].map(([n,l]) => (
             <div key={l} style={{ textAlign:"center" }}>
-              <div style={{ fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,background:"linear-gradient(135deg,#93c5fd,#86efac)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>{n}</div>
-              <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",letterSpacing:"0.1em",marginTop:3 }}>{l}</div>
+              <div style={{ fontFamily:"'Syne', sans-serif", fontSize:isMobile?24:28, fontWeight:800, background:"linear-gradient(135deg,#93c5fd,#86efac)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", backgroundClip:"text" }}>{n}</div>
+              <div style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:isMobile?7:9, color:"#2d3748", letterSpacing:"0.1em", marginTop:3 }}>{l}</div>
             </div>
           ))}
         </div>
@@ -458,9 +785,7 @@ function Hero({ onStart, onVoice }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SECTION WRAPPER
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── SECTION WRAPPER ─────────────────────────────────────────────────────────
 function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice, seen }) {
   const [ref, vis] = useVisible(0.07);
   const isSp = speaking === id;
@@ -471,18 +796,12 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
       transition:"opacity 0.78s cubic-bezier(0.22,1,0.36,1),transform 0.78s cubic-bezier(0.22,1,0.36,1)",
     }}>
       <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:24,flexWrap:"wrap" }}>
-        <div style={{
-          width:50,height:50,borderRadius:16,flexShrink:0,
-          background:`${color}14`,border:`1px solid ${color}38`,
-          display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,
-          boxShadow:`0 0 28px ${color}18`,
-        }}>{icon}</div>
+        <div style={{ width:50,height:50,borderRadius:16,flexShrink:0,background:`${color}14`,border:`1px solid ${color}38`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,boxShadow:`0 0 28px ${color}18` }}>{icon}</div>
         <h2 style={{ flex:1,margin:0,minWidth:0,fontFamily:"'Syne',sans-serif",fontSize:"clamp(19px,3.8vw,30px)",fontWeight:800,color:"#f8fafc",letterSpacing:"-0.022em",lineHeight:1.15 }}>{title}</h2>
         <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
           <CompletedBadge seen={seen}/>
           <button onClick={() => onVoice(id, voice)} style={{
-            display:"flex",alignItems:"center",gap:6,
-            padding:"7px 14px",borderRadius:28,cursor:"pointer",
+            display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:28,cursor:"pointer",
             background:isSp?`${color}20`:"rgba(255,255,255,0.04)",
             border:`1.5px solid ${isSp?color:"rgba(255,255,255,0.1)"}`,
             fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,
@@ -494,20 +813,10 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
         </div>
       </div>
       <div className="sg" style={{ display:"grid",gridTemplateColumns:"minmax(0,1.12fr) minmax(0,0.88fr)",gap:18 }}>
-        <div style={{
-          padding:20,borderRadius:22,
-          background:"linear-gradient(150deg,rgba(255,255,255,0.028) 0%,rgba(0,0,0,0.22) 100%)",
-          border:`1px solid ${color}18`,boxShadow:`0 0 64px ${color}09`,minWidth:0,
-        }}>{visual}</div>
+        <div style={{ padding:20,borderRadius:22,background:"linear-gradient(150deg,rgba(255,255,255,0.028) 0%,rgba(0,0,0,0.22) 100%)",border:`1px solid ${color}18`,boxShadow:`0 0 64px ${color}09`,minWidth:0 }}>{visual}</div>
         <div style={{ display:"flex",flexDirection:"column",gap:9,minWidth:0 }}>
           {cards.map((c,i) => (
-            <div key={i} style={{
-              padding:"12px 14px",borderRadius:13,
-              background:"rgba(255,255,255,0.022)",
-              border:"1px solid rgba(255,255,255,0.052)",
-              borderLeft:`3px solid ${color}55`,
-              animation:vis?`sRight 0.5s cubic-bezier(0.22,1,0.36,1) ${0.1+i*0.1}s both`:"none",
-            }}>
+            <div key={i} style={{ padding:"12px 14px",borderRadius:13,background:"rgba(255,255,255,0.022)",border:"1px solid rgba(255,255,255,0.052)",borderLeft:`3px solid ${color}55`,animation:vis?`sRight 0.5s cubic-bezier(0.22,1,0.36,1) ${0.1+i*0.1}s both`:"none" }}>
               {c.lbl && <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,fontWeight:700,color,letterSpacing:"0.12em",marginBottom:5,opacity:0.88 }}>{c.lbl}</div>}
               <div style={{ fontFamily:"'DM Sans',sans-serif",fontSize:13,color:"#94a3b8",lineHeight:1.68 }}>{c.body}</div>
             </div>
@@ -518,9 +827,12 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Intro — interactive FIFO demo
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── VISUAL COMPONENTS ────────────────────────────────────────────────────────
+// (VisIntro, VisOps, VisImpl, VisTypes, VisCircular, VisDeque, VisApplications,
+//  ComplexityTable, ShortcutsModal, Confetti, Quiz)
+// Place them here exactly as provided in your original queue code.
+// For brevity, we'll include them now.
+
 function VisIntro() {
   const [queue, setQueue] = useState([10, 20, 30]);
   const [log, setLog] = useState([]);
@@ -550,7 +862,6 @@ function VisIntro() {
   return (
     <div>
       <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-        {/* Queue display */}
         <div style={{ display:"flex", gap:6, alignItems:"center", justifyContent:"center", flexWrap:"wrap" }}>
           {queue.map((v, i) => (
             <div key={i} style={{
@@ -570,7 +881,6 @@ function VisIntro() {
           )}
         </div>
 
-        {/* Controls */}
         <div style={{ display:"flex", gap:5, justifyContent:"center", flexWrap:"wrap" }}>
           <input value={inputVal} onChange={e=>setInputVal(e.target.value)} onKeyDown={e=>e.key==="Enter"&&enqueue()} placeholder="value"
             style={{ width:70, padding:"5px 8px", borderRadius:8, background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.1)", fontFamily:"'JetBrains Mono',monospace", color:"#f8fafc", outline:"none" }}/>
@@ -580,7 +890,6 @@ function VisIntro() {
           <button onClick={clear} disabled={queue.length===0} style={{ padding:"5px 12px", borderRadius:20, background:"rgba(251,146,60,0.12)", border:"1px solid rgba(251,146,60,0.3)", fontFamily:"'JetBrains Mono',monospace", fontSize:9, fontWeight:700, color:queue.length?"#fb923c":"#2d3748" }}>CLEAR</button>
         </div>
 
-        {/* Log */}
         <div style={{ marginTop:4, padding:"8px 12px", borderRadius:10, background:"rgba(0,0,0,0.3)", border:"1px solid rgba(255,255,255,0.06)" }}>
           {log.map((l,i) => <div key={i} style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:i===0?"#60a5fa":"#2d3748", padding:"1px 0" }}>{l}</div>)}
         </div>
@@ -589,9 +898,6 @@ function VisIntro() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Operations — O(1) cards
-// ═══════════════════════════════════════════════════════════════════════════════
 function VisOps() {
   const [active, setActive] = useState(null);
   const OPS = [
@@ -642,9 +948,6 @@ function VisOps() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Implementation — Array vs Linked List
-// ═══════════════════════════════════════════════════════════════════════════════
 function VisImpl() {
   const [mode, setMode] = useState("array");
   const queue = [10, 20, 30, 40];
@@ -719,9 +1022,6 @@ function VisImpl() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Types — Simple, Circular, Deque, Priority
-// ═══════════════════════════════════════════════════════════════════════════════
 function VisTypes() {
   const [tab, setTab] = useState("simple");
   return (
@@ -818,9 +1118,6 @@ function VisTypes() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Circular Queue — interactive
-// ═══════════════════════════════════════════════════════════════════════════════
 function VisCircular() {
   const CAP = 6;
   const [arr, setArr] = useState(Array(CAP).fill(null));
@@ -880,9 +1177,6 @@ function VisCircular() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Deque — interactive
-// ═══════════════════════════════════════════════════════════════════════════════
 function VisDeque() {
   const [deque, setDeque] = useState([10,20,30]);
   const [log, setLog] = useState([]);
@@ -937,9 +1231,6 @@ function VisDeque() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Applications — Task Scheduler (simple)
-// ═══════════════════════════════════════════════════════════════════════════════
 function VisApplications() {
   const [queue, setQueue] = useState(["Task A","Task B","Task C"]);
   const [processed, setProcessed] = useState([]);
@@ -988,9 +1279,6 @@ function VisApplications() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// COMPLEXITY TABLE
-// ═══════════════════════════════════════════════════════════════════════════════
 function ComplexityTable() {
   const [hov, setHov] = useState(null);
   const rows = [
@@ -1020,7 +1308,7 @@ function ComplexityTable() {
                   <span style={{ width:7, height:7, borderRadius:"50%", background:r.c, flexShrink:0, boxShadow:hov===i?`0 0 8px ${r.c}`:"none", transition:"box-shadow 0.2s" }}/>
                   <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:700, color:"#e2e8f0" }}>{r.nm}</span>
                 </div>
-               </td>
+              </td>
               {[r.avg, r.wc, r.sp].map((v,j) => (
                 <td key={j} style={{ padding:"10px 14px", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:v.includes("O(1)")?700:400, color:v.includes("O(1)")?"#4ade80":v==="O(n)"?"#ef4444":"#94a3b8", whiteSpace:"nowrap" }}>{v}</td>
               ))}
@@ -1033,9 +1321,6 @@ function ComplexityTable() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// SHORTCUTS MODAL
-// ═══════════════════════════════════════════════════════════════════════════════
 function ShortcutsModal({ open, onClose }) {
   if (!open) return null;
   return (
@@ -1056,9 +1341,6 @@ function ShortcutsModal({ open, onClose }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// CONFETTI
-// ═══════════════════════════════════════════════════════════════════════════════
 function Confetti() {
   const pieces = Array.from({ length: 32 }, (_, i) => ({
     id: i,
@@ -1082,9 +1364,6 @@ function Confetti() {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// QUIZ
-// ═══════════════════════════════════════════════════════════════════════════════
 function Quiz({ onDone }) {
   const QS = [
     { q:"A queue follows which ordering principle?", opts:["FIFO","LIFO","FILO","Priority"], ans:0, exp:"FIFO — First In, First Out. The first element added is the first to be removed." },
@@ -1171,12 +1450,11 @@ function Quiz({ onDone }) {
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ═══════════════════════════════════════════════════════════════════════════════
+// ── MAIN PAGE (with RightSidebar) ────────────────────────────────────────────
 export default function QueuePage() {
   const [speaking,      setSpeaking]      = useState(null);
   const [active,        setActive]        = useState("intro");
+  const [navOpen,       setNavOpen]       = useState(true);
   const [qScore,        setQScore]        = useState(null);
   const [qTotal,        setQTotal]        = useState(null);
   const [speed,         setSpeed]         = useState(1.25);
@@ -1311,6 +1589,8 @@ export default function QueuePage() {
       ]},
   ];
 
+  const isMobile = useMediaQuery("(max-width: 600px)");
+
   return (
     <div style={{ background:"#030612", color:"#f8fafc", minHeight:"100vh", overflowX:"hidden" }}>
       <style>{`
@@ -1342,7 +1622,6 @@ export default function QueuePage() {
 
       {showConfetti && <Confetti/>}
       <ProgressBar/>
-      <StickyNav active={active} speaking={speaking} speed={speed} setSpeed={setSpeed} onRestart={handleRestart} seenCount={seenSections.size}/>
       <BackToTop/>
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
       <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} speed={speed}/>
@@ -1353,7 +1632,7 @@ export default function QueuePage() {
         PRESS <kbd style={{ background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:5, padding:"1px 7px", color:"#2d3748" }}>?</kbd> FOR KEYBOARD SHORTCUTS
       </div>
 
-      <main style={{ maxWidth:1000, margin:"0 auto", padding:"0 20px 100px" }}>
+      <main style={{ maxWidth:1000, margin:"0 auto", padding:"0 20px 100px", marginRight: navOpen ? (isMobile ? "70px" : "clamp(70px, 8vw, 100px)") : "20px", transition:"margin-right 0.3s cubic-bezier(0.22,1,0.36,1)" }}>
         {SECTS.map(s => (
           <Sect key={s.id} id={s.id} icon={s.icon} title={s.title}
             color={s.color} visual={s.visual} cards={s.cards}
@@ -1449,6 +1728,17 @@ export default function QueuePage() {
           <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#2d3748", marginBottom:22 }}>{seenSections.size} / {NAV_SECTIONS.length} sections visited</div>
         </div>
       </main>
+
+      <RightSidebar
+        active={active}
+        speaking={speaking}
+        speed={speed}
+        setSpeed={setSpeed}
+        onRestart={handleRestart}
+        seenCount={seenSections.size}
+        open={navOpen}
+        setOpen={setNavOpen}
+      />
     </div>
   );
 }

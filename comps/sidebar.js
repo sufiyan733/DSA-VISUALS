@@ -44,8 +44,8 @@ const ROUTES = {
 
 // Group-level navigation routes (clicking the group header goes here)
 const GROUP_ROUTES = {
-  Trees:  "/tree-explaination",
-  Graphs: "/graph-explaination",
+  Trees:  "/tree",
+  Graphs: "/graph",
 };
 
 const NAV = [
