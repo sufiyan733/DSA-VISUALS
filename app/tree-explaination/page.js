@@ -1378,7 +1378,7 @@ export default function TreePage() {
     ? (NAV_SECTIONS.find(s => s.id === speaking)?.label ?? (speaking === "__hero__" ? "Introduction" : speaking))
     : null;
 
-  const goStack = () => router.push("/stack");
+  const goStack = () => router.push("/tree");
   const goIntro = () => document.getElementById("intro")?.scrollIntoView({ behavior:"smooth" });
 
   const SECTS = [
