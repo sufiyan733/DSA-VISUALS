@@ -393,11 +393,9 @@ fn main() {
 // BRACE-COUNTING UTILITIES
 // ══════════════════════════════════════════════════════════════════════════════
 
-// Count { and } in a line, ignoring string literals and line comments
 function countBraces(line) {
   let opens = 0, closes = 0;
   let inStr = false, strChar = "";
-  // Strip line comment first
   const commentIdx = line.indexOf("//");
   const cleaned = commentIdx >= 0 ? line.slice(0, commentIdx) : line;
   for (let i = 0; i < cleaned.length; i++) {
@@ -412,7 +410,6 @@ function countBraces(line) {
   return { opens, closes };
 }
 
-// Extract the text of a class body (from "class Foo {" to its matching "}")
 function extractClassBlock(code, className) {
   const re = new RegExp(`\\bclass\\s+${className}(?:\\s+[^{]*)?\\{`);
   const match = re.exec(code);
@@ -429,33 +426,23 @@ function extractClassBlock(code, className) {
 // ══════════════════════════════════════════════════════════════════════════════
 // JAVASCRIPT / TYPESCRIPT REAL EXECUTION ENGINE
 // ══════════════════════════════════════════════════════════════════════════════
-// Strategy:
-//  1. Find the user's Stack class name + internal data field name
-//  2. Remove the user's class from the code
-//  3. Inject our instrumented replacement class (same public API, records every op)
-//  4. Execute with new Function() in a sandbox with a stub console
-//  5. Collect recorded steps, then map each step back to the original line number
 
 function runJavaScript(code) {
-  // ── 1. Find class name ────────────────────────────────────────────────────
   const classMatch = /\bclass\s+(\w+)/.exec(code);
   if (!classMatch) {
     return { steps: [], errors: ["No class definition found.\nWrite a Stack class with push / pop / peek / isEmpty methods, then use it below."] };
   }
   const className = classMatch[1];
 
-  // ── 2. Find data field name ──────────────────────────────────────────────
   const fieldMatch = /this\.(\w+)\s*=\s*(?:\[\s*\]|new\s+Array\s*\(\s*\))/.exec(code);
   const field = fieldMatch?.[1] ?? "items";
 
-  // ── 3. Remove original class ──────────────────────────────────────────────
   const classBlock = extractClassBlock(code, className);
   if (!classBlock) {
     return { steps: [], errors: [`Could not parse class '${className}'. Make sure the class has a proper opening and closing brace.`] };
   }
   const execCode = code.slice(0, classBlock.start) + "\n" + code.slice(classBlock.end);
 
-  // ── 4. Build instrumented class ──────────────────────────────────────────
   const instrumented = `
 "use strict";
 const __S = [];
@@ -505,13 +492,9 @@ ${execCode}
 return __S;
 `.trim();
 
-  // ── 5. Execute ────────────────────────────────────────────────────────────
   let rawSteps;
   try {
-    const stubConsole = {
-      log: () => {}, warn: () => {}, error: () => {}, info: () => {},
-    };
-    // eslint-disable-next-line no-new-func
+    const stubConsole = { log: () => {}, warn: () => {}, error: () => {}, info: () => {} };
     const fn = new Function("console", instrumented);
     rawSteps = fn(stubConsole);
   } catch (e) {
@@ -522,9 +505,7 @@ return __S;
     return { steps: [], errors: ["No stack operations were executed.\nCall push(), pop(), peek(), or isEmpty() on your stack instance after the class definition."] };
   }
 
-  // ── 6. Map steps → original line numbers ─────────────────────────────────
   const lines = code.split("\n");
-  // Collect lines AFTER the class that have push/pop/peek/isEmpty calls
   const callLineNums = [];
   let charCursor = 0;
   let classEndLine = 0;
@@ -553,10 +534,6 @@ return __S;
 // ══════════════════════════════════════════════════════════════════════════════
 // SCOPE-AWARE PARSER — Python, Java, C++, C#, Go, Rust
 // ══════════════════════════════════════════════════════════════════════════════
-// Strategy:
-//  Track brace depth / indentation.
-//  For compiled languages: find main() and only parse inside it.
-//  For Python: only parse indentation-0 lines outside any class.
 
 function parseScoped(code, lang) {
   if (lang === "python") return parsePython(code);
@@ -573,7 +550,6 @@ function parsePython(code) {
     if (!trimmed || trimmed.startsWith("#")) continue;
 
     const indent = line.match(/^(\s*)/)?.[1]?.length ?? 0;
-    // Top-level, not a class/def/import/comment
     if (indent === 0 &&
         !trimmed.startsWith("class ") &&
         !trimmed.startsWith("def ") &&
@@ -582,7 +558,6 @@ function parsePython(code) {
         !trimmed.startsWith("if __name__")) {
       execLines.push({ lineIdx: i, line: trimmed });
     }
-    // Also allow top-level code under `if __name__ == "__main__":` (indent=4)
     if (i > 0 && lines[i - 1].trim().includes("__main__") && indent === 4) {
       execLines.push({ lineIdx: i, line: trimmed });
     }
@@ -602,14 +577,12 @@ function parseBraced(code, lang) {
   let mainDepth = -1;
   let mlComment = false;
 
-  // Languages that need a main() context
   const needsMain = ["java", "cpp", "csharp", "go", "rust"];
 
   for (let i = 0; i < lines.length; i++) {
     const line    = lines[i];
     const trimmed = line.trim();
 
-    // Multi-line comment tracking
     if (mlComment) {
       if (trimmed.includes("*/")) mlComment = false;
       continue;
@@ -622,13 +595,11 @@ function parseBraced(code, lang) {
     const depthBefore = depth;
     depth += opens - closes;
 
-    // Detect entering a class body
     if (/\bclass\s+\w+/.test(trimmed)) {
       inClass    = true;
       classDepth = depthBefore;
     }
 
-    // Detect entering main()
     if (needsMain.includes(lang)) {
       if (/\bmain\s*\(/.test(trimmed) || /\bfunc\s+main\s*\(/.test(trimmed)) {
         inMain    = true;
@@ -636,11 +607,9 @@ function parseBraced(code, lang) {
       }
     }
 
-    // Detect exiting class or main
     if (inClass  && depth <= classDepth) { inClass  = false; classDepth = -1; }
     if (inMain   && depth <= mainDepth)  { inMain   = false; mainDepth  = -1; }
 
-    // Determine if this is an "executable" line
     const isExec = needsMain.includes(lang)
       ? (inMain && depth === mainDepth + 1 && !inClass)
       : (lang === "javascript" || lang === "typescript")
@@ -653,16 +622,14 @@ function parseBraced(code, lang) {
   return simulateOps(execLines, lines, lang);
 }
 
-// ── Simulate operations from exec lines ──────────────────────────────────────
 function simulateOps(execLines, allLines, lang) {
   const steps  = [];
   const errors = [];
   const stack  = [];
 
-  // Regex patterns per language family
   const PUSH_RE = [
     /\.(?:push|Push|append|add|enqueue)\s*\(\s*(-?[\d.]+)\s*\)/,
-    /\bappend\s*\(\s*\w+\s*,\s*(-?[\d.]+)\s*\)/,  // Go append(s, N)
+    /\bappend\s*\(\s*\w+\s*,\s*(-?[\d.]+)\s*\)/,
   ];
   const POP_RE  = /\.(?:pop|Pop|pop_back|remove_last|dequeue|poll|delete_last)\s*\(\s*\)/;
   const PEEK_RE = /\.(?:peek|Peek|top|Top|last|back|front)\s*\(\s*\)|\.(?:peek|top)\(\)|\.last\(\)/;
@@ -671,7 +638,6 @@ function simulateOps(execLines, allLines, lang) {
   for (const { lineIdx, line } of execLines) {
     const origLine = allLines[lineIdx]?.trim() ?? line;
 
-    // PUSH
     let pushVal = null;
     for (const re of PUSH_RE) {
       const m = line.match(re);
@@ -683,7 +649,6 @@ function simulateOps(execLines, allLines, lang) {
       continue;
     }
 
-    // POP
     if (POP_RE.test(line)) {
       if (stack.length === 0) {
         steps.push({ type:"pop_error", value:null, stack:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"pop_error"}) });
@@ -694,7 +659,6 @@ function simulateOps(execLines, allLines, lang) {
       continue;
     }
 
-    // PEEK
     if (PEEK_RE.test(line)) {
       if (stack.length === 0) {
         steps.push({ type:"peek_error", value:null, stack:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"peek_error"}) });
@@ -705,7 +669,6 @@ function simulateOps(execLines, allLines, lang) {
       continue;
     }
 
-    // IS EMPTY
     if (EMPTY_RE.test(line)) {
       const e = stack.length === 0;
       steps.push({ type:"isEmpty", result:e, stack:[...stack], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"isEmpty",result:e,stack:[...stack]}) });
@@ -720,7 +683,6 @@ function simulateOps(execLines, allLines, lang) {
   return { steps, errors };
 }
 
-// ── Human-readable step message ───────────────────────────────────────────────
 function buildMessage(s) {
   switch (s.type) {
     case "push":       return `push(${s.value})  →  added ${s.value} to top · stack size: ${s.stack?.length}`;
@@ -736,10 +698,6 @@ function buildMessage(s) {
 // ══════════════════════════════════════════════════════════════════════════════
 // GEMINI VALIDATION GATE
 // ══════════════════════════════════════════════════════════════════════════════
-// Calls /api/chat (Gemini) and asks it to validate the Stack implementation.
-// Response MUST be JSON: { valid: bool, reason: string, errors: [{line,message}] }
-// If the API fails we FAIL OPEN (let the local engine handle it) so the user
-// isn't blocked by quota/network issues.
 
 async function validateWithGemini(code, lang) {
   const prompt = `You are a strict code reviewer for a Stack data-structure visualizer.
@@ -775,12 +733,10 @@ ${code}
     const data = await res.json();
 
     if (data.error) {
-      // API quota or network failure — fail open so we don't block the user
-      return { valid: true, reason: `Gemini unavailable: ${data.error}`, errors: [], apiError: data.error };
+      return { valid: true, reason: `Server unavailable: ${data.error}`, errors: [], apiError: data.error };
     }
 
     const raw = data.content ?? "";
-    // Strip possible markdown fences
     const cleaned = raw.replace(/```json|```/gi, "").trim();
     const parsed = JSON.parse(cleaned);
 
@@ -791,14 +747,10 @@ ${code}
       apiError: null,
     };
   } catch (e) {
-    // Parse error or network error — fail open
     return { valid: true, reason: "", errors: [], apiError: e.message };
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// MASTER ENTRY POINT
-// ══════════════════════════════════════════════════════════════════════════════
 function runCode(code, lang) {
   const trimmed = code.trim();
   if (!trimmed) return { steps: [], errors: ["Please write some code first."] };
@@ -834,7 +786,7 @@ function StackViz({ step, animKey, idle }) {
   return (
     <div className={`sv${isErr ? " sv-err" : ""}`} key={isErr ? `e${animKey}` : "sv"}>
 
-      {/* ── Metrics strip ─────────────────────────────────── */}
+      {/* Metrics strip */}
       <div className="sv-metrics">
         {[
           { lbl:"SIZE",   val: stack.length,                         c:"#60a5fa" },
@@ -849,10 +801,9 @@ function StackViz({ step, animKey, idle }) {
         ))}
       </div>
 
-      {/* ── Stack column ──────────────────────────────────── */}
+      {/* Stack column */}
       <div className="sv-col">
 
-        {/* Flying-away block on pop */}
         {flyItem && (
           <div key={flyItem.key} className="sv-fly"
             style={{
@@ -864,7 +815,6 @@ function StackViz({ step, animKey, idle }) {
           </div>
         )}
 
-        {/* Stack blocks */}
         <div className="sv-blocks">
           {stack.length === 0 && !flyItem ? (
             <div className={`sv-empty${isErr ? " sv-empty-err" : ""}`}>
@@ -900,10 +850,182 @@ function StackViz({ step, animKey, idle }) {
           })}
         </div>
 
-        {/* Platform */}
         <div className="sv-plat"><div className="sv-plat-shine" /></div>
         <p className="sv-base">▲ BASE OF STACK</p>
       </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// TERMINAL OUTPUT COMPONENT
+// ══════════════════════════════════════════════════════════════════════════════
+function TerminalOutput({ steps, error, aiErrors, apiNote, validating }) {
+  const [entries, setEntries] = useState([]);
+  const [expanded, setExpanded] = useState(true);
+  const terminalBodyRef = useRef(null);
+
+  useEffect(() => {
+    const newEntries = [];
+
+    if (validating) {
+      newEntries.push({ type: "info", message: "🤖 Saif's Chatbot is validating your code...", timestamp: Date.now() });
+    }
+    if (apiNote) {
+      newEntries.push({ type: "warn", message: `ℹ️ ${apiNote}`, timestamp: Date.now() });
+    }
+    if (aiErrors.length > 0) {
+      newEntries.push({ type: "error", message: `❌ Implementation errors found:`, timestamp: Date.now() });
+      aiErrors.forEach(e => {
+        newEntries.push({ type: "error", message: `Line ${e.line}: ${e.message}`, timestamp: Date.now() });
+      });
+    }
+    if (error) {
+      newEntries.push({ type: "error", message: `⛔ Runtime error: ${error}`, timestamp: Date.now() });
+    }
+
+    steps.forEach((step, idx) => {
+      const sm = OP[step.type] ?? OP.push;
+      let msg = `[${idx + 1}] ${sm.label.toUpperCase()}`;
+      if (step.type === "push") msg += ` ${step.value}`;
+      else if (step.type === "pop" && step.valid !== false) msg += ` → ${step.value}`;
+      else if (step.type === "peek" && step.valid !== false) msg += ` = ${step.value}`;
+      else if (step.type === "isEmpty") msg += ` = ${step.result}`;
+      else if (step.type === "pop_error") msg += ` ⚠ Underflow`;
+      else if (step.type === "peek_error") msg += ` ⚠ Empty`;
+      msg += ` (stack size: ${step.stack?.length ?? 0})`;
+      newEntries.push({ type: step.type, message: msg, timestamp: Date.now() + idx, lineNum: step.lineNum + 1 });
+    });
+
+    newEntries.sort((a, b) => a.timestamp - b.timestamp);
+    setEntries(newEntries);
+
+    if (terminalBodyRef.current) {
+      terminalBodyRef.current.scrollTop = terminalBodyRef.current.scrollHeight;
+    }
+  }, [steps, error, aiErrors, apiNote, validating]);
+
+  const clearTerminal = () => setEntries([]);
+
+  return (
+    <div style={{ marginTop: "12px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "8px 16px",
+        background: "rgba(0,0,0,0.3)",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontSize: "14px" }}>📟</span>
+          <span style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "11px",
+            fontWeight: "bold",
+            color: "#94a3b8",
+            letterSpacing: "0.5px"
+          }}>
+            TERMINAL OUTPUT
+          </span>
+        </div>
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button
+            onClick={clearTerminal}
+            style={{
+              background: "none",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: "6px",
+              padding: "3px 8px",
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: "9px",
+              color: "#64748b",
+              cursor: "pointer",
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={e => e.currentTarget.style.borderColor = "#60a5fa"}
+            onMouseLeave={e => e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"}
+          >
+            Clear
+          </button>
+          <button
+            onClick={() => setExpanded(!expanded)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#64748b",
+              cursor: "pointer",
+              fontSize: "12px",
+            }}
+          >
+            {expanded ? "▼" : "▲"}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div
+          ref={terminalBodyRef}
+          style={{
+            maxHeight: "200px",
+            overflowY: "auto",
+            background: "rgba(0,0,0,0.6)",
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: "11px",
+            padding: "8px 0",
+          }}
+        >
+          {entries.length === 0 ? (
+            <div style={{
+              padding: "12px 16px",
+              color: "#1e293b",
+              fontStyle: "italic",
+              textAlign: "center"
+            }}>
+              No output yet. Run your code.
+            </div>
+          ) : (
+            entries.map((entry, i) => {
+              let icon = "▸", color = "#60a5fa";
+              if (entry.type === "error") { icon = "✗"; color = "#ef4444"; }
+              else if (entry.type === "warn") { icon = "⚠"; color = "#fbbf24"; }
+              else if (entry.type === "info") { icon = "ℹ"; color = "#60a5fa"; }
+              else if (entry.type === "push") { icon = "⬇"; color = "#4ade80"; }
+              else if (entry.type === "pop") { icon = "⬆"; color = "#f472b6"; }
+              else if (entry.type === "peek") { icon = "👁"; color = "#fbbf24"; }
+              else if (entry.type === "isEmpty") { icon = "∅"; color = "#60a5fa"; }
+              else if (entry.type === "pop_error") { icon = "⚠"; color = "#ef4444"; }
+              else if (entry.type === "peek_error") { icon = "⚠"; color = "#ef4444"; }
+
+              return (
+                <div
+                  key={i}
+                  style={{
+                    padding: "4px 16px",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "12px",
+                    borderBottom: "1px solid rgba(255,255,255,0.03)",
+                    animation: "fadeIn 0.2s ease",
+                  }}
+                >
+                  <span style={{ color, width: "20px", flexShrink: 0 }}>{icon}</span>
+                  <span style={{ color: "#a0aec0", wordBreak: "break-word" }}>{entry.message}</span>
+                  {entry.lineNum && (
+                    <span style={{
+                      marginLeft: "auto",
+                      color: "#334155",
+                      fontSize: "9px",
+                      fontFamily: "'JetBrains Mono', monospace"
+                    }}>
+                      L{entry.lineNum}
+                    </span>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -921,11 +1043,10 @@ export default function StackDSPage() {
   const [speed,      setSpeed]      = useState(1.1);
   const [animKey,    setAnimKey]    = useState(0);
   const [done,       setDone]       = useState(false);
-  // ── Gemini validation state ──────────────────────────────────────────────
-  const [validating, setValidating] = useState(false);   // spinner while calling API
-  const [aiErrors,   setAiErrors]   = useState([]);      // [{line, message}]
-  const [aiReason,   setAiReason]   = useState("");      // summary from Gemini
-  const [apiNote,    setApiNote]    = useState("");      // quota / network notice
+  const [validating, setValidating] = useState(false);
+  const [aiErrors,   setAiErrors]   = useState([]);
+  const [aiReason,   setAiReason]   = useState("");
+  const [apiNote,    setApiNote]    = useState("");
 
   const timerRef = useRef(null);
   const taRef    = useRef(null);
@@ -946,7 +1067,6 @@ export default function StackDSPage() {
     doReset();
   };
 
-  // ── Main run handler — Gemini gate first ──────────────────────────────────
   const handleRun = async () => {
     doReset();
     setValidating(true);
@@ -954,17 +1074,13 @@ export default function StackDSPage() {
     const validation = await validateWithGemini(code, lang);
     setValidating(false);
 
-    // Surface any API quota / network notice (non-blocking)
     if (validation.apiError) setApiNote(validation.apiError);
-
-    // If Gemini says INVALID → show errors, block visualization
     if (!validation.valid) {
       setAiReason(validation.reason ?? "");
       setAiErrors(validation.errors ?? []);
-      return;  // ← visualization does NOT start
+      return;
     }
 
-    // Code is valid — now run the local engine
     const { steps: s, errors } = runCode(code, lang);
     if (errors.length) { setError(errors.join("\n")); return; }
     setSteps(s);
@@ -1032,7 +1148,6 @@ export default function StackDSPage() {
   const idle         = steps.length === 0 && !error && !hasAiErrors;
   const lm           = LANGS[lang];
   const codeLines    = code.split("\n");
-  // 0-based set of lines Gemini flagged
   const errorLineSet = new Set(aiErrors.map(e => (e.line ?? 1) - 1));
 
   return (
@@ -1042,14 +1157,12 @@ export default function StackDSPage() {
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
         body{background:#030612;color:#e2e8f0;font-family:'DM Sans',sans-serif;min-height:100vh}
 
-        /* PAGE */
         .pg{min-height:100vh;display:flex;flex-direction:column;
           background:radial-gradient(ellipse 60% 45% at 10% 0%,rgba(59,130,246,0.13) 0%,transparent 60%),
                      radial-gradient(ellipse 50% 40% at 90% 100%,rgba(244,114,182,0.1) 0%,transparent 58%),
                      radial-gradient(ellipse 40% 35% at 50% 55%,rgba(74,222,128,0.05) 0%,transparent 60%),
                      #030612}
 
-        /* HEADER */
         .hd{position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:14px;
           padding:14px 40px;background:rgba(3,6,18,0.9);backdrop-filter:blur(22px) saturate(160%);
           border-bottom:1px solid rgba(96,165,250,0.12)}
@@ -1065,12 +1178,10 @@ export default function StackDSPage() {
           color:#60a5fa;font-size:10px;font-family:'JetBrains Mono',monospace;
           padding:4px 12px;border-radius:20px;letter-spacing:0.05em;white-space:nowrap}
 
-        /* MAIN GRID */
         .main{display:grid;grid-template-columns:1fr 1fr;gap:18px;
           padding:20px 40px 60px;max-width:1440px;margin:0 auto;width:100%;flex:1}
         @media(max-width:960px){.main{grid-template-columns:1fr;padding:16px 14px 60px}.hd{padding:12px 16px}}
 
-        /* PANEL */
         .panel{background:rgba(7,12,30,0.78);border:1px solid rgba(255,255,255,0.07);
           border-radius:18px;display:flex;flex-direction:column;overflow:hidden;
           box-shadow:0 24px 60px rgba(0,0,0,0.55)}
@@ -1080,7 +1191,6 @@ export default function StackDSPage() {
         .pt{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#334155;
           text-transform:uppercase;letter-spacing:1.5px;margin-left:8px}
 
-        /* LANG TABS */
         .lb{display:flex;gap:4px;flex-wrap:wrap;padding:11px 16px;
           border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(9,16,36,0.5)}
         .lt{padding:5px 11px;border-radius:7px;cursor:pointer;
@@ -1090,7 +1200,6 @@ export default function StackDSPage() {
         .lt:hover{color:#475569;border-color:rgba(255,255,255,0.13)}
         .lt.la{background:rgba(59,130,246,0.16);border-color:rgba(96,165,250,0.38);color:#93c5fd}
 
-        /* CODE EDITOR */
         .cw{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
         .ln-col{position:absolute;left:0;top:0;bottom:0;width:40px;padding:18px 0;
           border-right:1px solid rgba(255,255,255,0.04);overflow:hidden;pointer-events:none;
@@ -1106,7 +1215,6 @@ export default function StackDSPage() {
           resize:none;caret-color:#60a5fa;min-height:320px;tab-size:2;white-space:pre}
         .ta::selection{background:rgba(96,165,250,0.2)}
 
-        /* ACTIVE LINE BAR */
         .alb{display:flex;align-items:center;gap:9px;padding:6px 14px;
           border-top:1px solid rgba(255,255,255,0.05);border-left:3px solid;min-height:34px;
           animation:alIn 0.22s ease}
@@ -1116,7 +1224,6 @@ export default function StackDSPage() {
         .alb-code{font-family:'JetBrains Mono',monospace;font-size:10px;color:#334155;
           overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 
-        /* ERROR BOX — runtime engine errors */
         .err{margin:10px 14px;padding:13px 14px;background:rgba(239,68,68,0.07);
           border:1px solid rgba(239,68,68,0.28);border-radius:12px;
           color:#fca5a5;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.65;
@@ -1124,7 +1231,6 @@ export default function StackDSPage() {
         @keyframes errSh{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
         .err-t{font-weight:700;color:#ef4444;margin-bottom:7px;display:flex;align-items:center;gap:7px;font-size:12px}
 
-        /* VALIDATING OVERLAY */
         .validating-bar{margin:10px 14px;padding:11px 14px;display:flex;align-items:center;gap:10px;
           background:rgba(251,191,36,0.07);border:1px solid rgba(251,191,36,0.28);border-radius:12px;
           animation:fadeIn 0.2s ease}
@@ -1134,7 +1240,6 @@ export default function StackDSPage() {
         @keyframes spin{to{transform:rotate(360deg)}}
         .vld-txt{font-family:'JetBrains Mono',monospace;font-size:11px;color:#fbbf24;letter-spacing:0.04em}
 
-        /* GEMINI AI ERROR PANEL */
         .ai-err{margin:10px 14px;border-radius:14px;overflow:hidden;
           border:1px solid rgba(239,68,68,0.35);animation:errSh 0.38s ease}
         .ai-err-head{padding:10px 14px;background:rgba(239,68,68,0.14);
@@ -1162,13 +1267,10 @@ export default function StackDSPage() {
           background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.18);
           font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#92400e;line-height:1.5}
 
-        /* ERROR LINE in gutter */
         .ln.eln{color:#ef4444!important;background:rgba(239,68,68,0.12);border-radius:3px}
-        /* Error line overlay in editor */
         .err-line-overlay{position:absolute;left:40px;right:0;height:22px;pointer-events:none;
           background:rgba(239,68,68,0.07);border-left:2px solid rgba(239,68,68,0.55)}
 
-        /* RUN ROW */
         .rr{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.05);
           display:flex;align-items:center;gap:9px;flex-wrap:wrap}
         .btn-run{padding:10px 28px;border-radius:10px;
@@ -1187,15 +1289,12 @@ export default function StackDSPage() {
         .btn-rst:hover{color:#f87171;border-color:rgba(248,113,113,0.4)}
         .rr-hint{font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e293b;letter-spacing:0.07em}
 
-        /* ═══ VISUALIZATION PANEL ═══ */
         .vb{flex:1;display:flex;flex-direction:column}
 
-        /* Stack viz */
         .sv{flex:1;display:flex;flex-direction:column}
         .sv.sv-err{animation:svSh 0.42s ease}
         @keyframes svSh{0%,100%{transform:translateX(0)}18%{transform:translateX(-10px)}36%{transform:translateX(10px)}54%{transform:translateX(-6px)}72%{transform:translateX(6px)}}
 
-        /* Metrics */
         .sv-metrics{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(7,12,28,0.5)}
         .sv-m{flex:1;padding:9px 12px;text-align:center;border-right:1px solid rgba(255,255,255,0.05);
           display:flex;flex-direction:column;gap:3px}
@@ -1203,11 +1302,9 @@ export default function StackDSPage() {
         .sv-ml{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:#1e3050;letter-spacing:0.12em;text-transform:uppercase}
         .sv-mv{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;line-height:1}
 
-        /* Stack column */
         .sv-col{flex:1;display:flex;flex-direction:column;align-items:center;
           justify-content:flex-end;padding:28px 20px 0;position:relative;min-height:300px}
 
-        /* Flying block on pop */
         .sv-fly{position:absolute;top:18px;left:50%;transform:translateX(-50%);
           width:196px;height:50px;border-radius:13px;display:flex;align-items:center;
           justify-content:center;gap:9px;z-index:20;pointer-events:none;
@@ -1220,7 +1317,6 @@ export default function StackDSPage() {
         .sv-fly-v{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:#fff}
         .sv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(255,255,255,0.7);letter-spacing:0.06em}
 
-        /* Blocks */
         .sv-blocks{display:flex;flex-direction:column;gap:4px;align-items:center;width:100%;position:relative}
 
         .sv-block{height:50px;border-radius:13px;border:1.5px solid transparent;
@@ -1237,7 +1333,6 @@ export default function StackDSPage() {
           78%{transform:translateY(-2px) scale(0.98)}
           100%{transform:translateY(0) scale(1);opacity:1}}
 
-        /* Peek rings */
         .sv-pr,.sv-pr2{position:absolute;inset:-4px;border-radius:17px;border:2.5px solid;
           animation:pkRing 0.78s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none}
         .sv-pr2{animation-delay:0.16s}
@@ -1255,14 +1350,12 @@ export default function StackDSPage() {
         .sv-bval{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:#fff;flex:1;text-align:center;text-shadow:0 2px 9px rgba(0,0,0,0.35)}
         .sv-btag{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,0.68);flex-shrink:0;letter-spacing:0.05em;white-space:nowrap}
 
-        /* Empty */
         .sv-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
           width:200px;height:88px;border:1px dashed rgba(255,255,255,0.07);border-radius:13px;gap:7px}
         .sv-empty.sv-empty-err{border-color:rgba(239,68,68,0.35);animation:errSh 0.38s ease}
         .sv-ei{font-size:22px;opacity:0.45}
         .sv-et{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#1e3050;letter-spacing:0.07em}
 
-        /* Platform */
         .sv-plat{margin-top:5px;width:240px;height:11px;border-radius:7px;
           background:linear-gradient(90deg,rgba(96,165,250,0.28),rgba(96,165,250,0.14),rgba(96,165,250,0.28));
           position:relative;overflow:hidden;
@@ -1274,7 +1367,6 @@ export default function StackDSPage() {
         .sv-base{font-family:'JetBrains Mono',monospace;font-size:8px;color:#1e3050;
           letter-spacing:0.1em;margin-top:4px;margin-bottom:14px}
 
-        /* OP INFO */
         .oi{padding:13px 18px;border-top:1px solid rgba(255,255,255,0.05);
           background:rgba(7,12,28,0.5);min-height:76px}
         .oi-badge{display:inline-flex;align-items:center;gap:8px;padding:5px 13px;
@@ -1286,7 +1378,6 @@ export default function StackDSPage() {
         .oi-idle{display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;
           font-size:10.5px;color:#1e3050;letter-spacing:0.06em;padding:7px 0}
 
-        /* CONTROLS */
         .ctrl{display:flex;align-items:center;gap:7px;padding:9px 16px;
           border-top:1px solid rgba(255,255,255,0.05);background:rgba(5,9,24,0.5);flex-wrap:wrap}
         .cb{width:33px;height:32px;border-radius:8px;border:1px solid rgba(255,255,255,0.09);
@@ -1307,7 +1398,6 @@ export default function StackDSPage() {
         .sb:hover{color:#64748b}
         .sb.sa{background:rgba(96,165,250,0.14);border-color:rgba(96,165,250,0.35);color:#93c5fd}
 
-        /* PROGRESS */
         .pr{display:flex;align-items:center;gap:9px;padding:7px 18px;
           border-top:1px solid rgba(255,255,255,0.04)}
         .pt2{flex:1;height:5px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden}
@@ -1316,7 +1406,6 @@ export default function StackDSPage() {
           box-shadow:0 0 10px rgba(96,165,250,0.55)}
         .ptx{font-family:'JetBrains Mono',monospace;font-size:10px;color:#1e3050;white-space:nowrap}
 
-        /* DONE BANNER */
         .db{padding:11px 18px;border-top:1px solid rgba(74,222,128,0.2);
           background:rgba(74,222,128,0.06);display:flex;align-items:center;gap:10px;
           animation:dbIn 0.52s cubic-bezier(0.22,1,0.36,1)}
@@ -1325,7 +1414,6 @@ export default function StackDSPage() {
         .db-sp{display:inline-block;animation:spSpin 0.65s ease}
         @keyframes spSpin{0%{transform:scale(0) rotate(-180deg)}60%{transform:scale(1.35) rotate(12deg)}100%{transform:scale(1) rotate(0)}}
 
-        /* STEPS LIST */
         .slh{padding:9px 18px 5px;font-family:'JetBrains Mono',monospace;font-size:8px;color:#1e3050;
           letter-spacing:0.12em;text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.04)}
         .sl{max-height:120px;overflow-y:auto;padding:0 12px 10px;display:flex;flex-direction:column;gap:2px}
@@ -1344,7 +1432,6 @@ export default function StackDSPage() {
 
       <div className="pg">
 
-        {/* ── HEADER ─────────────────────────────────────── */}
         <header className="hd">
           <div className="hd-logo">📚</div>
           <div>
@@ -1354,10 +1441,9 @@ export default function StackDSPage() {
           <div className="hd-badge">{lm.name} · Real Execution Engine</div>
         </header>
 
-        {/* ── GRID ────────────────────────────────────────── */}
         <main className="main">
 
-          {/* ══ LEFT — CODE EDITOR ══ */}
+          {/* LEFT PANEL */}
           <div className="panel">
             <div className="ph">
               <span className="pd" style={{ background:"#ff5f57" }} />
@@ -1369,7 +1455,6 @@ export default function StackDSPage() {
                 padding:"2px 9px", borderRadius:20 }}>{lm.name}</span>
             </div>
 
-            {/* Language tabs */}
             <div className="lb">
               {Object.entries(LANGS).map(([k, m]) => (
                 <button key={k}
@@ -1380,7 +1465,6 @@ export default function StackDSPage() {
               ))}
             </div>
 
-            {/* Code area */}
             <div className="cw">
               <div className="ln-col">
                 {codeLines.map((_, i) => (
@@ -1391,11 +1475,9 @@ export default function StackDSPage() {
                   ].join(" ")}>{i + 1}</div>
                 ))}
               </div>
-              {/* Blue active-line overlay during playback */}
               {step && (
                 <div className="al-overlay" style={{ top:`${18 + step.lineNum * 22}px` }} />
               )}
-              {/* Red error-line overlays from Gemini */}
               {[...errorLineSet].map(i => (
                 <div key={`el${i}`} className="err-line-overlay" style={{ top:`${18 + i * 22}px` }} />
               ))}
@@ -1408,7 +1490,6 @@ export default function StackDSPage() {
               />
             </div>
 
-            {/* Active line bar — shown during playback */}
             {step && os && (
               <div className="alb" style={{ borderColor:os.bd, background:os.bg }}>
                 <span className="alb-icon" style={{ color:os.c }}>{os.icon}</span>
@@ -1417,7 +1498,6 @@ export default function StackDSPage() {
               </div>
             )}
 
-            {/* Validating spinner */}
             {validating && (
               <div className="validating-bar">
                 <div className="vld-spinner" />
@@ -1425,7 +1505,6 @@ export default function StackDSPage() {
               </div>
             )}
 
-            {/* Gemini AI error panel — shown when implementation is wrong */}
             {hasAiErrors && (
               <div className="ai-err">
                 <div className="ai-err-head">
@@ -1438,7 +1517,6 @@ export default function StackDSPage() {
                   {aiErrors.map((e, i) => (
                     <div key={i} className="ai-err-row"
                       onClick={() => {
-                        // Scroll editor to the error line
                         const lineH = 22;
                         if (taRef.current) taRef.current.scrollTop = Math.max(0, ((e.line ?? 1) - 4)) * lineH;
                       }}>
@@ -1455,7 +1533,6 @@ export default function StackDSPage() {
               </div>
             )}
 
-            {/* Runtime engine errors (local) */}
             {error && (
               <div className="err">
                 <div className="err-t"><span>⚠</span> Execution Error</div>
@@ -1463,12 +1540,10 @@ export default function StackDSPage() {
               </div>
             )}
 
-            {/* Quota / network notice */}
             {apiNote && (
               <div className="api-note">ℹ {apiNote} — visualization ran without AI check.</div>
             )}
 
-            {/* Run row */}
             <div className="rr">
               <button className={`btn-run${playing ? " running" : validating ? " running" : ""}`}
                 onClick={handleRun} disabled={playing || validating}>
@@ -1479,9 +1554,18 @@ export default function StackDSPage() {
               )}
               <span className="rr-hint">CTRL + ENTER</span>
             </div>
+
+            {/* TERMINAL OUTPUT */}
+            <TerminalOutput
+              steps={steps}
+              error={error}
+              aiErrors={aiErrors}
+              apiNote={apiNote}
+              validating={validating}
+            />
           </div>
 
-          {/* ══ RIGHT — VISUALIZATION ══ */}
+          {/* RIGHT PANEL */}
           <div className="panel">
             <div className="ph">
               <span className="pd" style={{ background:"#60a5fa" }} />
@@ -1497,7 +1581,6 @@ export default function StackDSPage() {
             <div className="vb">
               <StackViz step={step} animKey={animKey} idle={idle} />
 
-              {/* Op info */}
               <div className="oi">
                 {step && os ? (
                   <>
@@ -1519,12 +1602,11 @@ export default function StackDSPage() {
                 ) : (
                   <div className="oi-idle">
                     <span>📟</span>
-                    <span>{idle ? "Write your Stack class, then call push/pop/peek/isEmpty below it and click Run" : hasAiErrors ? "Fix the implementation errors shown in the editor" : error ? "Fix the errors above and run again" : validating ? "Gemini is reviewing your code…" : "Waiting..."}</span>
+                    <span>{idle ? "Write your Stack class, then call push/pop/peek/isEmpty below it and click Run" : hasAiErrors ? "Fix the implementation errors shown in the editor" : error ? "Fix the errors above and run again" : validating ? "VisuoSlayer is reviewing your code…" : "Waiting..."}</span>
                   </div>
                 )}
               </div>
 
-              {/* Done banner */}
               {done && (
                 <div className="db">
                   <span className="db-sp">🎉</span>
@@ -1532,7 +1614,6 @@ export default function StackDSPage() {
                 </div>
               )}
 
-              {/* Playback controls */}
               {steps.length > 0 && (
                 <div className="ctrl">
                   <button className="cb" title="First" onClick={() => goTo(0)} disabled={idx <= 0}>⏮</button>
@@ -1561,7 +1642,6 @@ export default function StackDSPage() {
                 </div>
               )}
 
-              {/* Progress */}
               {steps.length > 0 && (
                 <div className="pr">
                   <div className="pt2"><div className="pf" style={{ width:`${prog}%` }} /></div>
@@ -1569,7 +1649,6 @@ export default function StackDSPage() {
                 </div>
               )}
 
-              {/* Steps list */}
               {steps.length > 0 && (
                 <>
                   <div className="slh">OPERATION LOG — click any step to jump</div>

@@ -203,7 +203,7 @@ function StickyNav({ active, speaking, speed, setSpeed, onRestart, seenCount }) 
       </div>
       <div style={{ width:1,height:20,background:"rgba(255,255,255,0.08)",margin:"0 4px" }}/>
 
-      {/* NEW: Code buttons */}
+      {/* Code buttons */}
       <button onClick={goToArray} style={{
         padding:"4px 12px",borderRadius:20,cursor:"pointer",
         background:"rgba(74,222,128,0.12)",border:"1px solid rgba(74,222,128,0.35)",
@@ -306,7 +306,7 @@ function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HERO — FIXED animation (no stale closures, flex-based layout)
+// HERO — FIXED animation (no stale closures, fixed-height container)
 // ═══════════════════════════════════════════════════════════════════════════════
 const HERO_COLORS = ["#60a5fa","#f472b6","#4ade80","#fb923c","#a78bfa","#f59e0b","#34d399","#e879f9"];
 const HERO_VALS   = ["10","25","37","99","42","7","88","15","63","21"];
@@ -381,26 +381,31 @@ function Hero({ onStart, onVoice }) {
       <div style={{ position:"absolute",top:"6%",left:"3%",width:440,height:440,borderRadius:"50%",background:"radial-gradient(circle,rgba(96,165,250,0.13) 0%,transparent 70%)",filter:"blur(80px)",pointerEvents:"none",animation:"orb1 24s ease-in-out infinite" }}/>
       <div style={{ position:"absolute",bottom:"8%",right:"3%",width:360,height:360,borderRadius:"50%",background:"radial-gradient(circle,rgba(244,114,182,0.1) 0%,transparent 70%)",filter:"blur(68px)",pointerEvents:"none",animation:"orb2 30s ease-in-out infinite" }}/>
 
-      {/* Stack visual — flex-based, no absolute positioning */}
-      <div style={{ marginBottom:36,position:"relative",width:240 }}>
-
-        {/* Op label floats above the stack */}
+      {/* Fixed-height stack wrapper */}
+      <div style={{ marginBottom:36, position:"relative", width:240, height:380 }}>
+        {/* Operation label area */}
         <div style={{
-          height:32,display:"flex",alignItems:"center",justifyContent:"center",marginBottom:8,
+          position:"absolute", top:0, left:0, right:0, height:32,
+          display:"flex", alignItems:"center", justifyContent:"center",
         }}>
           {opLabel && (
             <span key={opLabel.text} style={{
-              padding:"4px 16px",borderRadius:20,
-              background:`${opLabel.col}18`,border:`1px solid ${opLabel.col}50`,
-              fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,
+              padding:"4px 16px", borderRadius:20,
+              background:`${opLabel.col}18`, border:`1px solid ${opLabel.col}50`,
+              fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:700,
               color:opLabel.col,
               animation:"opLabelIn 0.3s cubic-bezier(0.22,1,0.36,1) both",
             }}>{opLabel.text}</span>
           )}
         </div>
 
-        {/* Stack items — column-reverse so index-0 is at the bottom */}
-        <div style={{ display:"flex",flexDirection:"column",gap:5,alignItems:"center" }}>
+        {/* Stack items container */}
+        <div style={{
+          position:"absolute", top:32, bottom:44, left:0, right:0,
+          display:"flex", flexDirection:"column-reverse",
+          justifyContent:"flex-start", alignItems:"center", gap:5,
+          overflow:"hidden",
+        }}>
           {visible.map((pl, i) => {
             const isTop     = i === visible.length - 1;
             const isPushing = pl.id === pushingId;
@@ -409,14 +414,13 @@ function Hero({ onStart, onVoice }) {
 
             return (
               <div key={pl.id} style={{
-                order: visible.length - 1 - i,  // top item renders first (visually on top)
                 width: w, height: 46, borderRadius: 13,
                 background: `linear-gradient(135deg,${pl.c}22,${pl.c}0e)`,
                 border: `1.5px solid ${isTop ? pl.c : `${pl.c}50`}`,
-                display:"flex",alignItems:"center",justifyContent:"space-between",
+                display:"flex", alignItems:"center", justifyContent:"space-between",
                 padding:"0 16px",
                 boxShadow: isTop ? `0 0 28px ${pl.c}45,0 4px 16px rgba(0,0,0,0.5)` : `0 3px 10px rgba(0,0,0,0.35)`,
-                position:"relative",overflow:"hidden",
+                position:"relative", overflow:"hidden",
                 animation: isPushing
                   ? "heroPush 0.52s cubic-bezier(0.34,1.56,0.64,1) both"
                   : isPopping
@@ -424,13 +428,12 @@ function Hero({ onStart, onVoice }) {
                   : "none",
                 transition:"width 0.35s ease,box-shadow 0.3s ease",
               }}>
-                {/* Shine */}
-                <div style={{ position:"absolute",inset:0,background:"linear-gradient(135deg,rgba(255,255,255,0.12) 0%,transparent 55%)",borderRadius:"inherit",pointerEvents:"none" }}/>
-                <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:15,fontWeight:700,color:pl.c,position:"relative" }}>{pl.v}</span>
+                <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg,rgba(255,255,255,0.12) 0%,transparent 55%)", borderRadius:"inherit", pointerEvents:"none" }}/>
+                <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:15, fontWeight:700, color:pl.c, position:"relative" }}>{pl.v}</span>
                 {isTop && (
-                  <div style={{ display:"flex",alignItems:"center",gap:5,position:"relative" }}>
-                    <div style={{ width:6,height:6,borderRadius:"50%",background:pl.c,animation:"topPulse 1.5s ease-in-out infinite",boxShadow:`0 0 8px ${pl.c}` }}/>
-                    <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:`${pl.c}cc`,letterSpacing:"0.06em" }}>TOP</span>
+                  <div style={{ display:"flex", alignItems:"center", gap:5, position:"relative" }}>
+                    <div style={{ width:6, height:6, borderRadius:"50%", background:pl.c, animation:"topPulse 1.5s ease-in-out infinite", boxShadow:`0 0 8px ${pl.c}` }}/>
+                    <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:`${pl.c}cc`, letterSpacing:"0.06em" }}>TOP</span>
                   </div>
                 )}
               </div>
@@ -440,38 +443,47 @@ function Hero({ onStart, onVoice }) {
 
         {/* Base platform */}
         <div style={{
-          marginTop:5,width:"100%",height:10,borderRadius:8,
+          position:"absolute", bottom:30, left:0, right:0, height:10,
+          borderRadius:8,
           background:"linear-gradient(90deg,rgba(96,165,250,0.25),rgba(96,165,250,0.12),rgba(96,165,250,0.25))",
           boxShadow:"0 0 20px rgba(96,165,250,0.25),0 4px 12px rgba(0,0,0,0.4)",
-          position:"relative",overflow:"hidden",
+          overflow:"hidden",
         }}>
-          <div style={{ position:"absolute",top:0,left:"-100%",width:"50%",height:"100%",background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)",animation:"platShine 3s ease-in-out infinite" }}/>
+          <div style={{
+            position:"absolute", top:0, left:"-100%", width:"50%", height:"100%",
+            background:"linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)",
+            animation:"platShine 3s ease-in-out infinite",
+          }}/>
         </div>
 
         {/* Size counter */}
-        <div style={{ display:"flex",justifyContent:"space-between",marginTop:8,padding:"0 4px" }}>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#1e3050" }}>▲ BASE</span>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#334155" }}>size: {visible.length}</span>
+        <div style={{
+          position:"absolute", bottom:0, left:0, right:0,
+          display:"flex", justifyContent:"space-between", padding:"0 4px",
+          fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#334155",
+        }}>
+          <span style={{ color:"#1e3050" }}>▲ BASE</span>
+          <span>size: {visible.length}</span>
         </div>
 
         {/* LIFO badge */}
         <div style={{
-          position:"absolute",right:-72,top:"42%",
-          background:"rgba(96,165,250,0.1)",border:"1px solid rgba(96,165,250,0.25)",
-          borderRadius:8,padding:"4px 10px",
-          fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#60a5fa",
-          letterSpacing:"0.06em",whiteSpace:"nowrap",
+          position:"absolute", right:-72, top:"50%", transform:"translateY(-50%)",
+          background:"rgba(96,165,250,0.1)", border:"1px solid rgba(96,165,250,0.25)",
+          borderRadius:8, padding:"4px 10px",
+          fontFamily:"'JetBrains Mono',monospace", fontSize:9, fontWeight:700, color:"#60a5fa",
+          letterSpacing:"0.06em", whiteSpace:"nowrap",
           animation:"lifoFloat 4s ease-in-out infinite",
         }}>LIFO</div>
 
         {/* Pause button */}
         <button onClick={() => setPaused(p => !p)} style={{
-          position:"absolute",bottom:-32,right:0,
-          padding:"3px 10px",borderRadius:20,cursor:"pointer",
+          position:"absolute", bottom:-32, right:0,
+          padding:"3px 10px", borderRadius:20, cursor:"pointer",
           background:paused?"rgba(251,191,36,0.15)":"rgba(255,255,255,0.04)",
           border:`1px solid ${paused?"rgba(251,191,36,0.4)":"rgba(255,255,255,0.1)"}`,
-          fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,
-          color:paused?"#fbbf24":"#334155",transition:"all 0.2s",
+          fontFamily:"'JetBrains Mono',monospace", fontSize:8, fontWeight:700,
+          color:paused?"#fbbf24":"#334155", transition:"all 0.2s",
         }}>{paused?"▶ RESUME":"⏸ PAUSE"}</button>
       </div>
 
@@ -1236,7 +1248,7 @@ function ComplexityTable() {
                   <span style={{ width:7,height:7,borderRadius:"50%",background:r.c,flexShrink:0,boxShadow:hov===i?`0 0 8px ${r.c}`:"none",transition:"box-shadow 0.2s" }}/>
                   <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"#e2e8f0" }}>{r.nm}</span>
                 </div>
-               </td>
+              </td>
               {[r.avg,r.wc,r.sp].map((v,j) => (
                 <td key={j} style={{ padding:"10px 14px",fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:v.includes("O(1)")?700:400,color:v.includes("O(1)")?"#4ade80":v==="O(n)"?"#ef4444":"#94a3b8",whiteSpace:"nowrap" }}>{v}</td>
               ))}

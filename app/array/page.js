@@ -1367,9 +1367,11 @@ function ComplexityTable() {
     <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch" }}>
       <table style={{ width:"100%", borderCollapse:"collapse", minWidth:480 }}>
         <thead>
-          <tr>{["Operation","Time","Space","Notes"].map(h => (
-            <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontFamily:"'JetBrains Mono',monospace", fontSize:9, letterSpacing:"0.1em", color:"#2d3748", borderBottom:"1px solid rgba(255,255,255,0.06)", fontWeight:700, whiteSpace:"nowrap" }}>{h}</th>
-          ))}</tr>
+          <tr>
+            {["Operation","Time","Space","Notes"].map(h => (
+              <th key={h} style={{ padding:"10px 14px", textAlign:"left", fontFamily:"'JetBrains Mono',monospace", fontSize:9, letterSpacing:"0.1em", color:"#2d3748", borderBottom:"1px solid rgba(255,255,255,0.06)", fontWeight:700, whiteSpace:"nowrap" }}>{h}</th>
+            ))}
+          </tr>
         </thead>
         <tbody>
           {rows.map((r, i) => (
@@ -1744,6 +1746,7 @@ export default function ArrayPage() {
         @keyframes wave{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
         @keyframes arrCell{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
         @keyframes cellRip{from{opacity:0.5;transform:scale(0.9)}to{opacity:0;transform:scale(1.25)}}
+        @keyframes pulse { 0% { opacity: 0.7; transform: scale(0.98); } 100% { opacity: 1; transform: scale(1); } }
 
         @media(max-width:760px){
           .sg{grid-template-columns:1fr !important}
@@ -1867,7 +1870,7 @@ export default function ArrayPage() {
           )}
         </section>
 
-        {/* ── Footer CTA ─────────────────────────────────────────── */}
+        {/* ── Footer CTA (enhanced) ─────────────────────────────── */}
         <div style={{
           textAlign:"center", padding:"48px 24px", borderRadius:26,
           background:"linear-gradient(140deg,rgba(96,165,250,0.09) 0%,rgba(52,211,153,0.07) 50%,rgba(245,158,11,0.06) 100%)",
@@ -1884,6 +1887,7 @@ export default function ArrayPage() {
             Writing the code makes every concept permanent.
           </p>
 
+          {/* Section badges */}
           <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap", marginBottom:24 }}>
             {NAV_SECTIONS.map(s => (
               <div key={s.id} style={{
@@ -1897,30 +1901,70 @@ export default function ArrayPage() {
               </div>
             ))}
           </div>
-          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#2d3748", marginBottom:22 }}>
+
+          <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#2d3748", marginBottom:32 }}>
             {seenSections.size} / {NAV_SECTIONS.length} sections visited
+            {seenSections.size === NAV_SECTIONS.length && (
+              <span style={{ marginLeft:8, color:"#fbbf24", animation:"pulse 0.6s infinite" }}>✨ Complete! ✨</span>
+            )}
           </div>
 
-          <div style={{ display:"flex", gap:9, justifyContent:"center", flexWrap:"wrap", marginBottom:20 }}>
-            {["💻 Code a Dynamic Array","💻 Code Binary Search","💻 Code Merge Sort","💻 Code Prefix Sum"].map(t => (
-              <button key={t} onClick={goTree} style={{
-                padding:"8px 16px", borderRadius:22, cursor:"pointer",
-                background:"rgba(96,165,250,0.1)", border:"1px solid rgba(96,165,250,0.24)",
-                fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"#60a5fa",
-                letterSpacing:"0.04em", transition:"all 0.22s",
+          {/* Enhanced next steps */}
+          <div style={{
+            display:"flex", flexWrap:"wrap", gap:16, justifyContent:"center",
+            marginBottom:32, alignItems:"stretch",
+          }}>
+            <button
+              onClick={goTree}
+              style={{
+                flex:"1", minWidth:200, padding:"14px 24px", borderRadius:20, cursor:"pointer",
+                background:"linear-gradient(135deg,#3b82f6 0%,#34d399 100%)",
+                border:"none", fontFamily:"'Syne',sans-serif", fontSize:16, fontWeight:700,
+                color:"#fff", boxShadow:"0 8px 32px rgba(59,130,246,0.42)",
+                transition:"all 0.25s", display:"inline-flex", alignItems:"center", justifyContent:"center", gap:11,
               }}
-                onMouseEnter={e=>{e.currentTarget.style.background="rgba(96,165,250,0.2)";e.currentTarget.style.borderColor="rgba(96,165,250,0.45)";}}
-                onMouseLeave={e=>{e.currentTarget.style.background="rgba(96,165,250,0.1)";e.currentTarget.style.borderColor="rgba(96,165,250,0.24)";}}>
-                {t}
-              </button>
-            ))}
+              onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";e.currentTarget.style.boxShadow="0 14px 44px rgba(59,130,246,0.58)";}}
+              onMouseLeave={e=>{e.currentTarget.style.transform="none";e.currentTarget.style.boxShadow="0 8px 32px rgba(59,130,246,0.42)";}}
+            >
+              <span>🌲 Next: Tree Data Structure</span>
+              <span style={{ fontSize:20 }}>→</span>
+            </button>
+
+            <button
+              onClick={() => window.scrollTo({ top:0, behavior:"smooth" })}
+              style={{
+                flex:"1", minWidth:140, padding:"14px 24px", borderRadius:20, cursor:"pointer",
+                background:"rgba(96,165,250,0.1)", border:"1.5px solid rgba(96,165,250,0.3)",
+                fontFamily:"'Syne',sans-serif", fontSize:15, fontWeight:600,
+                color:"#60a5fa", transition:"all 0.25s", display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(96,165,250,0.2)";e.currentTarget.style.borderColor="rgba(96,165,250,0.5)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="rgba(96,165,250,0.1)";e.currentTarget.style.borderColor="rgba(96,165,250,0.3)";}}
+            >
+              <span>📚</span> Review from Top
+            </button>
+
+            <button
+              onClick={() => setShortcutsOpen(true)}
+              style={{
+                flex:"0 0 auto", padding:"14px 24px", borderRadius:20, cursor:"pointer",
+                background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.1)",
+                fontFamily:"'JetBrains Mono',monospace", fontSize:12, fontWeight:600,
+                color:"#64748b", transition:"all 0.2s", display:"flex", alignItems:"center", gap:8,
+              }}
+              onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.07)";e.currentTarget.style.color="#94a3b8";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.03)";e.currentTarget.style.color="#64748b";}}
+            >
+              <span>⌨️</span> VIEW KEYBOARD SHORTCUTS
+            </button>
           </div>
 
-          <button onClick={() => setShortcutsOpen(true)} style={{
-            background:"none", border:"1px solid rgba(255,255,255,0.08)", borderRadius:20, cursor:"pointer",
-            padding:"6px 16px", fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#2d3748",
-            transition:"all 0.2s",
-          }}>⌨️ VIEW KEYBOARD SHORTCUTS</button>
+          <div style={{
+            marginTop: 20, paddingTop: 20, borderTop: "1px solid rgba(255,255,255,0.05)",
+            fontSize: 10, fontFamily: "'JetBrains Mono',monospace", color: "#2d3748"
+          }}>
+            💡 Pro tip: Revisit sections by clicking their badges above. Solid understanding of arrays unlocks all other data structures.
+          </div>
         </div>
 
       </main>

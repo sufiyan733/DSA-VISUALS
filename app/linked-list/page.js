@@ -230,7 +230,7 @@ function StickyNav({ active, speaking, seenCount }) {
         <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#38bdf8", fontWeight: 700 }}>{seenCount}/{NAV_SECTIONS.length}</span>
       </div>
       <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.08)", margin: "0 4px" }} />
-      <button onClick={() => window.location.href = "/linked-list"} style={{
+      <button onClick={() => window.location.href = "/ll"} style={{
         padding: "4px 12px", borderRadius: 20, cursor: "pointer",
         background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.35)",
         fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 700,
@@ -1690,7 +1690,7 @@ export default function LinkedListPage() {
               <p style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 15, color: "#94a3b8", margin: "10px 0 24px", lineHeight: 1.55 }}>
                 {qScore >= 5 ? "Outstanding! You genuinely understand linked lists." : qScore >= 3 ? "Solid progress. Review the sections you missed and retry." : "Great start — re-read the sections above and come back stronger."}
               </p>
-              <button onClick={() => window.location.href = "/linked-list"} style={{
+              <button onClick={() => window.location.href = "/ll"} style={{
                 padding: "12px 28px", borderRadius: 16, cursor: "pointer",
                 background: "linear-gradient(135deg,#0ea5e9,#8b5cf6)", border: "none",
                 fontFamily: "'Clash Display',sans-serif", fontSize: 15, fontWeight: 700, color: "#fff",
@@ -1727,7 +1727,7 @@ export default function LinkedListPage() {
             {seenSections.size} / {NAV_SECTIONS.length} sections visited
           </div>
           <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
-            <button onClick={() => window.location.href = "/linked-list"} style={{
+            <button onClick={() => window.location.href = "/ll"} style={{
               padding: "13px 28px", borderRadius: 14, cursor: "pointer",
               background: "linear-gradient(135deg,#0ea5e9,#8b5cf6)", border: "none",
               fontFamily: "'Clash Display',sans-serif", fontSize: 14, fontWeight: 700, color: "#fff",

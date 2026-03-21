@@ -1,1399 +1,1115 @@
-// 'use client'
-// /* eslint-disable react-hooks/refs */
-// import { useState, useRef, useEffect } from 'react'
-// import { motion, AnimatePresence } from 'framer-motion'
-// import Navbar from '@/comps/navbar'
-
-// // ─── BST pure-data (plain objects, no class — avoids structuredClone issues) ──
-
-// function mkNode(val) { return { val, left: null, right: null } }
-
-// function insert(node, val) {
-//   if (!node) return mkNode(val)
-//   if (val < node.val) return { ...node, left:  insert(node.left,  val) }
-//   if (val > node.val) return { ...node, right: insert(node.right, val) }
-//   return node   // duplicate — ignore
-// }
-
-// function minNode(node) { return node.left ? minNode(node.left) : node }
-
-// function remove(node, val) {
-//   if (!node) return null
-//   if (val < node.val) return { ...node, left:  remove(node.left,  val) }
-//   if (val > node.val) return { ...node, right: remove(node.right, val) }
-//   if (!node.left)  return node.right
-//   if (!node.right) return node.left
-//   const m = minNode(node.right)
-//   return { ...node, val: m.val, right: remove(node.right, m.val) }
-// }
-
-// function searchPath(node, val, path = []) {
-//   if (!node) return { path, found: false }
-//   path.push(node.val)
-//   if (val === node.val) return { path, found: true }
-//   return val < node.val
-//     ? searchPath(node.left,  val, path)
-//     : searchPath(node.right, val, path)
-// }
-
-// function inorder(node, out = [])   { if (!node) return out; inorder(node.left, out); out.push(node.val); inorder(node.right, out); return out }
-// function preorder(node, out = [])  { if (!node) return out; out.push(node.val); preorder(node.left, out); preorder(node.right, out); return out }
-// function postorder(node, out = []) { if (!node) return out; postorder(node.left, out); postorder(node.right, out); out.push(node.val); return out }
-// function treeSize(node)            { return node ? 1 + treeSize(node.left) + treeSize(node.right) : 0 }
-// function treeHeight(node)          { return node ? 1 + Math.max(treeHeight(node.left), treeHeight(node.right)) : 0 }
-
-// // ─── Layout: assign pixel coords to every node ───────────────────────────────
-// // Returns { nodes: [{val,x,y,id}], edges: [{x1,y1,x2,y2,key}] }
-// function layout(root, W, H) {
-//   const nodes = [], edges = []
-//   if (!root) return { nodes, edges }
-
-//   const LEVEL_H = 70
-//   const R       = 20
-//   const PAD     = R + 8
-
-//   function subtreeSize(n) { return n ? 1 + subtreeSize(n.left) + subtreeSize(n.right) : 0 }
-
-//   let nodeId = 0
-//   function place(node, xMin, xMax, depth) {
-//     if (!node) return null
-//     const ls   = subtreeSize(node.left)
-//     const tot  = subtreeSize(node)
-//     const x    = xMin + (ls + 0.5) * (xMax - xMin) / tot
-//     const y    = PAD + depth * LEVEL_H
-//     const id   = nodeId++
-//     node._x = x; node._y = y; node._id = id
-//     const entry = { val: node.val, x, y, r: R, id }
-//     nodes.push(entry)
-
-//     const lChild = place(node.left,  xMin, x,    depth + 1)
-//     const rChild = place(node.right, x,    xMax, depth + 1)
-
-//     if (lChild) edges.push({ x1: x, y1: y, x2: lChild.x,  y2: lChild.y,  key: `${id}-l` })
-//     if (rChild) edges.push({ x1: x, y1: y, x2: rChild.x,  y2: rChild.y,  key: `${id}-r` })
-
-//     return entry
-//   }
-//   place(root, PAD, W - PAD, 0)
-//   return { nodes, edges }
-// }
-
-// // ─── Colours ──────────────────────────────────────────────────────────────────
-// const G  = '#00e5a0'   // green  — insert / inorder
-// const B  = '#38bdf8'   // blue   — search / preorder
-// const Y  = '#fbbf24'   // amber  — postorder / warn
-// const R  = '#f87171'   // red    — delete
-// const DIM = '#091525'
-
-// // ─── Component ────────────────────────────────────────────────────────────────
-// export default function BSTPage() {
-//   const [root,          setRoot]          = useState(null)
-//   const [input,         setInput]         = useState('')
-//   const [msg,           setMsg]           = useState(null)
-//   const [hl,            setHl]            = useState(new Set())   // highlighted node vals
-//   const [hlCol,         setHlCol]         = useState(G)
-//   const [travSeq,       setTravSeq]       = useState([])
-//   const [travActive,    setTravActive]    = useState(new Set())
-//   const [travCol,       setTravCol]       = useState(G)
-//   const [svgW,          setSvgW]          = useState(600)
-//   const [svgH,          setSvgH]          = useState(400)
-//   const wrapRef  = useRef(null)
-//   const timers   = useRef({ msg: null, hl: [] })
-
-//   // measure SVG wrapper
-//   useEffect(() => {
-//     if (!wrapRef.current) return
-//     const ro = new ResizeObserver(([e]) => {
-//       setSvgW(Math.max(e.contentRect.width,  200))
-//       setSvgH(Math.max(e.contentRect.height, 200))
-//     })
-//     ro.observe(wrapRef.current)
-//     return () => ro.disconnect()
-//   }, [])
-
-//   // ── helpers ──────────────────────────────────────────────
-//   const showMsg = (text, type = 'info') => {
-//     clearTimeout(timers.current.msg)
-//     setMsg({ text, type })
-//     timers.current.msg = setTimeout(() => setMsg(null), 2600)
-//   }
-
-//   const clearHlTimers = () => {
-//     timers.current.hl.forEach(clearTimeout)
-//     timers.current.hl = []
-//   }
-
-//   const flashNodes = (vals, col, ms = 1800) => {
-//     clearHlTimers()
-//     setHl(new Set(vals))
-//     setHlCol(col)
-//     timers.current.hl.push(setTimeout(() => setHl(new Set()), ms))
-//   }
-
-//   const stepNodes = (seq, col, stepMs = 370) => {
-//     clearHlTimers()
-//     setHl(new Set())
-//     setTravSeq(seq)
-//     setTravActive(new Set())
-//     setTravCol(col)
-//     const seen = new Set()
-//     seq.forEach((v, i) => {
-//       timers.current.hl.push(setTimeout(() => {
-//         seen.add(v)
-//         setHl(new Set(seen))
-//         setHlCol(col)
-//         setTravActive(new Set(seen))
-//         if (i === seq.length - 1) {
-//           timers.current.hl.push(setTimeout(() => {
-//             setHl(new Set())
-//             setTravActive(new Set())
-//           }, 1400))
-//         }
-//       }, i * stepMs))
-//     })
-//   }
-
-//   // ── actions ──────────────────────────────────────────────
-//   const handleInsert = () => {
-//     const n = Number(input)
-//     if (!input.trim() || isNaN(n)) { showMsg('Enter a valid number', 'error'); return }
-//     if (n < -999 || n > 999)       { showMsg('Use -999 to 999', 'error'); return }
-//     setRoot(prev => insert(prev, n))
-//     setInput('')
-//     setTimeout(() => flashNodes([n], G), 40)
-//     showMsg(`Inserted  ${n}`, 'success')
-//   }
-
-//   const handleDelete = () => {
-//     const n = Number(input)
-//     if (!input.trim() || isNaN(n)) { showMsg('Enter a number to delete', 'error'); return }
-//     if (!root)                     { showMsg('Tree is empty', 'error'); return }
-//     const { found } = searchPath(root, n)
-//     if (!found)                    { showMsg(`${n} not found`, 'error'); return }
-//     flashNodes([n], R, 500)
-//     setTimeout(() => setRoot(prev => remove(prev, n)), 520)
-//     setInput('')
-//     showMsg(`Deleted  ${n}`, 'delete')
-//   }
-
-//   const handleSearch = () => {
-//     const n = Number(input)
-//     if (!input.trim() || isNaN(n)) { showMsg('Enter a number to search', 'error'); return }
-//     if (!root)                     { showMsg('Tree is empty', 'error'); return }
-//     const { path, found } = searchPath(root, n)
-//     clearHlTimers()
-//     setHl(new Set())
-//     const seen = new Set()
-//     path.forEach((v, i) => {
-//       timers.current.hl.push(setTimeout(() => {
-//         seen.add(v)
-//         setHl(new Set(seen))
-//         setHlCol(found && i === path.length - 1 ? G : Y)
-//         if (i === path.length - 1) {
-//           showMsg(found ? `Found  ${n}  —  ${path.length} step${path.length > 1 ? 's' : ''}` : `${n}  not found`, found ? 'success' : 'error')
-//           timers.current.hl.push(setTimeout(() => setHl(new Set()), 1800))
-//         }
-//       }, i * 420))
-//     })
-//     setInput('')
-//   }
-
-//   const handleSeed = () => {
-//     let r = null
-//     ;[50, 30, 70, 20, 40, 60, 80, 10, 35, 55, 65].forEach(v => { r = insert(r, v) })
-//     setRoot(r)
-//     setHl(new Set()); setTravSeq([])
-//     showMsg('Sample tree loaded', 'info')
-//   }
-
-//   const handleClear = () => {
-//     clearHlTimers()
-//     setRoot(null); setHl(new Set()); setTravSeq([]); setTravActive(new Set())
-//     showMsg('Tree cleared', 'info')
-//   }
-
-//   const handleInorder   = () => { if (root) stepNodes(inorder(root),   G) }
-//   const handlePreorder  = () => { if (root) stepNodes(preorder(root),  B) }
-//   const handlePostorder = () => { if (root) stepNodes(postorder(root), Y) }
-
-//   // ── layout ───────────────────────────────────────────────
-//   const { nodes, edges } = layout(root, svgW, svgH)
-
-//   // build a map for quick lookup: val → {x,y}
-//   const nodeMap = {}
-//   nodes.forEach(n => { nodeMap[n.val] = n })
-
-//   const msgStyle = {
-//     success: { c: G,        b: `${G}28`  },
-//     error:   { c: R,        b: `${R}28`  },
-//     delete:  { c: '#fb923c',b: '#fb923c28'},
-//     info:    { c: '#64748b',b: '#64748b20'},
-//   }
-
-//   const nodeCount  = treeSize(root)
-//   const nodeHeight = treeHeight(root)
-
-//   return (
-//     <>
-//       <Navbar />
-
-//       <style>{`
-//         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-//         html,body { margin:0; padding:0; overflow:hidden; height:100%; }
-//         *,*::before,*::after { box-sizing:border-box; }
-
-//         .shell {
-//           height: calc(100vh - 52px);
-//           background: #03080f;
-//           display: flex; overflow: hidden; position: relative;
-//         }
-
-//         /* subtle dot-grid background */
-//         .shell::after {
-//           content:''; position:absolute; inset:0; pointer-events:none; z-index:0;
-//           background-image: radial-gradient(circle, #0a1f3520 1px, transparent 1px);
-//           background-size: 28px 28px;
-//         }
-
-//         .col {
-//           position:relative; z-index:1;
-//           width:50%; height:100%; overflow:hidden;
-//           display:flex; flex-direction:column;
-//         }
-//         .col-l { padding:18px 14px 16px 22px; border-right:1px solid #091a2e; }
-//         .col-r { padding:18px 22px 16px 14px; }
-
-//         /* tree canvas */
-//         .canvas {
-//           flex:1; min-height:0;
-//           border-radius:14px;
-//           border:1px solid #091a2e;
-//           background:#020c18;
-//           position:relative; overflow:hidden;
-//         }
-//         .canvas::before {
-//           content:''; position:absolute; inset:0; pointer-events:none;
-//           background:
-//             linear-gradient(#091a2e18 1px, transparent 1px),
-//             linear-gradient(90deg, #091a2e18 1px, transparent 1px);
-//           background-size: 32px 32px;
-//         }
-
-//         /* right panel */
-//         .panel { flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; }
-//         .card  { background:#040d1a; border:1px solid #091a2e; border-radius:10px; padding:10px 13px; flex-shrink:0; }
-//         .card.fill { flex:1; min-height:0; display:flex; flex-direction:column; }
-//         .clabel {
-//           font-family:'Syne'; font-weight:700; font-size:9px;
-//           color:#112240; letter-spacing:2px; text-transform:uppercase;
-//           margin-bottom:7px; flex-shrink:0;
-//         }
-//         .olist { flex:1; min-height:0; display:flex; flex-direction:column; }
-//         .orow  {
-//           flex:1; min-height:0; display:flex; align-items:center;
-//           justify-content:space-between; padding:0 10px;
-//           border-radius:6px; background:#020c18;
-//           border:1px solid #091a2e; margin-bottom:4px;
-//           transition:border-color 0.2s;
-//         }
-//         .orow:last-child { margin-bottom:0; }
-//         .orow:hover { border-color:#122540; }
-
-//         /* buttons */
-//         .btn-insert {
-//           background:linear-gradient(135deg,${G},#00c49a);
-//           color:#000; border:none; border-radius:8px; padding:9px 20px;
-//           font-family:'Syne'; font-size:12px; font-weight:800; cursor:pointer;
-//           box-shadow:0 0 16px ${G}28; transition:all 0.18s;
-//           white-space:nowrap; flex-shrink:0; letter-spacing:0.3px;
-//         }
-//         .btn-insert:hover { transform:translateY(-1px); box-shadow:0 0 26px ${G}50; }
-
-//         .btn-act {
-//           flex:1; border:none; border-radius:7px;
-//           padding:8px 6px; font-family:'Syne'; font-size:11px;
-//           font-weight:700; cursor:pointer; transition:all 0.18s; letter-spacing:0.2px;
-//         }
-//         .btn-act:disabled { opacity:0.22; cursor:not-allowed; }
-//         .btn-act:hover:not(:disabled) { transform:translateY(-1px); }
-//         .b-srch  { background:${B}14; color:${B};        border:1px solid ${B}28; }
-//         .b-del   { background:${R}14; color:${R};        border:1px solid ${R}28; }
-//         .b-seed  { background:${Y}14; color:${Y};        border:1px solid ${Y}28; }
-//         .b-clear { background:#64748b14; color:#64748b;  border:1px solid #64748b28; }
-//         .b-srch:hover:not(:disabled)  { background:${B}22; }
-//         .b-del:hover:not(:disabled)   { background:${R}22; }
-//         .b-seed:hover:not(:disabled)  { background:${Y}22; }
-//         .b-clear:hover:not(:disabled) { background:#64748b22; }
-
-//         .btn-trav {
-//           flex:1; border:none; border-radius:7px;
-//           padding:7px 4px; font-family:'Syne'; font-size:10px;
-//           font-weight:700; cursor:pointer; transition:all 0.18s;
-//           background:#020c18; border:1px solid #091a2e; color:#112240;
-//         }
-//         .btn-trav:disabled { opacity:0.2; cursor:not-allowed; }
-//         .btn-trav:hover:not(:disabled) { transform:translateY(-1px); }
-
-//         .bst-inp {
-//           flex:1; background:#020c18; border:1px solid #0e2240;
-//           border-radius:8px; padding:9px 13px; color:#e2e8f0;
-//           font-family:'JetBrains Mono'; font-size:13px;
-//           outline:none; min-width:0;
-//           transition:border-color 0.2s, box-shadow 0.2s;
-//         }
-//         .bst-inp:focus { border-color:${G}55; box-shadow:0 0 0 3px ${G}12; }
-//         .bst-inp::placeholder { color:#112240; }
-
-//         /* hide number input arrows */
-//         .bst-inp::-webkit-inner-spin-button,
-//         .bst-inp::-webkit-outer-spin-button { -webkit-appearance:none; }
-//         .bst-inp[type=number] { -moz-appearance:textfield; }
-//       `}</style>
-
-//       <div className="shell">
-
-//         {/* ════ LEFT — Tree canvas ════ */}
-//         <div className="col col-l">
-
-//           {/* header */}
-//           <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px', flexShrink:0 }}>
-//             <h1 style={{ fontFamily:'Syne', fontWeight:800, fontSize:'1.6rem', color:'#e2e8f0', letterSpacing:'-0.5px', lineHeight:1, margin:0 }}>
-//               BST
-//             </h1>
-//             <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:G, background:`${G}14`, border:`1px solid ${G}28`, borderRadius:'4px', padding:'2px 8px', letterSpacing:'0.5px' }}>
-//               Binary Search Tree
-//             </span>
-//             <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:'#112240', marginLeft:'auto' }}>
-//               {nodeCount > 0 ? `${nodeCount} node${nodeCount > 1 ? 's' : ''}  ·  h = ${nodeHeight}` : 'empty'}
-//             </span>
-//           </div>
-
-//           {/* canvas */}
-//           <div className="canvas" ref={wrapRef}>
-
-//             {/* empty state */}
-//             {!root && (
-//               <div style={{ position:'absolute', inset:0, zIndex:2, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'10px', pointerEvents:'none' }}>
-//                 <svg width="36" height="36" viewBox="0 0 36 36">
-//                   <circle cx="18" cy="18" r="17" fill="none" stroke="#091a2e" strokeWidth="1" strokeDasharray="4 3"/>
-//                   <text x="18" y="22" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="14" fill="#091a2e">∅</text>
-//                 </svg>
-//                 <p style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:'#091a2e', letterSpacing:'1px' }}>
-//                   insert a number to begin
-//                 </p>
-//               </div>
-//             )}
-
-//             <svg
-//               width={svgW} height={svgH}
-//               style={{ position:'absolute', inset:0, zIndex:3, overflow:'visible' }}
-//             >
-//               <defs>
-//                 <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-//                   <feGaussianBlur in="SourceGraphic" stdDeviation="3.5" result="blur"/>
-//                   <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-//                 </filter>
-//                 <filter id="glow2" x="-80%" y="-80%" width="260%" height="260%">
-//                   <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur"/>
-//                   <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-//                 </filter>
-//               </defs>
-
-//               {/* ── dim edges ── */}
-//               {edges.map(e => (
-//                 <motion.line
-//                   key={e.key}
-//                   x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-//                   stroke="#0d2035" strokeWidth={1.5} strokeLinecap="round"
-//                   initial={{ opacity:0, pathLength:0 }}
-//                   animate={{ opacity:1, pathLength:1 }}
-//                   transition={{ duration:0.35, ease:'easeOut' }}
-//                 />
-//               ))}
-
-//               {/* ── glowing edges when both endpoint nodes are highlighted ── */}
-//               {edges.map(e => {
-//                 const nA = nodes.find(n => Math.round(n.x) === Math.round(e.x1) && Math.round(n.y) === Math.round(e.y1))
-//                 const nB = nodes.find(n => Math.round(n.x) === Math.round(e.x2) && Math.round(n.y) === Math.round(e.y2))
-//                 const lit = nA && nB && hl.has(nA.val) && hl.has(nB.val)
-//                 if (!lit) return null
-//                 return (
-//                   <motion.line
-//                     key={`hl-${e.key}`}
-//                     x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-//                     stroke={hlCol} strokeWidth={2} strokeLinecap="round"
-//                     filter="url(#glow)" opacity={0.7}
-//                     initial={{ opacity:0 }} animate={{ opacity:0.7 }}
-//                     transition={{ duration:0.2 }}
-//                   />
-//                 )
-//               })}
-
-//               {/* ── nodes ── */}
-//               <AnimatePresence>
-//                 {nodes.map(node => {
-//                   const isHl  = hl.has(node.val)
-//                   const col   = isHl ? hlCol : '#0d2035'
-//                   const tCol  = isHl ? hlCol : '#1a3a5c'
-//                   const bgCol = isHl ? `${hlCol}16` : '#040d1a'
-
-//                   return (
-//                     <motion.g
-//                       key={node.val}
-//                       initial={{ scale:0, opacity:0 }}
-//                       animate={{ scale:1, opacity:1 }}
-//                       exit={{ scale:0, opacity:0, transition:{ duration:0.2 } }}
-//                       transition={{ type:'spring', stiffness:420, damping:22 }}
-//                       // SVG transform-origin fix — use cx/cy directly
-//                       style={{ transformOrigin: `${node.x}px ${node.y}px` }}
-//                     >
-//                       {/* pulse ring on highlight */}
-//                       {isHl && (
-//                         <motion.circle
-//                           cx={node.x} cy={node.y}
-//                           fill="none" stroke={hlCol} strokeWidth={1}
-//                           filter="url(#glow2)"
-//                           initial={{ r: node.r + 2, opacity: 0.7 }}
-//                           animate={{ r: node.r + 14, opacity: 0 }}
-//                           transition={{ duration: 0.9, repeat: Infinity, ease:'easeOut' }}
-//                         />
-//                       )}
-
-//                       {/* node fill */}
-//                       <circle
-//                         cx={node.x} cy={node.y} r={node.r}
-//                         fill={bgCol}
-//                         stroke={col} strokeWidth={isHl ? 1.5 : 1}
-//                         filter={isHl ? 'url(#glow)' : undefined}
-//                       />
-
-//                       {/* value text */}
-//                       <text
-//                         x={node.x} y={node.y}
-//                         textAnchor="middle" dominantBaseline="central"
-//                         fontFamily="JetBrains Mono" fontWeight="700"
-//                         fontSize={Math.abs(node.val) >= 100 ? 9 : Math.abs(node.val) >= 10 ? 11 : 13}
-//                         fill={tCol}
-//                         style={{ userSelect:'none', pointerEvents:'none' }}
-//                       >
-//                         {node.val}
-//                       </text>
-//                     </motion.g>
-//                   )
-//                 })}
-//               </AnimatePresence>
-//             </svg>
-//           </div>
-
-//           {/* traversal sequence strip */}
-//           <AnimatePresence>
-//             {travSeq.length > 0 && (
-//               <motion.div
-//                 initial={{ opacity:0, y:5 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:5 }}
-//                 transition={{ duration:0.2 }}
-//                 style={{ flexShrink:0, marginTop:'7px', background:'#020c18', border:'1px solid #091a2e', borderRadius:'8px', padding:'7px 12px', display:'flex', alignItems:'center', gap:'5px', flexWrap:'wrap', minHeight:'34px' }}
-//               >
-//                 <span style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color:'#112240', letterSpacing:'1.5px', marginRight:'4px', flexShrink:0 }}>SEQ</span>
-//                 {travSeq.map((v, i) => {
-//                   const active = travActive.has(v)
-//                   return (
-//                     <motion.span key={`${v}-${i}`}
-//                       initial={{ opacity:0, scale:0.7 }}
-//                       animate={{ opacity:1, scale:1 }}
-//                       transition={{ delay: i * 0.37, type:'spring', stiffness:400, damping:20 }}
-//                       style={{
-//                         fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'11px',
-//                         color:      active ? travCol : '#1a3a5c',
-//                         background: active ? `${travCol}18` : 'transparent',
-//                         border:     `1px solid ${active ? `${travCol}40` : '#091a2e'}`,
-//                         borderRadius:'4px', padding:'2px 7px',
-//                         transition: 'all 0.25s',
-//                       }}
-//                     >{v}</motion.span>
-//                   )
-//                 })}
-//               </motion.div>
-//             )}
-//           </AnimatePresence>
-
-//           {/* message bar */}
-//           <div style={{ height:'28px', marginTop:'6px', marginBottom:'6px', flexShrink:0 }}>
-//             <AnimatePresence mode="wait">
-//               {msg && (
-//                 <motion.div key={msg.text}
-//                   initial={{ opacity:0, y:3 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-3 }}
-//                   transition={{ duration:0.15 }}
-//                   style={{ background:'#020c18', border:`1px solid ${msgStyle[msg.type].b}`, borderRadius:'7px', padding:'5px 13px', fontFamily:'JetBrains Mono', fontSize:'11px', color:msgStyle[msg.type].c, height:'100%', display:'flex', alignItems:'center' }}
-//                 >
-//                   {msg.text}
-//                 </motion.div>
-//               )}
-//             </AnimatePresence>
-//           </div>
-
-//           {/* input + insert */}
-//           <div style={{ display:'flex', gap:'7px', marginBottom:'7px', flexShrink:0 }}>
-//             <input
-//               className="bst-inp" type="number" value={input}
-//               onChange={e => setInput(e.target.value)}
-//               onKeyDown={e => { if (e.key === 'Enter') handleInsert() }}
-//               placeholder="enter number…"
-//             />
-//             <button className="btn-insert" onClick={handleInsert}>Insert</button>
-//           </div>
-
-//           {/* action buttons */}
-//           <div style={{ display:'flex', gap:'7px', marginBottom:'7px', flexShrink:0 }}>
-//             <button className="btn-act b-srch"  onClick={handleSearch} disabled={!root}>Search</button>
-//             <button className="btn-act b-del"   onClick={handleDelete} disabled={!root}>Delete</button>
-//             <button className="btn-act b-seed"  onClick={handleSeed}                  >Sample</button>
-//             <button className="btn-act b-clear" onClick={handleClear}  disabled={!root}>Clear</button>
-//           </div>
-
-//           {/* traversal buttons */}
-//           <div style={{ display:'flex', gap:'7px', flexShrink:0 }}>
-//             {[
-//               { label:'Inorder',   fn: handleInorder,   col: G },
-//               { label:'Preorder',  fn: handlePreorder,  col: B },
-//               { label:'Postorder', fn: handlePostorder, col: Y },
-//             ].map(({ label, fn, col }) => (
-//               <button key={label} className="btn-trav" onClick={fn} disabled={!root}
-//                 style={root ? { color:col, borderColor:`${col}30`, background:`${col}0e` } : {}}>
-//                 {label}
-//               </button>
-//             ))}
-//           </div>
-//         </div>
-
-//         {/* ════ RIGHT — Info panel ════ */}
-//         <div className="col col-r">
-
-//           <div style={{ marginBottom:'10px', flexShrink:0 }}>
-//             <h2 style={{ fontFamily:'Syne', fontWeight:800, fontSize:'1.6rem', color:'#e2e8f0', letterSpacing:'-0.5px', lineHeight:1, margin:0 }}>
-//               Info
-//             </h2>
-//             <p style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:'#112240', marginTop:'4px' }}>
-//               left &lt; root &lt; right  ·  O(log n) average
-//             </p>
-//           </div>
-
-//           <div className="panel">
-
-//             {/* BST rule */}
-//             <div className="card">
-//               <p className="clabel">BST Rule</p>
-//               <div style={{ display:'flex', gap:'6px' }}>
-//                 {[
-//                   { lbl:'Left subtree',  val:'< root', col: B },
-//                   { lbl:'Root',          val:'pivot',  col: G },
-//                   { lbl:'Right subtree', val:'> root', col: Y },
-//                 ].map(({ lbl, val, col }) => (
-//                   <div key={lbl} style={{ flex:1, background:'#020c18', border:'1px solid #091a2e', borderRadius:'7px', padding:'8px 6px', textAlign:'center' }}>
-//                     <p style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color:'#112240', marginBottom:'3px', letterSpacing:'0.5px' }}>{lbl}</p>
-//                     <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'13px', color:col }}>{val}</p>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-
-//             {/* complexity */}
-//             <div className="card">
-//               <p className="clabel">Complexity</p>
-//               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'5px' }}>
-//                 {[
-//                   { lbl:'Search (avg)',  val:'O(log n)', col: G },
-//                   { lbl:'Search (worst)',val:'O(n)',     col: R },
-//                   { lbl:'Insert (avg)',  val:'O(log n)', col: B },
-//                   { lbl:'Space',         val:'O(n)',     col: Y },
-//                 ].map(({ lbl, val, col }) => (
-//                   <div key={lbl} style={{ background:'#020c18', border:'1px solid #091a2e', borderRadius:'6px', padding:'7px 9px' }}>
-//                     <p style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color:'#112240', marginBottom:'2px' }}>{lbl}</p>
-//                     <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'13px', color:col }}>{val}</p>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-
-//             {/* traversals */}
-//             <div className="card">
-//               <p className="clabel">Traversals</p>
-//               <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
-//                 {[
-//                   { name:'Inorder',   pattern:'L → Root → R', note:'sorted output',      col: G },
-//                   { name:'Preorder',  pattern:'Root → L → R', note:'copy / serialize',   col: B },
-//                   { name:'Postorder', pattern:'L → R → Root', note:'delete / evaluate',  col: Y },
-//                 ].map(({ name, pattern, note, col }) => (
-//                   <div key={name} style={{ background:'#020c18', border:'1px solid #091a2e', borderRadius:'7px', padding:'8px 10px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-//                     <div>
-//                       <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'11px', color:col, margin:0 }}>{name}</p>
-//                       <p style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#112240', marginTop:'2px' }}>{pattern}</p>
-//                     </div>
-//                     <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#112240', textAlign:'right' }}>{note}</span>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-
-//             {/* operations — fills rest */}
-//             <div className="card fill">
-//               <p className="clabel">Operations</p>
-//               <div className="olist">
-//                 {[
-//                   { op:'insert(x)',   desc:'Add, preserve BST order',      col: G },
-//                   { op:'delete(x)',   desc:'Remove, restructure tree',      col: R },
-//                   { op:'search(x)',   desc:'Go left/right until found',     col: B },
-//                   { op:'inorder()',   desc:'Produces sorted sequence',      col: G },
-//                   { op:'height()',    desc:'Depth of deepest leaf',         col: Y },
-//                 ].map(({ op, desc, col }) => (
-//                   <div key={op} className="orow">
-//                     <div>
-//                       <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'11px', color:col, margin:0 }}>{op}</p>
-//                       <p style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:'#112240', marginTop:'1px' }}>{desc}</p>
-//                     </div>
-//                     <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:G, background:`${G}10`, border:`1px solid ${G}22`, borderRadius:'4px', padding:'2px 6px', flexShrink:0 }}>
-//                       O(log n)
-//                     </span>
-//                   </div>
-//                 ))}
-//               </div>
-//             </div>
-
-//           </div>
-//         </div>
-
-//       </div>
-//     </>
-//   )
-// }
-'use client'
-/* eslint-disable react-hooks/refs */
-import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import Navbar from '@/comps/navbar'
-
-// ─── BST pure-data (plain objects, no class — avoids structuredClone issues) ──
-
-function mkNode(val) { return { val, left: null, right: null } }
-
-function insert(node, val) {
-  if (!node) return mkNode(val)
-  if (val < node.val) return { ...node, left:  insert(node.left,  val) }
-  if (val > node.val) return { ...node, right: insert(node.right, val) }
-  return node   // duplicate — ignore
-}
-
-function minNode(node) { return node.left ? minNode(node.left) : node }
-
-function remove(node, val) {
-  if (!node) return null
-  if (val < node.val) return { ...node, left:  remove(node.left,  val) }
-  if (val > node.val) return { ...node, right: remove(node.right, val) }
-  if (!node.left)  return node.right
-  if (!node.right) return node.left
-  const m = minNode(node.right)
-  return { ...node, val: m.val, right: remove(node.right, m.val) }
-}
-
-function searchPath(node, val, path = []) {
-  if (!node) return { path, found: false }
-  path.push(node.val)
-  if (val === node.val) return { path, found: true }
-  return val < node.val
-    ? searchPath(node.left,  val, path)
-    : searchPath(node.right, val, path)
-}
-
-function inorder(node, out = [])   { if (!node) return out; inorder(node.left, out); out.push(node.val); inorder(node.right, out); return out }
-function preorder(node, out = [])  { if (!node) return out; out.push(node.val); preorder(node.left, out); preorder(node.right, out); return out }
-function postorder(node, out = []) { if (!node) return out; postorder(node.left, out); postorder(node.right, out); out.push(node.val); return out }
-function treeSize(node)            { return node ? 1 + treeSize(node.left) + treeSize(node.right) : 0 }
-function treeHeight(node)          { return node ? 1 + Math.max(treeHeight(node.left), treeHeight(node.right)) : 0 }
-function isBalanced(node) {
-  if (!node) return true
-  const lh = treeHeight(node.left)
-  const rh = treeHeight(node.right)
-  return Math.abs(lh - rh) <= 1 && isBalanced(node.left) && isBalanced(node.right)
-}
-
-// ─── Layout: assign pixel coords to every node ───────────────────────────────
-// Returns { nodes: [{val,x,y,id}], edges: [{x1,y1,x2,y2,key}] }
-function layout(root, W, H) {
-  const nodes = [], edges = []
-  if (!root) return { nodes, edges }
-
-  const LEVEL_H = 70
-  const R       = 20
-  const PAD     = R + 8
-
-  function subtreeSize(n) { return n ? 1 + subtreeSize(n.left) + subtreeSize(n.right) : 0 }
-
-  let nodeId = 0
-  function place(node, xMin, xMax, depth) {
-    if (!node) return null
-    const ls   = subtreeSize(node.left)
-    const tot  = subtreeSize(node)
-    const x    = xMin + (ls + 0.5) * (xMax - xMin) / tot
-    const y    = PAD + depth * LEVEL_H
-    const id   = nodeId++
-    node._x = x; node._y = y; node._id = id
-    const entry = { val: node.val, x, y, r: R, id }
-    nodes.push(entry)
-
-    const lChild = place(node.left,  xMin, x,    depth + 1)
-    const rChild = place(node.right, x,    xMax, depth + 1)
-
-    if (lChild) edges.push({ x1: x, y1: y, x2: lChild.x,  y2: lChild.y,  key: `${id}-l` })
-    if (rChild) edges.push({ x1: x, y1: y, x2: rChild.x,  y2: rChild.y,  key: `${id}-r` })
-
-    return entry
+"use client";
+
+import { useState, useRef, useEffect, useCallback } from "react";
+
+// ─── Tree Node ───────────────────────────────────────────────────────────────
+class TreeNode {
+  constructor(val) {
+    this.val = val;
+    this.left = null;
+    this.right = null;
+    this.id = Math.random().toString(36).slice(2);
   }
-  place(root, PAD, W - PAD, 0)
-  return { nodes, edges }
 }
 
-// ─── Premium color palette ────────────────────────────────────────────────────
-const palette = {
-  emerald: '#10b981',
-  teal:    '#14b8a6',
-  sky:     '#38bdf8',
-  violet:  '#8b5cf6',
-  amber:   '#f59e0b',
-  rose:    '#f43f5e',
-  slate:   '#1e293b',
-  zinc:    '#181e2c',
-  border:  '#1f2a3f',
-  textDim: '#5f7a9a',
-  glow:    'rgba(20, 184, 166, 0.4)',
+// ─── Parse & Execute user code to extract tree steps ─────────────────────────
+function parseAndRunCode(code, lang) {
+  const steps = [];
+  const errors = [];
+
+  try {
+    // We support JS/Python/Java/C++ as display options
+    // We actually execute only JS (safely sandboxed via Function)
+    // For other langs we parse insert/search patterns via regex heuristics
+
+    if (lang === "javascript" || lang === "typescript") {
+      // intercept BST operations
+      const insertCalls = [];
+      const searchCalls = [];
+      const deleteCalls = [];
+
+      // Match: insert(val), tree.insert(val), bst.insert(val)
+      const insertRe = /(?:insert|add|push)\s*\(\s*(\d+)\s*\)/g;
+      const searchRe = /(?:search|find|contains|has)\s*\(\s*(\d+)\s*\)/g;
+      const deleteRe = /(?:delete|remove)\s*\(\s*(\d+)\s*\)/g;
+
+      let m;
+      while ((m = insertRe.exec(code)) !== null) insertCalls.push(+m[1]);
+      while ((m = searchRe.exec(code)) !== null) searchCalls.push(+m[1]);
+      while ((m = deleteRe.exec(code)) !== null) deleteCalls.push(+m[1]);
+
+      if (insertCalls.length === 0 && searchCalls.length === 0 && deleteCalls.length === 0) {
+        errors.push("No recognizable BST operations found (insert/search/delete).");
+        return { steps, errors };
+      }
+
+      // Build tree step by step
+      let root = null;
+
+      const bstInsert = (node, val) => {
+        if (!node) return new TreeNode(val);
+        if (val < node.val) node.left = bstInsert(node.left, val);
+        else if (val > node.val) node.right = bstInsert(node.right, val);
+        return node;
+      };
+
+      const cloneTree = (node) => {
+        if (!node) return null;
+        const n = new TreeNode(node.val);
+        n.id = node.id;
+        n.left = cloneTree(node.left);
+        n.right = cloneTree(node.right);
+        return n;
+      };
+
+      const pathToNode = (node, val, path = []) => {
+        if (!node) return null;
+        path.push(node.val);
+        if (val === node.val) return path;
+        if (val < node.val) return pathToNode(node.left, val, path);
+        return pathToNode(node.right, val, path);
+      };
+
+      for (const val of insertCalls) {
+        root = bstInsert(root, val);
+        steps.push({
+          type: "insert",
+          value: val,
+          tree: cloneTree(root),
+          highlight: [val],
+          path: pathToNode(cloneTree(root), val),
+          message: `Inserting ${val} into the BST`,
+        });
+      }
+
+      for (const val of searchCalls) {
+        const path = pathToNode(cloneTree(root), val);
+        steps.push({
+          type: "search",
+          value: val,
+          tree: cloneTree(root),
+          highlight: path || [],
+          path: path,
+          found: !!path,
+          message: path
+            ? `Searching for ${val} → Found! Path: ${path.join(" → ")}`
+            : `Searching for ${val} → Not found`,
+        });
+      }
+
+      for (const val of deleteCalls) {
+        const bstDelete = (node, v) => {
+          if (!node) return null;
+          if (v < node.val) { node.left = bstDelete(node.left, v); return node; }
+          if (v > node.val) { node.right = bstDelete(node.right, v); return node; }
+          if (!node.left) return node.right;
+          if (!node.right) return node.left;
+          let succ = node.right;
+          while (succ.left) succ = succ.left;
+          node.val = succ.val;
+          node.right = bstDelete(node.right, succ.val);
+          return node;
+        };
+        root = bstDelete(root, val);
+        steps.push({
+          type: "delete",
+          value: val,
+          tree: cloneTree(root),
+          highlight: [],
+          message: `Deleted ${val} from the BST`,
+        });
+      }
+    } else {
+      // For Python / Java / C++ — same regex heuristic
+      const insertRe = /(?:insert|add|push)\s*\(\s*(\d+)\s*\)/g;
+      const searchRe = /(?:search|find|contains)\s*\(\s*(\d+)\s*\)/g;
+      let m;
+      const insertCalls = [];
+      const searchCalls = [];
+      while ((m = insertRe.exec(code)) !== null) insertCalls.push(+m[1]);
+      while ((m = searchRe.exec(code)) !== null) searchCalls.push(+m[1]);
+
+      if (insertCalls.length === 0) {
+        errors.push("No recognizable insert(val) calls found.");
+        return { steps, errors };
+      }
+
+      let root = null;
+      const bstInsert = (node, val) => {
+        if (!node) return new TreeNode(val);
+        if (val < node.val) node.left = bstInsert(node.left, val);
+        else if (val > node.val) node.right = bstInsert(node.right, val);
+        return node;
+      };
+      const cloneTree = (node) => {
+        if (!node) return null;
+        const n = new TreeNode(node.val);
+        n.id = node.id;
+        n.left = cloneTree(node.left);
+        n.right = cloneTree(node.right);
+        return n;
+      };
+      const pathToNode = (node, val, path = []) => {
+        if (!node) return null;
+        path.push(node.val);
+        if (val === node.val) return path;
+        if (val < node.val) return pathToNode(node.left, val, path);
+        return pathToNode(node.right, val, path);
+      };
+
+      for (const val of insertCalls) {
+        root = bstInsert(root, val);
+        steps.push({
+          type: "insert",
+          value: val,
+          tree: cloneTree(root),
+          highlight: [val],
+          path: pathToNode(cloneTree(root), val),
+          message: `Inserting ${val}`,
+        });
+      }
+      for (const val of searchCalls) {
+        const path = pathToNode(cloneTree(root), val);
+        steps.push({
+          type: "search",
+          value: val,
+          tree: cloneTree(root),
+          highlight: path || [],
+          path,
+          found: !!path,
+          message: path ? `Found ${val}! Path: ${path.join(" → ")}` : `${val} not found`,
+        });
+      }
+    }
+  } catch (e) {
+    errors.push(e.message);
+  }
+
+  return { steps, errors };
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
-export default function BSTPage() {
-  const [root,          setRoot]          = useState(null)
-  const [input,         setInput]         = useState('')
-  const [msg,           setMsg]           = useState(null)
-  const [hl,            setHl]            = useState(new Set())   // highlighted node vals
-  const [hlCol,         setHlCol]         = useState(palette.emerald)
-  const [travSeq,       setTravSeq]       = useState([])
-  const [travActive,    setTravActive]    = useState(new Set())
-  const [travCol,       setTravCol]       = useState(palette.emerald)
-  const [svgW,          setSvgW]          = useState(600)
-  const [svgH,          setSvgH]          = useState(400)
-  const wrapRef  = useRef(null)
-  const timers   = useRef({ msg: null, hl: [] })
+// ─── Layout: assign x/y to each node ─────────────────────────────────────────
+function layoutTree(root) {
+  const positions = {};
+  let counter = 0;
+  const inorder = (node) => {
+    if (!node) return;
+    inorder(node.left);
+    positions[node.id] = { x: counter++, y: 0 };
+    inorder(node.right);
+  };
+  const setDepth = (node, depth) => {
+    if (!node) return;
+    positions[node.id].y = depth;
+    setDepth(node.left, depth + 1);
+    setDepth(node.right, depth + 1);
+  };
+  inorder(root);
+  setDepth(root, 0);
+  return positions;
+}
 
-  // measure SVG wrapper
+// ─── SVG Tree Renderer ────────────────────────────────────────────────────────
+function TreeViz({ tree, highlight = [], animKey }) {
+  const W = 700, H = 380;
+  const NODE_R = 26;
+
+  if (!tree) {
+    return (
+      <div className="tree-empty">
+        <span>Tree will appear here</span>
+      </div>
+    );
+  }
+
+  const positions = layoutTree(tree);
+  const nodes = [];
+  const edges = [];
+
+  const maxX = Math.max(...Object.values(positions).map((p) => p.x));
+  const maxY = Math.max(...Object.values(positions).map((p) => p.y));
+
+  const px = (x) => ((x / (maxX || 1)) * (W - 120)) + 60;
+  const py = (y) => y * 72 + 48;
+
+  const collectNodes = (node) => {
+    if (!node) return;
+    nodes.push(node);
+    if (node.left) {
+      edges.push({ from: node.id, to: node.left.id });
+      collectNodes(node.left);
+    }
+    if (node.right) {
+      edges.push({ from: node.id, to: node.right.id });
+      collectNodes(node.right);
+    }
+  };
+  collectNodes(tree);
+
+  const svgH = (maxY + 1) * 72 + 80;
+
+  return (
+    <svg
+      key={animKey}
+      viewBox={`0 0 ${W} ${svgH}`}
+      width="100%"
+      style={{ maxHeight: 420, overflow: "visible" }}
+    >
+      <defs>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+          <feMerge>
+            <feMergeNode in="coloredBlur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+        <radialGradient id="nodeGrad" cx="35%" cy="30%">
+          <stop offset="0%" stopColor="#7ee8fa" />
+          <stop offset="100%" stopColor="#1a6cf7" />
+        </radialGradient>
+        <radialGradient id="hlGrad" cx="35%" cy="30%">
+          <stop offset="0%" stopColor="#ffd98a" />
+          <stop offset="100%" stopColor="#ff6b35" />
+        </radialGradient>
+      </defs>
+
+      {/* Edges */}
+      {edges.map((e) => {
+        const fp = positions[e.from];
+        const tp = positions[e.to];
+        const isHighlighted =
+          highlight.includes(nodes.find((n) => n.id === e.from)?.val) &&
+          highlight.includes(nodes.find((n) => n.id === e.to)?.val);
+        return (
+          <line
+            key={`${e.from}-${e.to}`}
+            x1={px(fp.x)} y1={py(fp.y)}
+            x2={px(tp.x)} y2={py(tp.y)}
+            stroke={isHighlighted ? "#ff6b35" : "#334155"}
+            strokeWidth={isHighlighted ? 3 : 1.5}
+            strokeOpacity={isHighlighted ? 1 : 0.5}
+            filter={isHighlighted ? "url(#glow)" : undefined}
+            className="tree-edge"
+          />
+        );
+      })}
+
+      {/* Nodes */}
+      {nodes.map((node) => {
+        const pos = positions[node.id];
+        const isHL = highlight.includes(node.val);
+        return (
+          <g key={node.id} className="tree-node-group">
+            <circle
+              cx={px(pos.x)} cy={py(pos.y)}
+              r={NODE_R}
+              fill={isHL ? "url(#hlGrad)" : "url(#nodeGrad)"}
+              stroke={isHL ? "#ffd98a" : "#4aaeff"}
+              strokeWidth={isHL ? 2.5 : 1.5}
+              filter={isHL ? "url(#glow)" : undefined}
+              className={isHL ? "node-highlight" : "node-normal"}
+            />
+            <text
+              x={px(pos.x)} y={py(pos.y)}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="white"
+              fontSize="14"
+              fontWeight="700"
+              fontFamily="'JetBrains Mono', monospace"
+            >
+              {node.val}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── Code templates ───────────────────────────────────────────────────────────
+const TEMPLATES = {
+  javascript: `// Binary Search Tree - JavaScript
+class BST {
+  constructor() { this.root = null; }
+
+  insert(val) { /* ... */ }
+  search(val) { /* ... */ }
+}
+
+const tree = new BST();
+tree.insert(50);
+tree.insert(30);
+tree.insert(70);
+tree.insert(20);
+tree.insert(40);
+tree.insert(60);
+tree.insert(80);
+tree.search(40);
+tree.search(99);
+`,
+  python: `# Binary Search Tree - Python
+class BST:
+    def insert(self, val): pass
+    def search(self, val): pass
+
+tree = BST()
+tree.insert(50)
+tree.insert(30)
+tree.insert(70)
+tree.insert(20)
+tree.insert(40)
+tree.search(40)
+tree.search(99)
+`,
+  java: `// Binary Search Tree - Java
+public class BST {
+    void insert(int val) {}
+    boolean search(int val) { return false; }
+
+    public static void main(String[] args) {
+        BST tree = new BST();
+        tree.insert(50);
+        tree.insert(30);
+        tree.insert(70);
+        tree.insert(20);
+        tree.search(30);
+    }
+}
+`,
+  cpp: `// Binary Search Tree - C++
+#include <iostream>
+using namespace std;
+
+struct BST {
+    void insert(int val) {}
+    bool search(int val) { return false; }
+};
+
+int main() {
+    BST tree;
+    tree.insert(50);
+    tree.insert(30);
+    tree.insert(70);
+    tree.insert(40);
+    tree.search(30);
+    return 0;
+}
+`,
+};
+
+const LANG_LABELS = {
+  javascript: "JavaScript",
+  typescript: "TypeScript",
+  python: "Python",
+  java: "Java",
+  cpp: "C++",
+};
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+export default function TreeDSPage() {
+  const [lang, setLang] = useState("javascript");
+  const [code, setCode] = useState(TEMPLATES["javascript"]);
+  const [steps, setSteps] = useState([]);
+  const [currentStep, setCurrentStep] = useState(-1);
+  const [error, setError] = useState("");
+  const [running, setRunning] = useState(false);
+  const [animKey, setAnimKey] = useState(0);
+  const [done, setDone] = useState(false);
+  const intervalRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  const handleLangChange = (l) => {
+    setLang(l);
+    setCode(TEMPLATES[l] || "");
+    reset();
+  };
+
+  const reset = () => {
+    clearInterval(intervalRef.current);
+    setSteps([]);
+    setCurrentStep(-1);
+    setError("");
+    setRunning(false);
+    setDone(false);
+  };
+
+  const handleRun = () => {
+    reset();
+    const { steps: s, errors } = parseAndRunCode(code, lang);
+    if (errors.length > 0) {
+      setError(errors.join("\n"));
+      return;
+    }
+    if (s.length === 0) {
+      setError("No BST operations detected. Use insert(val), search(val), or delete(val).");
+      return;
+    }
+    setSteps(s);
+    setRunning(true);
+    setCurrentStep(0);
+    setAnimKey((k) => k + 1);
+  };
+
   useEffect(() => {
-    if (!wrapRef.current) return
-    const ro = new ResizeObserver(([e]) => {
-      setSvgW(Math.max(e.contentRect.width,  200))
-      setSvgH(Math.max(e.contentRect.height, 200))
-    })
-    ro.observe(wrapRef.current)
-    return () => ro.disconnect()
-  }, [])
-
-  // ── helpers ──────────────────────────────────────────────
-  const showMsg = (text, type = 'info') => {
-    clearTimeout(timers.current.msg)
-    setMsg({ text, type })
-    timers.current.msg = setTimeout(() => setMsg(null), 2600)
-  }
-
-  const clearHlTimers = () => {
-    timers.current.hl.forEach(clearTimeout)
-    timers.current.hl = []
-  }
-
-  const flashNodes = (vals, col, ms = 1800) => {
-    clearHlTimers()
-    setHl(new Set(vals))
-    setHlCol(col)
-    timers.current.hl.push(setTimeout(() => setHl(new Set()), ms))
-  }
-
-  const stepNodes = (seq, col, stepMs = 370) => {
-    clearHlTimers()
-    setHl(new Set())
-    setTravSeq(seq)
-    setTravActive(new Set())
-    setTravCol(col)
-    const seen = new Set()
-    seq.forEach((v, i) => {
-      timers.current.hl.push(setTimeout(() => {
-        seen.add(v)
-        setHl(new Set(seen))
-        setHlCol(col)
-        setTravActive(new Set(seen))
-        if (i === seq.length - 1) {
-          timers.current.hl.push(setTimeout(() => {
-            setHl(new Set())
-            setTravActive(new Set())
-          }, 1400))
+    if (!running || steps.length === 0) return;
+    intervalRef.current = setInterval(() => {
+      setCurrentStep((prev) => {
+        const next = prev + 1;
+        setAnimKey((k) => k + 1);
+        if (next >= steps.length) {
+          clearInterval(intervalRef.current);
+          setRunning(false);
+          setDone(true);
+          return prev;
         }
-      }, i * stepMs))
-    })
-  }
+        return next;
+      });
+    }, 1400);
+    return () => clearInterval(intervalRef.current);
+  }, [running, steps]);
 
-  // ── actions ──────────────────────────────────────────────
-  const handleInsert = () => {
-    const n = Number(input)
-    if (!input.trim() || isNaN(n)) { showMsg('Enter a valid number', 'error'); return }
-    if (n < -999 || n > 999)       { showMsg('Use -999 to 999', 'error'); return }
-    setRoot(prev => insert(prev, n))
-    setInput('')
-    setTimeout(() => flashNodes([n], palette.emerald), 40)
-    showMsg(`Inserted  ${n}`, 'success')
-  }
+  const step = steps[currentStep] || null;
 
-  const handleDelete = () => {
-    const n = Number(input)
-    if (!input.trim() || isNaN(n)) { showMsg('Enter a number to delete', 'error'); return }
-    if (!root)                     { showMsg('Tree is empty', 'error'); return }
-    const { found } = searchPath(root, n)
-    if (!found)                    { showMsg(`${n} not found`, 'error'); return }
-    flashNodes([n], palette.rose, 500)
-    setTimeout(() => setRoot(prev => remove(prev, n)), 520)
-    setInput('')
-    showMsg(`Deleted  ${n}`, 'delete')
-  }
-
-  const handleSearch = () => {
-    const n = Number(input)
-    if (!input.trim() || isNaN(n)) { showMsg('Enter a number to search', 'error'); return }
-    if (!root)                     { showMsg('Tree is empty', 'error'); return }
-    const { path, found } = searchPath(root, n)
-    clearHlTimers()
-    setHl(new Set())
-    const seen = new Set()
-    path.forEach((v, i) => {
-      timers.current.hl.push(setTimeout(() => {
-        seen.add(v)
-        setHl(new Set(seen))
-        setHlCol(found && i === path.length - 1 ? palette.emerald : palette.amber)
-        if (i === path.length - 1) {
-          showMsg(found ? `Found  ${n}  —  ${path.length} step${path.length > 1 ? 's' : ''}` : `${n}  not found`, found ? 'success' : 'error')
-          timers.current.hl.push(setTimeout(() => setHl(new Set()), 1800))
+  // Tab key support in textarea
+  const handleKeyDown = (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      const s = e.target.selectionStart;
+      const end = e.target.selectionEnd;
+      const newVal = code.substring(0, s) + "  " + code.substring(end);
+      setCode(newVal);
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = s + 2;
+          textareaRef.current.selectionEnd = s + 2;
         }
-      }, i * 420))
-    })
-    setInput('')
-  }
+      });
+    }
+  };
 
-  const handleSeed = () => {
-    let r = null
-    ;[50, 30, 70, 20, 40, 60, 80, 10, 35, 55, 65].forEach(v => { r = insert(r, v) })
-    setRoot(r)
-    setHl(new Set()); setTravSeq([])
-    showMsg('Sample tree loaded', 'info')
-  }
-
-  const handleClear = () => {
-    clearHlTimers()
-    setRoot(null); setHl(new Set()); setTravSeq([]); setTravActive(new Set())
-    showMsg('Tree cleared', 'info')
-  }
-
-  const handleInorder   = () => { if (root) stepNodes(inorder(root),   palette.emerald) }
-  const handlePreorder  = () => { if (root) stepNodes(preorder(root),  palette.sky) }
-  const handlePostorder = () => { if (root) stepNodes(postorder(root), palette.amber) }
-
-  // ── layout ───────────────────────────────────────────────
-  const { nodes, edges } = layout(root, svgW, svgH)
-
-  // build a map for quick lookup: val → {x,y}
-  const nodeMap = {}
-  nodes.forEach(n => { nodeMap[n.val] = n })
-
-  const msgStyle = {
-    success: { c: palette.emerald, b: `${palette.emerald}28` },
-    error:   { c: palette.rose,    b: `${palette.rose}28` },
-    delete:  { c: palette.amber,   b: `${palette.amber}28` },
-    info:    { c: palette.textDim, b: `${palette.border}50` },
-  }
-
-  const nodeCount  = treeSize(root)
-  const nodeHeight = treeHeight(root)
-  const balanced   = root ? isBalanced(root) : true
+  const opColor = {
+    insert: "#4aaeff",
+    search: "#ffd98a",
+    delete: "#ff6b6b",
+  };
 
   return (
     <>
-      <Navbar />
-
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
-        html,body { margin:0; padding:0; overflow:hidden; height:100%; background: #03080f; }
-        *,*::before,*::after { box-sizing:border-box; }
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap');
 
-        .shell {
-          height: calc(100vh - 52px);
-          display: flex; overflow: hidden; position: relative;
-          background: radial-gradient(circle at 20% 30%, #0b1a2f, #02070f);
-        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-        /* premium noise overlay */
-        .shell::after {
-          content:''; position:absolute; inset:0; pointer-events:none;
-          background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.025'/%3E%3C/svg%3E");
+        body {
+          background: #050a14;
+          color: #e2e8f0;
+          font-family: 'Inter', sans-serif;
+          min-height: 100vh;
         }
 
-        .col {
-          position:relative; z-index:1;
-          width:50%; height:100%; overflow:hidden;
-          display:flex; flex-direction:column;
-        }
-        .col-l { padding:18px 14px 16px 22px; border-right:1px solid ${palette.border}; }
-        .col-r { padding:18px 22px 16px 14px; }
-
-        /* tree canvas */
-        .canvas {
-          flex:1; min-height:0;
-          border-radius:20px;
-          border:1px solid ${palette.border};
-          background: rgba(10, 20, 35, 0.6);
-          backdrop-filter: blur(2px);
-          box-shadow: 0 10px 30px -15px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.03);
-          position:relative; overflow:hidden;
-        }
-        .canvas::before {
-          content:''; position:absolute; inset:0; pointer-events:none;
-          background: 
-            linear-gradient(to right, ${palette.border}20 1px, transparent 1px),
-            linear-gradient(to bottom, ${palette.border}20 1px, transparent 1px);
-          background-size: 40px 40px;
+        .page {
+          min-height: 100vh;
+          background: radial-gradient(ellipse at 20% 10%, #0d1f3c 0%, #050a14 60%),
+                      radial-gradient(ellipse at 80% 80%, #0a1628 0%, transparent 60%);
+          padding: 0 0 60px;
         }
 
-        /* right panel */
-        .panel { flex:1; min-height:0; display:flex; flex-direction:column; gap:8px; }
-        .card  {
-          background: rgba(12, 22, 38, 0.8);
-          backdrop-filter: blur(4px);
-          border:1px solid ${palette.border};
-          border-radius:14px;
-          padding:12px 15px;
-          flex-shrink:0;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        .card.fill { flex:1; min-height:0; display:flex; flex-direction:column; }
-        .clabel {
-          font-family:'Syne'; font-weight:700; font-size:9px;
-          color: ${palette.textDim}; letter-spacing:2.5px; text-transform:uppercase;
-          margin-bottom:8px; flex-shrink:0;
-        }
-        .olist { flex:1; min-height:0; display:flex; flex-direction:column; }
-        .orow  {
-          flex:1; min-height:0; display:flex; align-items:center;
-          justify-content:space-between; padding:0 12px;
-          border-radius:10px; background: rgba(6, 15, 26, 0.8);
-          border:1px solid ${palette.border}; margin-bottom:5px;
-          transition: all 0.2s ease;
-        }
-        .orow:last-child { margin-bottom:0; }
-        .orow:hover {
-          border-color: ${palette.teal}60;
-          box-shadow: 0 0 0 1px ${palette.teal}20;
+        /* Header */
+        .header {
+          border-bottom: 1px solid #1a2744;
+          padding: 22px 48px;
+          display: flex;
+          align-items: center;
+          gap: 18px;
+          background: rgba(5,10,20,0.8);
+          backdrop-filter: blur(12px);
+          position: sticky;
+          top: 0;
+          z-index: 100;
         }
 
-        /* buttons */
-        .btn-insert {
-          background: linear-gradient(135deg, ${palette.emerald}, ${palette.teal});
-          color: #000; border:none; border-radius:12px; padding:9px 20px;
-          font-family:'Syne'; font-size:13px; font-weight:800; cursor:pointer;
-          box-shadow: 0 4px 14px ${palette.glow}, 0 1px 2px rgba(255,255,255,0.1);
-          transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-          white-space:nowrap; flex-shrink:0; letter-spacing:0.3px;
-        }
-        .btn-insert:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 20px ${palette.glow}, 0 2px 4px rgba(255,255,255,0.1);
-        }
-        .btn-insert:active { transform: translateY(0); }
-
-        .btn-act {
-          flex:1; border:none; border-radius:10px;
-          padding:8px 6px; font-family:'Syne'; font-size:11px;
-          font-weight:700; cursor:pointer; transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-          letter-spacing:0.2px; background: rgba(10, 20, 35, 0.8);
-          backdrop-filter: blur(2px); border:1px solid transparent;
-        }
-        .btn-act:disabled { opacity:0.22; cursor:not-allowed; }
-        .btn-act:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 14px rgba(0,0,0,0.4);
-        }
-        .btn-act:active:not(:disabled) { transform: translateY(0); }
-
-        .b-srch  { color: ${palette.sky};        border-color: ${palette.sky}30; }
-        .b-del   { color: ${palette.rose};       border-color: ${palette.rose}30; }
-        .b-seed  { color: ${palette.amber};      border-color: ${palette.amber}30; }
-        .b-clear { color: ${palette.textDim};    border-color: ${palette.border}; }
-        .b-srch:hover:not(:disabled)  { background: ${palette.sky}12; border-color: ${palette.sky}60; }
-        .b-del:hover:not(:disabled)   { background: ${palette.rose}12; border-color: ${palette.rose}60; }
-        .b-seed:hover:not(:disabled)  { background: ${palette.amber}12; border-color: ${palette.amber}60; }
-        .b-clear:hover:not(:disabled) { background: #ffffff08; border-color: ${palette.textDim}; }
-
-        .btn-trav {
-          flex:1; border:none; border-radius:10px;
-          padding:7px 4px; font-family:'Syne'; font-size:10px;
-          font-weight:700; cursor:pointer; transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-          background: rgba(10, 20, 35, 0.8); backdrop-filter: blur(2px);
-          border:1px solid ${palette.border}; color: ${palette.textDim};
-        }
-        .btn-trav:disabled { opacity:0.2; cursor:not-allowed; }
-        .btn-trav:hover:not(:disabled) {
-          transform: translateY(-2px);
-          border-color: currentColor;
-          box-shadow: 0 6px 14px rgba(0,0,0,0.3);
+        .header-icon {
+          width: 40px; height: 40px;
+          background: linear-gradient(135deg, #1a6cf7, #7ee8fa);
+          border-radius: 10px;
+          display: flex; align-items: center; justify-content: center;
+          font-size: 20px;
+          box-shadow: 0 0 20px rgba(26,108,247,0.4);
         }
 
-        .bst-inp {
-          flex:1; background: rgba(8, 16, 26, 0.8);
-          backdrop-filter: blur(4px);
-          border:1px solid ${palette.border};
-          border-radius:12px; padding:9px 15px; color: #e2e8f0;
-          font-family:'JetBrains Mono'; font-size:13px;
-          outline:none; min-width:0;
-          transition: border-color 0.2s, box-shadow 0.2s;
+        .header-title {
+          font-family: 'Syne', sans-serif;
+          font-size: 22px;
+          font-weight: 800;
+          letter-spacing: -0.5px;
+          background: linear-gradient(90deg, #7ee8fa, #4aaeff, #a78bfa);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
         }
-        .bst-inp:focus {
-          border-color: ${palette.teal}80;
-          box-shadow: 0 0 0 3px ${palette.teal}20;
-        }
-        .bst-inp::placeholder { color: ${palette.textDim}; }
 
-        /* hide number input arrows */
-        .bst-inp::-webkit-inner-spin-button,
-        .bst-inp::-webkit-outer-spin-button { -webkit-appearance:none; }
-        .bst-inp[type=number] { -moz-appearance:textfield; }
+        .header-sub {
+          font-size: 12px;
+          color: #4a6080;
+          font-family: 'JetBrains Mono', monospace;
+          margin-top: 2px;
+        }
+
+        .header-badge {
+          margin-left: auto;
+          background: rgba(26,108,247,0.15);
+          border: 1px solid rgba(74,174,255,0.3);
+          color: #4aaeff;
+          font-size: 11px;
+          font-family: 'JetBrains Mono', monospace;
+          padding: 5px 12px;
+          border-radius: 20px;
+        }
+
+        /* Main Layout */
+        .main {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 24px;
+          padding: 28px 48px;
+          max-width: 1400px;
+          margin: 0 auto;
+        }
+
+        @media (max-width: 900px) {
+          .main { grid-template-columns: 1fr; padding: 20px 16px; }
+          .header { padding: 16px 20px; }
+        }
+
+        /* Panel */
+        .panel {
+          background: rgba(10,18,35,0.7);
+          border: 1px solid #1a2744;
+          border-radius: 16px;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .panel-header {
+          padding: 14px 20px;
+          border-bottom: 1px solid #1a2744;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          background: rgba(15,25,50,0.6);
+        }
+
+        .panel-dot {
+          width: 10px; height: 10px;
+          border-radius: 50%;
+        }
+
+        .panel-title {
+          font-size: 12px;
+          font-family: 'JetBrains Mono', monospace;
+          color: #6888aa;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+        }
+
+        /* Lang selector */
+        .lang-row {
+          display: flex;
+          gap: 6px;
+          padding: 14px 18px;
+          border-bottom: 1px solid #0f1e3a;
+          flex-wrap: wrap;
+        }
+
+        .lang-btn {
+          padding: 5px 14px;
+          border-radius: 6px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 12px;
+          cursor: pointer;
+          border: 1px solid #1a2744;
+          background: transparent;
+          color: #4a6080;
+          transition: all 0.18s;
+        }
+
+        .lang-btn:hover { color: #7ee8fa; border-color: #2a4070; }
+
+        .lang-btn.active {
+          background: rgba(26,108,247,0.2);
+          border-color: #4aaeff;
+          color: #7ee8fa;
+        }
+
+        /* Editor */
+        .editor-area {
+          flex: 1;
+          position: relative;
+        }
+
+        .code-textarea {
+          width: 100%;
+          height: 100%;
+          min-height: 320px;
+          padding: 18px 20px;
+          background: transparent;
+          border: none;
+          outline: none;
+          color: #c5daf0;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 13px;
+          line-height: 1.7;
+          resize: vertical;
+          caret-color: #4aaeff;
+        }
+
+        .code-textarea::selection { background: rgba(74,174,255,0.2); }
+
+        .code-textarea::placeholder { color: #2a4060; }
+
+        /* Run button */
+        .run-row {
+          padding: 14px 18px;
+          border-top: 1px solid #0f1e3a;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .run-btn {
+          padding: 10px 28px;
+          border-radius: 8px;
+          background: linear-gradient(135deg, #1a6cf7, #4aaeff);
+          border: none;
+          color: white;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          box-shadow: 0 0 18px rgba(26,108,247,0.35);
+          position: relative;
+          overflow: hidden;
+        }
+
+        .run-btn:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 0 30px rgba(74,174,255,0.5);
+        }
+
+        .run-btn:active { transform: translateY(0); }
+
+        .run-btn.running {
+          background: linear-gradient(135deg, #1a3060, #2a5090);
+          animation: pulse-btn 1s infinite;
+        }
+
+        @keyframes pulse-btn {
+          0%, 100% { box-shadow: 0 0 18px rgba(26,108,247,0.35); }
+          50% { box-shadow: 0 0 36px rgba(74,174,255,0.7); }
+        }
+
+        .reset-btn {
+          padding: 10px 18px;
+          border-radius: 8px;
+          background: transparent;
+          border: 1px solid #1a2744;
+          color: #4a6080;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 12px;
+          cursor: pointer;
+          transition: all 0.2s;
+        }
+
+        .reset-btn:hover { color: #ff6b6b; border-color: #ff6b6b; }
+
+        /* Error */
+        .error-box {
+          margin: 14px 18px;
+          padding: 14px 16px;
+          background: rgba(255,80,80,0.08);
+          border: 1px solid rgba(255,100,100,0.25);
+          border-radius: 10px;
+          color: #ff8888;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 12px;
+          line-height: 1.6;
+        }
+
+        .error-title {
+          font-weight: 700;
+          margin-bottom: 6px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        /* Viz panel */
+        .viz-body {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .tree-canvas {
+          flex: 1;
+          padding: 20px;
+          display: flex;
+          align-items: flex-start;
+          justify-content: center;
+          min-height: 280px;
+          position: relative;
+        }
+
+        .tree-empty {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 200px;
+          color: #1e3050;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 13px;
+          border: 1px dashed #1a2744;
+          border-radius: 12px;
+        }
+
+        /* Node animations */
+        .node-normal {
+          transition: all 0.4s ease;
+        }
+
+        .node-highlight {
+          animation: node-pop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+        }
+
+        @keyframes node-pop {
+          0% { r: 10; opacity: 0.3; }
+          60% { r: 32; }
+          100% { r: 26; opacity: 1; }
+        }
+
+        .tree-edge {
+          transition: all 0.3s ease;
+        }
+
+        /* Step info */
+        .step-info {
+          padding: 14px 20px;
+          border-top: 1px solid #0f1e3a;
+          background: rgba(8,15,30,0.5);
+        }
+
+        .step-badge {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 6px 14px;
+          border-radius: 20px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 12px;
+          font-weight: 600;
+          margin-bottom: 8px;
+          animation: badge-in 0.3s ease;
+        }
+
+        @keyframes badge-in {
+          from { opacity: 0; transform: translateY(6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .step-message {
+          font-size: 13px;
+          color: #8899bb;
+          font-family: 'JetBrains Mono', monospace;
+          animation: msg-in 0.3s ease;
+        }
+
+        @keyframes msg-in {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        /* Progress bar */
+        .progress-row {
+          padding: 10px 20px;
+          border-top: 1px solid #0f1e3a;
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .progress-track {
+          flex: 1;
+          height: 4px;
+          background: #0f1e3a;
+          border-radius: 4px;
+          overflow: hidden;
+        }
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, #1a6cf7, #7ee8fa);
+          border-radius: 4px;
+          transition: width 0.4s ease;
+          box-shadow: 0 0 8px rgba(74,174,255,0.5);
+        }
+
+        .progress-text {
+          font-size: 11px;
+          font-family: 'JetBrains Mono', monospace;
+          color: #2a4060;
+          white-space: nowrap;
+        }
+
+        /* Done celebration */
+        .done-banner {
+          padding: 16px 20px;
+          background: rgba(74,200,100,0.08);
+          border-top: 1px solid rgba(74,200,100,0.2);
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          animation: done-in 0.5s ease;
+        }
+
+        @keyframes done-in {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .done-text {
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 13px;
+          color: #68d391;
+        }
+
+        .sparkle {
+          animation: spin-sparkle 1s ease-in-out;
+          display: inline-block;
+        }
+
+        @keyframes spin-sparkle {
+          0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+          60% { transform: scale(1.3) rotate(20deg); }
+          100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+
+        /* Steps sidebar */
+        .steps-list {
+          border-top: 1px solid #0f1e3a;
+          max-height: 140px;
+          overflow-y: auto;
+          padding: 10px 18px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .steps-list::-webkit-scrollbar { width: 4px; }
+        .steps-list::-webkit-scrollbar-track { background: transparent; }
+        .steps-list::-webkit-scrollbar-thumb { background: #1a2744; border-radius: 4px; }
+
+        .step-item {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 5px 8px;
+          border-radius: 6px;
+          font-family: 'JetBrains Mono', monospace;
+          font-size: 11px;
+          color: #2a4060;
+          cursor: pointer;
+          transition: all 0.15s;
+        }
+
+        .step-item:hover { background: rgba(26,108,247,0.08); color: #4a7090; }
+
+        .step-item.active {
+          background: rgba(26,108,247,0.12);
+          color: #7ee8fa;
+        }
+
+        .step-dot {
+          width: 8px; height: 8px;
+          border-radius: 50%;
+          flex-shrink: 0;
+        }
       `}</style>
 
-      <div className="shell">
-
-        {/* ════ LEFT — Tree canvas ════ */}
-        <div className="col col-l">
-
-          {/* header */}
-          <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px', flexShrink:0 }}>
-            <h1 style={{ fontFamily:'Syne', fontWeight:800, fontSize:'1.7rem', color:'#e2e8f0', letterSpacing:'-0.5px', lineHeight:1, margin:0, textShadow:'0 2px 5px rgba(0,0,0,0.5)' }}>
-              BST
-            </h1>
-            <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:palette.emerald, background:`${palette.emerald}14`, border:`1px solid ${palette.emerald}28`, borderRadius:'20px', padding:'2px 12px', letterSpacing:'0.5px' }}>
-              Binary Search Tree
-            </span>
-            <div style={{ marginLeft:'auto', display:'flex', gap:'8px', alignItems:'center' }}>
-              {root && (
-                <>
-                  <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:palette.textDim, background:palette.zinc, padding:'2px 8px', borderRadius:'12px' }}>
-                    {nodeCount} node{nodeCount > 1 ? 's' : ''}
-                  </span>
-                  <span style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:balanced ? palette.emerald : palette.amber, background:balanced ? `${palette.emerald}14` : `${palette.amber}14`, border:`1px solid ${balanced ? palette.emerald : palette.amber}30`, borderRadius:'12px', padding:'2px 8px' }}>
-                    {balanced ? '⚖️ balanced' : '🌲 unbalanced'}
-                  </span>
-                </>
-              )}
-            </div>
+      <div className="page">
+        {/* Header */}
+        <header className="header">
+          <div className="header-icon">🌲</div>
+          <div>
+            <div className="header-title">Tree DS Visualizer</div>
+            <div className="header-sub">Binary Search Tree · Step-by-step animation</div>
           </div>
+          <div className="header-badge">v1.0 · BST Engine</div>
+        </header>
 
-          {/* canvas */}
-          <div className="canvas" ref={wrapRef}>
-
-            {/* empty state */}
-            {!root && (
-              <div style={{ position:'absolute', inset:0, zIndex:2, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'12px', pointerEvents:'none' }}>
-                <svg width="48" height="48" viewBox="0 0 48 48" fill="none" style={{ opacity:0.6 }}>
-                  <circle cx="24" cy="24" r="22" stroke={palette.border} strokeWidth="1.5" strokeDasharray="4 4"/>
-                  <text x="24" y="28" textAnchor="middle" fontFamily="JetBrains Mono" fontSize="20" fill={palette.border} fontWeight="500">∅</text>
-                </svg>
-                <p style={{ fontFamily:'JetBrains Mono', fontSize:'11px', color:palette.border, letterSpacing:'1px' }}>
-                  insert a number to begin
-                </p>
-              </div>
-            )}
-
-            <svg
-              width={svgW} height={svgH}
-              style={{ position:'absolute', inset:0, zIndex:3, overflow:'visible' }}
-            >
-              <defs>
-                <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur"/>
-                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-                <filter id="glow2" x="-80%" y="-80%" width="260%" height="260%">
-                  <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="blur"/>
-                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-                </filter>
-                <linearGradient id="nodeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#1e293b" />
-                  <stop offset="100%" stopColor="#0f172a" />
-                </linearGradient>
-              </defs>
-
-              {/* ── dim edges (drawn with dash for subtlety) ── */}
-              {edges.map(e => (
-                <motion.line
-                  key={e.key}
-                  x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-                  stroke={palette.border} strokeWidth={1.2} strokeLinecap="round"
-                  strokeDasharray="5 3"
-                  initial={{ opacity:0, pathLength:0 }}
-                  animate={{ opacity:1, pathLength:1 }}
-                  transition={{ duration:0.5, ease:'easeOut' }}
-                />
-              ))}
-
-              {/* ── glowing edges when both endpoint nodes are highlighted ── */}
-              {edges.map(e => {
-                const nA = nodes.find(n => Math.round(n.x) === Math.round(e.x1) && Math.round(n.y) === Math.round(e.y1))
-                const nB = nodes.find(n => Math.round(n.x) === Math.round(e.x2) && Math.round(n.y) === Math.round(e.y2))
-                const lit = nA && nB && hl.has(nA.val) && hl.has(nB.val)
-                if (!lit) return null
-                return (
-                  <motion.line
-                    key={`hl-${e.key}`}
-                    x1={e.x1} y1={e.y1} x2={e.x2} y2={e.y2}
-                    stroke={hlCol} strokeWidth={2.5} strokeLinecap="round"
-                    filter="url(#glow)" opacity={0.8}
-                    initial={{ pathLength:0, opacity:0 }}
-                    animate={{ pathLength:1, opacity:0.8 }}
-                    transition={{ duration:0.3, ease:'easeOut' }}
-                  />
-                )
-              })}
-
-              {/* ── nodes ── */}
-              <AnimatePresence>
-                {nodes.map(node => {
-                  const isHl  = hl.has(node.val)
-                  const col   = isHl ? hlCol : palette.teal
-                  const tCol  = isHl ? '#ffffff' : '#b7c9e2'
-                  const bgCol = isHl ? `${hlCol}30` : 'url(#nodeGradient)'
-
-                  return (
-                    <motion.g
-                      key={node.val}
-                      initial={{ scale:0, opacity:0, y: -20 }}
-                      animate={{ scale:1, opacity:1, y: 0 }}
-                      exit={{ scale:0, opacity:0, transition:{ duration:0.2 } }}
-                      transition={{ type:'spring', stiffness:450, damping:24 }}
-                      style={{ transformOrigin: `${node.x}px ${node.y}px` }}
-                    >
-                      {/* pulse ring on highlight */}
-                      {isHl && (
-                        <motion.circle
-                          cx={node.x} cy={node.y}
-                          fill="none" stroke={hlCol} strokeWidth={1.5}
-                          filter="url(#glow2)"
-                          initial={{ r: node.r + 3, opacity: 0.8 }}
-                          animate={{ r: node.r + 16, opacity: 0 }}
-                          transition={{ duration: 1, repeat: Infinity, ease:'easeOut' }}
-                        />
-                      )}
-
-                      {/* node with inner shadow effect */}
-                      <circle
-                        cx={node.x} cy={node.y} r={node.r}
-                        fill={bgCol}
-                        stroke={col} strokeWidth={isHl ? 2 : 1.5}
-                        filter={isHl ? 'url(#glow)' : undefined}
-                        style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }}
-                      />
-
-                      {/* value text */}
-                      <text
-                        x={node.x} y={node.y}
-                        textAnchor="middle" dominantBaseline="central"
-                        fontFamily="JetBrains Mono" fontWeight="700"
-                        fontSize={Math.abs(node.val) >= 100 ? 9 : Math.abs(node.val) >= 10 ? 11 : 13}
-                        fill={tCol}
-                        style={{ userSelect:'none', pointerEvents:'none', textShadow: isHl ? '0 0 8px currentColor' : 'none' }}
-                      >
-                        {node.val}
-                      </text>
-                    </motion.g>
-                  )
-                })}
-              </AnimatePresence>
-            </svg>
-          </div>
-
-          {/* traversal sequence strip */}
-          <AnimatePresence>
-            {travSeq.length > 0 && (
-              <motion.div
-                initial={{ opacity:0, y:5 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:5 }}
-                transition={{ duration:0.3 }}
-                style={{ flexShrink:0, marginTop:'8px', background:'rgba(10, 20, 35, 0.8)', backdropFilter:'blur(4px)', border:'1px solid '+palette.border, borderRadius:'12px', padding:'8px 14px', display:'flex', alignItems:'center', gap:'6px', flexWrap:'wrap', minHeight:'38px', boxShadow:'0 4px 12px rgba(0,0,0,0.3)' }}
-              >
-                <span style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color:palette.textDim, letterSpacing:'1.5px', marginRight:'6px', flexShrink:0 }}>TRAVERSAL</span>
-                {travSeq.map((v, i) => {
-                  const active = travActive.has(v)
-                  return (
-                    <motion.span key={`${v}-${i}`}
-                      initial={{ opacity:0, scale:0.7 }}
-                      animate={{ opacity:1, scale:1 }}
-                      transition={{ delay: i * 0.37, type:'spring', stiffness:400, damping:20 }}
-                      style={{
-                        fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'11px',
-                        color:      active ? travCol : palette.textDim,
-                        background: active ? `${travCol}20` : 'transparent',
-                        border:     `1px solid ${active ? `${travCol}50` : palette.border}`,
-                        borderRadius:'20px', padding:'2px 10px',
-                        transition: 'all 0.25s',
-                        boxShadow: active ? `0 0 10px ${travCol}40` : 'none',
-                      }}
-                    >{v}</motion.span>
-                  )
-                })}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* message bar */}
-          <div style={{ height:'30px', marginTop:'6px', marginBottom:'6px', flexShrink:0 }}>
-            <AnimatePresence mode="wait">
-              {msg && (
-                <motion.div key={msg.text}
-                  initial={{ opacity:0, y:3 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-3 }}
-                  transition={{ duration:0.18 }}
-                  style={{ background:'rgba(10, 20, 35, 0.8)', backdropFilter:'blur(4px)', border:`1px solid ${msgStyle[msg.type].b}`, borderRadius:'20px', padding:'5px 16px', fontFamily:'JetBrains Mono', fontSize:'11px', color:msgStyle[msg.type].c, height:'100%', display:'flex', alignItems:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.2)' }}
-                >
-                  {msg.text}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* input + insert */}
-          <div style={{ display:'flex', gap:'8px', marginBottom:'8px', flexShrink:0 }}>
-            <input
-              className="bst-inp" type="number" value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleInsert() }}
-              placeholder="enter number…"
-            />
-            <button className="btn-insert" onClick={handleInsert}>Insert</button>
-          </div>
-
-          {/* action buttons */}
-          <div style={{ display:'flex', gap:'8px', marginBottom:'8px', flexShrink:0 }}>
-            <button className="btn-act b-srch"  onClick={handleSearch} disabled={!root}>Search</button>
-            <button className="btn-act b-del"   onClick={handleDelete} disabled={!root}>Delete</button>
-            <button className="btn-act b-seed"  onClick={handleSeed}                  >Sample</button>
-            <button className="btn-act b-clear" onClick={handleClear}  disabled={!root}>Clear</button>
-          </div>
-
-          {/* traversal buttons */}
-          <div style={{ display:'flex', gap:'8px', flexShrink:0 }}>
-            {[
-              { label:'Inorder',   fn: handleInorder,   col: palette.emerald },
-              { label:'Preorder',  fn: handlePreorder,  col: palette.sky },
-              { label:'Postorder', fn: handlePostorder, col: palette.amber },
-            ].map(({ label, fn, col }) => (
-              <button key={label} className="btn-trav" onClick={fn} disabled={!root}
-                style={root ? { color:col, borderColor:`${col}50` } : {}}>
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ════ RIGHT — Info panel ════ */}
-        <div className="col col-r">
-
-          <div style={{ marginBottom:'12px', flexShrink:0 }}>
-            <h2 style={{ fontFamily:'Syne', fontWeight:800, fontSize:'1.7rem', color:'#e2e8f0', letterSpacing:'-0.5px', lineHeight:1, margin:0, textShadow:'0 2px 5px rgba(0,0,0,0.5)' }}>
-              Info
-            </h2>
-            <p style={{ fontFamily:'JetBrains Mono', fontSize:'10px', color:palette.textDim, marginTop:'4px' }}>
-              left &lt; root &lt; right  ·  O(log n) average
-            </p>
-          </div>
-
+        {/* Main Grid */}
+        <main className="main">
+          {/* Left: Code Editor */}
           <div className="panel">
-
-            {/* BST rule */}
-            <div className="card">
-              <p className="clabel">BST Rule</p>
-              <div style={{ display:'flex', gap:'8px' }}>
-                {[
-                  { lbl:'Left subtree',  val:'< root', col: palette.sky },
-                  { lbl:'Root',          val:'pivot',  col: palette.emerald },
-                  { lbl:'Right subtree', val:'> root', col: palette.amber },
-                ].map(({ lbl, val, col }) => (
-                  <div key={lbl} style={{ flex:1, background:'rgba(6, 15, 26, 0.8)', border:'1px solid '+palette.border, borderRadius:'12px', padding:'10px 6px', textAlign:'center' }}>
-                    <p style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color:palette.textDim, marginBottom:'4px', letterSpacing:'0.5px' }}>{lbl}</p>
-                    <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'14px', color:palette.textDim }}>{val}</p>
-                  </div>
-                ))}
-              </div>
+            <div className="panel-header">
+              <span className="panel-dot" style={{ background: "#ff5f57" }} />
+              <span className="panel-dot" style={{ background: "#ffbd2e" }} />
+              <span className="panel-dot" style={{ background: "#28c840" }} />
+              <span className="panel-title" style={{ marginLeft: 8 }}>Code Editor</span>
             </div>
 
-            {/* complexity */}
-            <div className="card">
-              <p className="clabel">Complexity</p>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px' }}>
-                {[
-                  { lbl:'Search (avg)',  val:'O(log n)', col: palette.emerald },
-                  { lbl:'Search (worst)',val:'O(n)',     col: palette.rose },
-                  { lbl:'Insert (avg)',  val:'O(log n)', col: palette.sky },
-                  { lbl:'Space',         val:'O(n)',     col: palette.amber },
-                ].map(({ lbl, val, col }) => (
-                  <div key={lbl} style={{ background:'rgba(6, 15, 26, 0.8)', border:'1px solid '+palette.border, borderRadius:'10px', padding:'9px 8px' }}>
-                    <p style={{ fontFamily:'JetBrains Mono', fontSize:'8px', color:palette.textDim, marginBottom:'3px' }}>{lbl}</p>
-                    <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'14px', color:palette.textDim }}>{val}</p>
-                  </div>
-                ))}
-              </div>
+            {/* Language Selector */}
+            <div className="lang-row">
+              {Object.entries(LANG_LABELS).map(([key, label]) => (
+                <button
+                  key={key}
+                  className={`lang-btn${lang === key ? " active" : ""}`}
+                  onClick={() => handleLangChange(key)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* traversals */}
-            <div className="card">
-              <p className="clabel">Traversals</p>
-              <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
-                {[
-                  { name:'Inorder',   pattern:'L → Root → R', note:'sorted output',      col: palette.emerald },
-                  { name:'Preorder',  pattern:'Root → L → R', note:'copy / serialize',   col: palette.sky },
-                  { name:'Postorder', pattern:'L → R → Root', note:'delete / evaluate',  col: palette.amber },
-                ].map(({ name, pattern, note, col }) => (
-                  <div key={name} style={{ background:'rgba(6, 15, 26, 0.8)', border:'1px solid '+palette.border, borderRadius:'12px', padding:'10px 12px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <div>
-                      <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'11px', color:col, margin:0 }}>{name}</p>
-                      <p style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim, marginTop:'2px' }}>{pattern}</p>
-                    </div>
-                    <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim, background:'#0e1625', padding:'2px 10px', borderRadius:'20px', border:'1px solid '+palette.border }}>{note}</span>
-                  </div>
-                ))}
-              </div>
+            {/* Editor */}
+            <div className="editor-area">
+              <textarea
+                ref={textareaRef}
+                className="code-textarea"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                onKeyDown={handleKeyDown}
+                spellCheck={false}
+                placeholder="// Write your BST code here..."
+              />
             </div>
 
-            {/* operations — fills rest */}
-            <div className="card fill">
-              <p className="clabel">Operations</p>
-              <div className="olist">
-                {[
-                  { op:'insert(x)',   desc:'Add, preserve BST order',      col: palette.emerald },
-                  { op:'delete(x)',   desc:'Remove, restructure tree',      col: palette.rose },
-                  { op:'search(x)',   desc:'Go left/right until found',     col: palette.sky },
-                  { op:'inorder()',   desc:'Produces sorted sequence',      col: palette.emerald },
-                  { op:'height()',    desc:'Depth of deepest leaf',         col: palette.amber },
-                ].map(({ op, desc, col }) => (
-                  <div key={op} className="orow">
-                    <div>
-                      <p style={{ fontFamily:'JetBrains Mono', fontWeight:700, fontSize:'11px', color:col, margin:0 }}>{op}</p>
-                      <p style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.textDim, marginTop:'1px' }}>{desc}</p>
-                    </div>
-                    <span style={{ fontFamily:'JetBrains Mono', fontSize:'9px', color:palette.emerald, background:`${palette.emerald}12`, border:`1px solid ${palette.emerald}30`, borderRadius:'20px', padding:'2px 10px', flexShrink:0 }}>
-                      O(log n)
-                    </span>
-                  </div>
-                ))}
+            {/* Error */}
+            {error && (
+              <div className="error-box">
+                <div className="error-title">
+                  <span>⚠</span> Write Correct Code
+                </div>
+                <div style={{ whiteSpace: "pre-wrap" }}>{error}</div>
               </div>
-            </div>
+            )}
 
+            {/* Run Row */}
+            <div className="run-row">
+              <button
+                className={`run-btn${running ? " running" : ""}`}
+                onClick={handleRun}
+                disabled={running}
+              >
+                {running ? "▶ Running..." : "▶ Run & Visualize"}
+              </button>
+              {(steps.length > 0 || error) && (
+                <button className="reset-btn" onClick={reset}>↺ Reset</button>
+              )}
+            </div>
           </div>
-        </div>
 
+          {/* Right: Visualization */}
+          <div className="panel">
+            <div className="panel-header">
+              <span className="panel-dot" style={{ background: "#4aaeff" }} />
+              <span className="panel-dot" style={{ background: "#7ee8fa" }} />
+              <span className="panel-dot" style={{ background: "#a78bfa" }} />
+              <span className="panel-title" style={{ marginLeft: 8 }}>Tree Visualization</span>
+            </div>
+
+            <div className="viz-body">
+              {/* SVG Canvas */}
+              <div className="tree-canvas">
+                <TreeViz
+                  tree={step?.tree || null}
+                  highlight={step?.highlight || []}
+                  animKey={animKey}
+                />
+              </div>
+
+              {/* Step Info */}
+              {step && (
+                <div className="step-info">
+                  <div
+                    className="step-badge"
+                    style={{
+                      background: `rgba(${
+                        step.type === "insert" ? "26,108,247" :
+                        step.type === "search" ? "255,180,50" :
+                        "255,80,80"
+                      }, 0.15)`,
+                      border: `1px solid ${opColor[step.type]}55`,
+                      color: opColor[step.type],
+                    }}
+                  >
+                    <span>{
+                      step.type === "insert" ? "➕ INSERT" :
+                      step.type === "search" ? "🔍 SEARCH" : "✂ DELETE"
+                    }</span>
+                    <span style={{ opacity: 0.7 }}>val = {step.value}</span>
+                  </div>
+                  <div className="step-message">{step.message}</div>
+                </div>
+              )}
+
+              {/* Done */}
+              {done && (
+                <div className="done-banner">
+                  <span className="sparkle">🎉</span>
+                  <span className="done-text">All {steps.length} operations visualized successfully!</span>
+                </div>
+              )}
+
+              {/* Progress */}
+              {steps.length > 0 && (
+                <div className="progress-row">
+                  <div className="progress-track">
+                    <div
+                      className="progress-fill"
+                      style={{
+                        width: `${((currentStep + 1) / steps.length) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="progress-text">
+                    {currentStep + 1} / {steps.length}
+                  </div>
+                </div>
+              )}
+
+              {/* Steps List */}
+              {steps.length > 0 && (
+                <div className="steps-list">
+                  {steps.map((s, i) => (
+                    <div
+                      key={i}
+                      className={`step-item${i === currentStep ? " active" : ""}`}
+                      onClick={() => { setCurrentStep(i); setAnimKey((k) => k + 1); }}
+                    >
+                      <span
+                        className="step-dot"
+                        style={{
+                          background:
+                            i < currentStep ? "#28c840" :
+                            i === currentStep ? opColor[s.type] :
+                            "#1a2744",
+                        }}
+                      />
+                      <span>
+                        {s.type.toUpperCase()}({s.value})
+                        {s.type === "search" && (s.found ? " ✓" : " ✗")}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </main>
       </div>
     </>
-  )
+  );
 }
