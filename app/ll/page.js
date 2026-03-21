@@ -1,37 +1,33 @@
 "use client";
 import { useState, useRef, useEffect, useCallback } from "react";
 
-// ══════════════════════════════════════════════════════════════════════════════
-// COLOR SYSTEM
-// ══════════════════════════════════════════════════════════════════════════════
+// ── Color palette for nodes ─────────────────────────────────────────────────
 const PALETTE = [
-  { g1:"#4facfe", g2:"#00f2fe", glow:"rgba(79,172,254,0.6)",  border:"#4facfe" },
-  { g1:"#f093fb", g2:"#f5576c", glow:"rgba(245,87,108,0.6)",  border:"#f5576c" },
-  { g1:"#43e97b", g2:"#38f9d7", glow:"rgba(67,233,123,0.6)",  border:"#43e97b" },
-  { g1:"#fda085", g2:"#f6d365", glow:"rgba(246,211,101,0.6)", border:"#fda085" },
-  { g1:"#a18cd1", g2:"#fbc2eb", glow:"rgba(161,140,209,0.6)", border:"#a18cd1" },
-  { g1:"#30cfd0", g2:"#667eea", glow:"rgba(102,126,234,0.6)", border:"#30cfd0" },
-  { g1:"#ff9966", g2:"#ff5e62", glow:"rgba(255,94,98,0.6)",   border:"#ff9966" },
-  { g1:"#89f7fe", g2:"#66a6ff", glow:"rgba(102,166,255,0.6)", border:"#89f7fe" },
+  { g1:"#f72585", g2:"#b5179e", glow:"rgba(247,37,133,0.6)",   border:"#f72585" },
+  { g1:"#7209b7", g2:"#560bad", glow:"rgba(114,9,183,0.6)",    border:"#7209b7" },
+  { g1:"#3a0ca3", g2:"#4361ee", glow:"rgba(67,97,238,0.6)",    border:"#4361ee" },
+  { g1:"#4cc9f0", g2:"#4895ef", glow:"rgba(76,201,240,0.6)",   border:"#4cc9f0" },
+  { g1:"#06d6a0", g2:"#1b9aaa", glow:"rgba(6,214,160,0.6)",    border:"#06d6a0" },
+  { g1:"#ffd60a", g2:"#ffc300", glow:"rgba(255,214,10,0.6)",   border:"#ffd60a" },
+  { g1:"#ff6b35", g2:"#ff4d6d", glow:"rgba(255,107,53,0.6)",   border:"#ff6b35" },
+  { g1:"#c77dff", g2:"#9d4edd", glow:"rgba(199,125,255,0.6)",  border:"#c77dff" },
 ];
 const col = (v) => PALETTE[Math.abs(Math.round(v) || 0) % PALETTE.length];
 
+// ── Op styles ───────────────────────────────────────────────────────────────
 const OP = {
-  insertHead:   { label:"INSERT HEAD", icon:"⬅", c:"#4ade80", bg:"rgba(74,222,128,0.1)",  bd:"rgba(74,222,128,0.3)"  },
-  insertTail:   { label:"INSERT TAIL", icon:"➡", c:"#60a5fa", bg:"rgba(96,165,250,0.1)",  bd:"rgba(96,165,250,0.3)"  },
-  insertAt:     { label:"INSERT AT",   icon:"⬇", c:"#a78bfa", bg:"rgba(167,139,250,0.1)", bd:"rgba(167,139,250,0.3)" },
-  deleteHead:   { label:"DELETE HEAD", icon:"⬆", c:"#f472b6", bg:"rgba(244,114,182,0.1)", bd:"rgba(244,114,182,0.3)" },
-  deleteTail:   { label:"DELETE TAIL", icon:"↩", c:"#fb923c", bg:"rgba(251,146,60,0.1)",  bd:"rgba(251,146,60,0.3)"  },
-  deleteVal:    { label:"DELETE VAL",  icon:"✕", c:"#ef4444", bg:"rgba(239,68,68,0.1)",   bd:"rgba(239,68,68,0.3)"   },
-  search:       { label:"SEARCH",      icon:"🔍", c:"#fbbf24", bg:"rgba(251,191,36,0.1)",  bd:"rgba(251,191,36,0.3)"  },
-  traverse:     { label:"TRAVERSE",    icon:"→", c:"#34d399", bg:"rgba(52,211,153,0.1)",  bd:"rgba(52,211,153,0.3)"  },
-  isEmpty:      { label:"IS EMPTY?",   icon:"∅", c:"#60a5fa", bg:"rgba(96,165,250,0.1)",  bd:"rgba(96,165,250,0.3)"  },
-  getSize:      { label:"GET SIZE",    icon:"#", c:"#a78bfa", bg:"rgba(167,139,250,0.1)", bd:"rgba(167,139,250,0.3)" },
-  delete_error: { label:"NOT FOUND",   icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.1)",   bd:"rgba(239,68,68,0.3)"   },
-  search_miss:  { label:"NOT FOUND",   icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.1)",   bd:"rgba(239,68,68,0.3)"   },
-  empty_error:  { label:"EMPTY",       icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.1)",   bd:"rgba(239,68,68,0.3)"   },
+  insertFront: { label:"insertFront", icon:"⬅", c:"#4cc9f0", bg:"rgba(76,201,240,0.08)", bd:"rgba(76,201,240,0.3)" },
+  insertBack:  { label:"insertBack",  icon:"➡", c:"#06d6a0", bg:"rgba(6,214,160,0.08)",  bd:"rgba(6,214,160,0.3)"  },
+  insertAt:    { label:"insertAt",    icon:"↕", c:"#ffd60a", bg:"rgba(255,214,10,0.08)", bd:"rgba(255,214,10,0.3)" },
+  delete:      { label:"delete",      icon:"✂", c:"#f72585", bg:"rgba(247,37,133,0.08)", bd:"rgba(247,37,133,0.3)" },
+  search:      { label:"search",      icon:"🔍",c:"#c77dff", bg:"rgba(199,125,255,0.08)",bd:"rgba(199,125,255,0.3)"},
+  traverse:    { label:"traverse",    icon:"→", c:"#ff6b35", bg:"rgba(255,107,53,0.08)", bd:"rgba(255,107,53,0.3)" },
+  reverse:     { label:"reverse",     icon:"⇄", c:"#ffd60a", bg:"rgba(255,214,10,0.08)", bd:"rgba(255,214,10,0.3)" },
+  size:        { label:"size",        icon:"#", c:"#4895ef", bg:"rgba(72,149,239,0.08)", bd:"rgba(72,149,239,0.3)" },
+  error:       { label:"ERROR",       icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.08)",  bd:"rgba(239,68,68,0.3)"  },
 };
 
+// ── Language templates ───────────────────────────────────────────────────────
 const LANGS = {
   javascript:{ name:"JavaScript", ext:"JS",  accent:"#f7df1e" },
   typescript:{ name:"TypeScript", ext:"TS",  accent:"#3178c6" },
@@ -39,85 +35,56 @@ const LANGS = {
   java:      { name:"Java",       ext:"JV",  accent:"#ed8b00" },
   cpp:       { name:"C++",        ext:"C++", accent:"#00b4d8" },
   csharp:    { name:"C#",         ext:"C#",  accent:"#9b4f96" },
+  go:        { name:"Go",         ext:"GO",  accent:"#00add8" },
+  rust:      { name:"Rust",       ext:"RS",  accent:"#f46623" },
 };
 
-// ══════════════════════════════════════════════════════════════════════════════
-// CODE TEMPLATES
-// ══════════════════════════════════════════════════════════════════════════════
+const LINE_H = 21;
+
 const TPL = {
-javascript:`// ─── Singly Linked List — JavaScript ───────────────────
+javascript:`// Linked List — JavaScript
 class Node {
   constructor(value) {
     this.value = value;
-    this.next  = null;
+    this.next = null;
   }
 }
 
 class LinkedList {
   constructor() {
     this.head = null;
-    this.size = 0;
+    this.length = 0;
   }
 
-  insertHead(value) {
+  insertFront(value) {
     const node = new Node(value);
-    node.next  = this.head;
-    this.head  = node;
-    this.size++;
+    node.next = this.head;
+    this.head = node;
+    this.length++;
   }
 
-  insertTail(value) {
+  insertBack(value) {
     const node = new Node(value);
-    if (!this.head) { this.head = node; this.size++; return; }
+    if (!this.head) { this.head = node; this.length++; return; }
     let cur = this.head;
     while (cur.next) cur = cur.next;
     cur.next = node;
-    this.size++;
-  }
-
-  insertAt(index, value) {
-    if (index <= 0) { this.insertHead(value); return; }
-    const node = new Node(value);
-    let cur = this.head, i = 0;
-    while (cur && i < index - 1) { cur = cur.next; i++; }
-    if (!cur) { this.insertTail(value); return; }
-    node.next = cur.next;
-    cur.next  = node;
-    this.size++;
-  }
-
-  deleteHead() {
-    if (!this.head) return undefined;
-    const val = this.head.value;
-    this.head  = this.head.next;
-    this.size--;
-    return val;
-  }
-
-  deleteTail() {
-    if (!this.head) return undefined;
-    if (!this.head.next) {
-      const v = this.head.value;
-      this.head = null; this.size--;
-      return v;
-    }
-    let cur = this.head;
-    while (cur.next.next) cur = cur.next;
-    const val = cur.next.value;
-    cur.next  = null;
-    this.size--;
-    return val;
+    this.length++;
   }
 
   delete(value) {
     if (!this.head) return false;
     if (this.head.value === value) {
-      this.head = this.head.next; this.size--; return true;
+      this.head = this.head.next;
+      this.length--;
+      return true;
     }
     let cur = this.head;
     while (cur.next) {
       if (cur.next.value === value) {
-        cur.next = cur.next.next; this.size--; return true;
+        cur.next = cur.next.next;
+        this.length--;
+        return true;
       }
       cur = cur.next;
     }
@@ -133,33 +100,33 @@ class LinkedList {
     return -1;
   }
 
-  traverse() {
-    const result = [];
-    let cur = this.head;
-    while (cur) { result.push(cur.value); cur = cur.next; }
-    return result;
+  reverse() {
+    let prev = null, cur = this.head;
+    while (cur) {
+      let nxt = cur.next;
+      cur.next = prev;
+      prev = cur;
+      cur = nxt;
+    }
+    this.head = prev;
   }
 
-  isEmpty()  { return this.size === 0; }
-  getSize()  { return this.size; }
+  size() { return this.length; }
 }
 
-// ─── Use your list below ─────────────────────────────
+// — Use your linked list here —
 const ll = new LinkedList();
-ll.insertTail(10);
-ll.insertTail(25);
-ll.insertTail(37);
-ll.insertHead(5);
-ll.insertAt(2, 99);
+ll.insertBack(10);
+ll.insertBack(25);
+ll.insertBack(37);
+ll.insertFront(5);
 ll.search(25);
-ll.traverse();
-ll.deleteHead();
-ll.deleteTail();
-ll.delete(99);
-ll.getSize();
-ll.isEmpty();`,
+ll.delete(25);
+ll.insertBack(99);
+ll.reverse();
+ll.size();`,
 
-typescript:`// ─── Singly Linked List — TypeScript ────────────────────
+typescript:`// Linked List — TypeScript
 class Node<T> {
   value: T;
   next: Node<T> | null = null;
@@ -167,66 +134,38 @@ class Node<T> {
 }
 
 class LinkedList<T> {
-  head: Node<T> | null = null;
-  size: number = 0;
+  private head: Node<T> | null = null;
+  private length: number = 0;
 
-  insertHead(value: T): void {
+  insertFront(value: T): void {
     const node = new Node(value);
     node.next = this.head;
     this.head = node;
-    this.size++;
+    this.length++;
   }
 
-  insertTail(value: T): void {
+  insertBack(value: T): void {
     const node = new Node(value);
-    if (!this.head) { this.head = node; this.size++; return; }
+    if (!this.head) { this.head = node; this.length++; return; }
     let cur = this.head;
     while (cur.next) cur = cur.next;
     cur.next = node;
-    this.size++;
-  }
-
-  insertAt(index: number, value: T): void {
-    if (index <= 0) { this.insertHead(value); return; }
-    const node = new Node(value);
-    let cur = this.head; let i = 0;
-    while (cur && i < index - 1) { cur = cur.next; i++; }
-    if (!cur) { this.insertTail(value); return; }
-    node.next = cur.next;
-    cur.next  = node;
-    this.size++;
-  }
-
-  deleteHead(): T | undefined {
-    if (!this.head) return undefined;
-    const val = this.head.value;
-    this.head = this.head.next;
-    this.size--;
-    return val;
-  }
-
-  deleteTail(): T | undefined {
-    if (!this.head) return undefined;
-    if (!this.head.next) {
-      const v = this.head.value; this.head = null; this.size--; return v;
-    }
-    let cur = this.head;
-    while (cur.next!.next) cur = cur.next!;
-    const val = cur.next!.value;
-    cur.next = null;
-    this.size--;
-    return val;
+    this.length++;
   }
 
   delete(value: T): boolean {
     if (!this.head) return false;
     if (this.head.value === value) {
-      this.head = this.head.next; this.size--; return true;
+      this.head = this.head.next;
+      this.length--;
+      return true;
     }
-    let cur = this.head;
+    let cur: Node<T> = this.head;
     while (cur.next) {
       if (cur.next.value === value) {
-        cur.next = cur.next.next; this.size--; return true;
+        cur.next = cur.next.next;
+        this.length--;
+        return true;
       }
       cur = cur.next;
     }
@@ -234,7 +173,7 @@ class LinkedList<T> {
   }
 
   search(value: T): number {
-    let cur = this.head; let idx = 0;
+    let cur = this.head, idx = 0;
     while (cur) {
       if (cur.value === value) return idx;
       cur = cur.next; idx++;
@@ -242,176 +181,148 @@ class LinkedList<T> {
     return -1;
   }
 
-  traverse(): T[] {
-    const result: T[] = [];
-    let cur = this.head;
-    while (cur) { result.push(cur.value); cur = cur.next; }
-    return result;
+  reverse(): void {
+    let prev: Node<T> | null = null, cur = this.head;
+    while (cur) {
+      let nxt = cur.next;
+      cur.next = prev;
+      prev = cur;
+      cur = nxt;
+    }
+    this.head = prev;
   }
 
-  isEmpty(): boolean { return this.size === 0; }
-  getSize(): number  { return this.size; }
+  size(): number { return this.length; }
 }
 
-// ─── Use your list below ─────────────────────────────
 const ll = new LinkedList<number>();
-ll.insertTail(10);
-ll.insertTail(25);
-ll.insertTail(37);
-ll.insertHead(5);
+ll.insertBack(10);
+ll.insertBack(25);
+ll.insertBack(37);
+ll.insertFront(5);
 ll.search(25);
-ll.traverse();
-ll.deleteHead();
-ll.deleteTail();
-ll.getSize();`,
+ll.delete(25);
+ll.insertBack(99);
+ll.reverse();
+ll.size();`,
 
-python:`# ─── Singly Linked List — Python ─────────────────────
+python:`# Linked List — Python
 class Node:
     def __init__(self, value):
         self.value = value
-        self.next  = None
+        self.next = None
 
 class LinkedList:
     def __init__(self):
-        self.head  = None
-        self._size = 0
+        self.head = None
+        self.length = 0
 
-    def insert_head(self, value):
-        node      = Node(value)
+    def insert_front(self, value):
+        node = Node(value)
         node.next = self.head
         self.head = node
-        self._size += 1
+        self.length += 1
 
-    def insert_tail(self, value):
+    def insert_back(self, value):
         node = Node(value)
         if not self.head:
-            self.head = node; self._size += 1; return
+            self.head = node
+            self.length += 1
+            return
         cur = self.head
-        while cur.next: cur = cur.next
+        while cur.next:
+            cur = cur.next
         cur.next = node
-        self._size += 1
-
-    def insert_at(self, index, value):
-        if index <= 0:
-            self.insert_head(value); return
-        node = Node(value)
-        cur = self.head; i = 0
-        while cur and i < index - 1: cur = cur.next; i += 1
-        if not cur:
-            self.insert_tail(value); return
-        node.next = cur.next
-        cur.next  = node
-        self._size += 1
-
-    def delete_head(self):
-        if not self.head: return None
-        val       = self.head.value
-        self.head = self.head.next
-        self._size -= 1
-        return val
-
-    def delete_tail(self):
-        if not self.head: return None
-        if not self.head.next:
-            val = self.head.value; self.head = None; self._size -= 1; return val
-        cur = self.head
-        while cur.next.next: cur = cur.next
-        val = cur.next.value; cur.next = None; self._size -= 1; return val
+        self.length += 1
 
     def delete(self, value):
-        if not self.head: return False
+        if not self.head:
+            return False
         if self.head.value == value:
-            self.head = self.head.next; self._size -= 1; return True
+            self.head = self.head.next
+            self.length -= 1
+            return True
         cur = self.head
         while cur.next:
             if cur.next.value == value:
-                cur.next = cur.next.next; self._size -= 1; return True
+                cur.next = cur.next.next
+                self.length -= 1
+                return True
             cur = cur.next
         return False
 
     def search(self, value):
-        cur = self.head; idx = 0
+        cur = self.head
+        idx = 0
         while cur:
-            if cur.value == value: return idx
-            cur = cur.next; idx += 1
+            if cur.value == value:
+                return idx
+            cur = cur.next
+            idx += 1
         return -1
 
-    def traverse(self):
-        result = []; cur = self.head
-        while cur: result.append(cur.value); cur = cur.next
-        return result
+    def reverse(self):
+        prev = None
+        cur = self.head
+        while cur:
+            nxt = cur.next
+            cur.next = prev
+            prev = cur
+            cur = nxt
+        self.head = prev
 
-    def is_empty(self):  return self._size == 0
-    def get_size(self):  return self._size
+    def size(self):
+        return self.length
 
-# ─── Use your list below ─────────────────────────────
 ll = LinkedList()
-ll.insert_tail(10)
-ll.insert_tail(25)
-ll.insert_tail(37)
-ll.insert_head(5)
-ll.insert_at(2, 99)
+ll.insert_back(10)
+ll.insert_back(25)
+ll.insert_back(37)
+ll.insert_front(5)
 ll.search(25)
-ll.traverse()
-ll.delete_head()
-ll.delete_tail()
-ll.delete(99)
-ll.get_size()
-ll.is_empty()`,
+ll.delete(25)
+ll.insert_back(99)
+ll.reverse()
+ll.size()`,
 
-java:`// ─── Singly Linked List — Java ──────────────────────────
+java:`// Linked List — Java
 public class Main {
     static class Node {
-        int  value;
+        int value;
         Node next;
         Node(int value) { this.value = value; }
     }
 
     static class LinkedList {
         Node head = null;
-        int  size = 0;
+        int length = 0;
 
-        void insertHead(int value) {
+        void insertFront(int value) {
             Node node = new Node(value);
-            node.next = head; head = node; size++;
+            node.next = head;
+            head = node;
+            length++;
         }
 
-        void insertTail(int value) {
+        void insertBack(int value) {
             Node node = new Node(value);
-            if (head == null) { head = node; size++; return; }
+            if (head == null) { head = node; length++; return; }
             Node cur = head;
             while (cur.next != null) cur = cur.next;
-            cur.next = node; size++;
-        }
-
-        void insertAt(int index, int value) {
-            if (index <= 0) { insertHead(value); return; }
-            Node node = new Node(value);
-            Node cur = head; int i = 0;
-            while (cur != null && i < index - 1) { cur = cur.next; i++; }
-            if (cur == null) { insertTail(value); return; }
-            node.next = cur.next; cur.next = node; size++;
-        }
-
-        int deleteHead() {
-            if (head == null) return -1;
-            int val = head.value; head = head.next; size--; return val;
-        }
-
-        int deleteTail() {
-            if (head == null) return -1;
-            if (head.next == null) { int v = head.value; head = null; size--; return v; }
-            Node cur = head;
-            while (cur.next.next != null) cur = cur.next;
-            int val = cur.next.value; cur.next = null; size--; return val;
+            cur.next = node;
+            length++;
         }
 
         boolean delete(int value) {
             if (head == null) return false;
-            if (head.value == value) { head = head.next; size--; return true; }
+            if (head.value == value) { head = head.next; length--; return true; }
             Node cur = head;
             while (cur.next != null) {
-                if (cur.next.value == value) { cur.next = cur.next.next; size--; return true; }
+                if (cur.next.value == value) {
+                    cur.next = cur.next.next;
+                    length--;
+                    return true;
+                }
                 cur = cur.next;
             }
             return false;
@@ -426,100 +337,87 @@ public class Main {
             return -1;
         }
 
-        boolean isEmpty() { return size == 0; }
-        int     getSize() { return size; }
+        void reverse() {
+            Node prev = null, cur = head;
+            while (cur != null) {
+                Node nxt = cur.next;
+                cur.next = prev;
+                prev = cur;
+                cur = nxt;
+            }
+            head = prev;
+        }
+
+        int size() { return length; }
     }
 
     public static void main(String[] args) {
         LinkedList ll = new LinkedList();
-        ll.insertTail(10);
-        ll.insertTail(25);
-        ll.insertTail(37);
-        ll.insertHead(5);
+        ll.insertBack(10);
+        ll.insertBack(25);
+        ll.insertBack(37);
+        ll.insertFront(5);
         ll.search(25);
-        ll.deleteHead();
-        ll.deleteTail();
         ll.delete(25);
-        ll.getSize();
-        ll.isEmpty();
+        ll.insertBack(99);
+        ll.reverse();
+        ll.size();
     }
 }`,
 
-cpp:`// ─── Singly Linked List — C++ ────────────────────────────
+cpp:`// Linked List — C++
 #include <iostream>
-#include <vector>
 using namespace std;
 
 struct Node {
-    int   value;
+    int value;
     Node* next;
     Node(int v) : value(v), next(nullptr) {}
 };
 
 class LinkedList {
 public:
-    Node* head;
-    int   sz;
-    LinkedList() : head(nullptr), sz(0) {}
+    Node* head = nullptr;
+    int length = 0;
 
-    void insertHead(int value) {
+    void insertFront(int value) {
         Node* node = new Node(value);
-        node->next = head; head = node; sz++;
+        node->next = head;
+        head = node;
+        length++;
     }
 
-    void insertTail(int value) {
+    void insertBack(int value) {
         Node* node = new Node(value);
-        if (!head) { head = node; sz++; return; }
+        if (!head) { head = node; length++; return; }
         Node* cur = head;
         while (cur->next) cur = cur->next;
-        cur->next = node; sz++;
+        cur->next = node;
+        length++;
     }
 
-    void insertAt(int index, int value) {
-        if (index <= 0) { insertHead(value); return; }
-        Node* node = new Node(value);
-        Node* cur = head; int i = 0;
-        while (cur && i < index - 1) { cur = cur->next; i++; }
-        if (!cur) { insertTail(value); return; }
-        node->next = cur->next; cur->next = node; sz++;
-    }
-
-    int deleteHead() {
-        if (!head) return -1;
-        int val = head->value;
-        Node* tmp = head; head = head->next;
-        delete tmp; sz--; return val;
-    }
-
-    int deleteTail() {
-        if (!head) return -1;
-        if (!head->next) {
-            int v = head->value; delete head; head = nullptr; sz--; return v;
-        }
-        Node* cur = head;
-        while (cur->next->next) cur = cur->next;
-        int val = cur->next->value;
-        delete cur->next; cur->next = nullptr; sz--; return val;
-    }
-
-    bool deleteVal(int value) {
+    bool delete_node(int value) {
         if (!head) return false;
         if (head->value == value) {
-            Node* tmp = head; head = head->next; delete tmp; sz--; return true;
+            Node* tmp = head;
+            head = head->next;
+            delete tmp; length--;
+            return true;
         }
         Node* cur = head;
         while (cur->next) {
             if (cur->next->value == value) {
                 Node* tmp = cur->next;
                 cur->next = cur->next->next;
-                delete tmp; sz--; return true;
+                delete tmp; length--;
+                return true;
             }
             cur = cur->next;
         }
         return false;
     }
 
-    int  search(int value) {
+    int search(int value) {
         Node* cur = head; int idx = 0;
         while (cur) {
             if (cur->value == value) return idx;
@@ -528,88 +426,81 @@ public:
         return -1;
     }
 
-    bool isEmpty() { return sz == 0; }
-    int  getSize() { return sz; }
+    void reverse() {
+        Node* prev = nullptr, *cur = head;
+        while (cur) {
+            Node* nxt = cur->next;
+            cur->next = prev;
+            prev = cur;
+            cur = nxt;
+        }
+        head = prev;
+    }
+
+    int size() { return length; }
 };
 
 int main() {
     LinkedList ll;
-    ll.insertTail(10);
-    ll.insertTail(25);
-    ll.insertTail(37);
-    ll.insertHead(5);
+    ll.insertBack(10);
+    ll.insertBack(25);
+    ll.insertBack(37);
+    ll.insertFront(5);
     ll.search(25);
-    ll.deleteHead();
-    ll.deleteTail();
-    ll.deleteVal(25);
-    ll.getSize();
-    ll.isEmpty();
+    ll.delete_node(25);
+    ll.insertBack(99);
+    ll.reverse();
+    ll.size();
     return 0;
 }`,
 
-csharp:`// ─── Singly Linked List — C# ─────────────────────────────
+csharp:`// Linked List — C#
 using System;
-using System.Collections.Generic;
 
 class Program {
     class Node {
-        public int  Value;
+        public int Value;
         public Node Next;
         public Node(int value) { Value = value; }
     }
 
     class LinkedList {
-        public Node Head = null;
-        public int  Size = 0;
+        Node head = null;
+        int length = 0;
 
-        public void InsertHead(int value) {
+        public void InsertFront(int value) {
             Node node = new Node(value);
-            node.Next = Head; Head = node; Size++;
+            node.Next = head;
+            head = node;
+            length++;
         }
 
-        public void InsertTail(int value) {
+        public void InsertBack(int value) {
             Node node = new Node(value);
-            if (Head == null) { Head = node; Size++; return; }
-            Node cur = Head;
+            if (head == null) { head = node; length++; return; }
+            Node cur = head;
             while (cur.Next != null) cur = cur.Next;
-            cur.Next = node; Size++;
-        }
-
-        public void InsertAt(int index, int value) {
-            if (index <= 0) { InsertHead(value); return; }
-            Node node = new Node(value);
-            Node cur = Head; int i = 0;
-            while (cur != null && i < index - 1) { cur = cur.Next; i++; }
-            if (cur == null) { InsertTail(value); return; }
-            node.Next = cur.Next; cur.Next = node; Size++;
-        }
-
-        public int DeleteHead() {
-            if (Head == null) return -1;
-            int val = Head.Value; Head = Head.Next; Size--; return val;
-        }
-
-        public int DeleteTail() {
-            if (Head == null) return -1;
-            if (Head.Next == null) { int v = Head.Value; Head = null; Size--; return v; }
-            Node cur = Head;
-            while (cur.Next.Next != null) cur = cur.Next;
-            int val = cur.Next.Value; cur.Next = null; Size--; return val;
+            cur.Next = node;
+            length++;
         }
 
         public bool Delete(int value) {
-            if (Head == null) return false;
-            if (Head.Value == value) { Head = Head.Next; Size--; return true; }
-            Node cur = Head;
+            if (head == null) return false;
+            if (head.Value == value) { head = head.Next; length--; return true; }
+            Node cur = head;
             while (cur.Next != null) {
-                if (cur.Next.Value == value) { cur.Next = cur.Next.Next; Size--; return true; }
+                if (cur.Next.Value == value) {
+                    cur.Next = cur.Next.Next;
+                    length--;
+                    return true;
+                }
                 cur = cur.Next;
             }
             return false;
         }
 
         public int Search(int value) {
-            Node cur = Head; int idx = 0;
+            Node cur = head; int idx = 0;
             while (cur != null) {
                 if (cur.Value == value) return idx;
                 cur = cur.Next; idx++;
@@ -617,1629 +508,1411 @@ class Program {
             return -1;
         }
 
-        public bool IsEmpty() { return Size == 0; }
-        public int  GetSize() { return Size; }
+        public void Reverse() {
+            Node prev = null, cur = head;
+            while (cur != null) {
+                Node nxt = cur.Next;
+                cur.Next = prev;
+                prev = cur;
+                cur = nxt;
+            }
+            head = prev;
+        }
+
+        public int Size() { return length; }
     }
 
     static void Main() {
         LinkedList ll = new LinkedList();
-        ll.InsertTail(10);
-        ll.InsertTail(25);
-        ll.InsertTail(37);
-        ll.InsertHead(5);
+        ll.InsertBack(10);
+        ll.InsertBack(25);
+        ll.InsertBack(37);
+        ll.InsertFront(5);
         ll.Search(25);
-        ll.DeleteHead();
-        ll.DeleteTail();
         ll.Delete(25);
-        ll.GetSize();
-        ll.IsEmpty();
+        ll.InsertBack(99);
+        ll.Reverse();
+        ll.Size();
     }
+}`,
+
+go:`// Linked List — Go
+package main
+
+import "fmt"
+
+type Node struct {
+    value int
+    next  *Node
+}
+
+type LinkedList struct {
+    head   *Node
+    length int
+}
+
+func (ll *LinkedList) InsertFront(value int) {
+    node := &Node{value: value}
+    node.next = ll.head
+    ll.head = node
+    ll.length++
+}
+
+func (ll *LinkedList) InsertBack(value int) {
+    node := &Node{value: value}
+    if ll.head == nil { ll.head = node; ll.length++; return }
+    cur := ll.head
+    for cur.next != nil { cur = cur.next }
+    cur.next = node
+    ll.length++
+}
+
+func (ll *LinkedList) Delete(value int) bool {
+    if ll.head == nil { return false }
+    if ll.head.value == value { ll.head = ll.head.next; ll.length--; return true }
+    cur := ll.head
+    for cur.next != nil {
+        if cur.next.value == value {
+            cur.next = cur.next.next
+            ll.length--
+            return true
+        }
+        cur = cur.next
+    }
+    return false
+}
+
+func (ll *LinkedList) Search(value int) int {
+    cur := ll.head
+    for i := 0; cur != nil; i++ {
+        if cur.value == value { return i }
+        cur = cur.next
+    }
+    return -1
+}
+
+func (ll *LinkedList) Reverse() {
+    var prev *Node
+    cur := ll.head
+    for cur != nil {
+        nxt := cur.next
+        cur.next = prev
+        prev = cur
+        cur = nxt
+    }
+    ll.head = prev
+}
+
+func (ll *LinkedList) Size() int { return ll.length }
+
+func main() {
+    ll := &LinkedList{}
+    ll.InsertBack(10)
+    ll.InsertBack(25)
+    ll.InsertBack(37)
+    ll.InsertFront(5)
+    ll.Search(25)
+    ll.Delete(25)
+    ll.InsertBack(99)
+    ll.Reverse()
+    fmt.Println(ll.Size())
+}`,
+
+rust:`// Linked List — Rust
+#[derive(Debug)]
+struct Node {
+    value: i32,
+    next: Option<Box<Node>>,
+}
+
+struct LinkedList {
+    head: Option<Box<Node>>,
+    length: usize,
+}
+
+impl LinkedList {
+    fn new() -> Self {
+        LinkedList { head: None, length: 0 }
+    }
+
+    fn insert_front(&mut self, value: i32) {
+        let mut node = Box::new(Node { value, next: None });
+        node.next = self.head.take();
+        self.head = Some(node);
+        self.length += 1;
+    }
+
+    fn insert_back(&mut self, value: i32) {
+        let node = Box::new(Node { value, next: None });
+        match self.head {
+            None => { self.head = Some(node); }
+            Some(ref mut h) => {
+                let mut cur = h;
+                while cur.next.is_some() {
+                    cur = cur.next.as_mut().unwrap();
+                }
+                cur.next = Some(node);
+            }
+        }
+        self.length += 1;
+    }
+
+    fn search(&self, value: i32) -> i32 {
+        let mut cur = &self.head;
+        let mut idx = 0;
+        while let Some(n) = cur {
+            if n.value == value { return idx; }
+            cur = &n.next;
+            idx += 1;
+        }
+        -1
+    }
+
+    fn size(&self) -> usize { self.length }
+}
+
+fn main() {
+    let mut ll = LinkedList::new();
+    ll.insert_back(10);
+    ll.insert_back(25);
+    ll.insert_back(37);
+    ll.insert_front(5);
+    ll.search(25);
+    ll.insert_back(99);
+    ll.size();
 }`,
 };
 
-// ══════════════════════════════════════════════════════════════════════════════
-// BRACE / INDENT UTILITIES
-// ══════════════════════════════════════════════════════════════════════════════
-function countBraces(line) {
-  let opens=0, closes=0, inStr=false, strChar="";
-  const ci = line.indexOf("//");
-  const cleaned = ci>=0 ? line.slice(0,ci) : line;
-  for (let i=0;i<cleaned.length;i++) {
-    const ch=cleaned[i];
-    if (!inStr&&(ch==='"'||ch==="'"||ch==="`")){inStr=true;strChar=ch;continue;}
-    if (inStr&&ch===strChar&&cleaned[i-1]!=="\\"){inStr=false;continue;}
-    if (!inStr){if(ch==="{")opens++;else if(ch==="}") closes++;}
-  }
-  return {opens,closes};
-}
-function extractClassBlock(code, className) {
-  const re = new RegExp(`\\bclass\\s+${className}(?:\\s+[^{]*)?\\{`);
-  const match = re.exec(code);
-  if (!match) return null;
-  let depth=1, i=match.index+match[0].length;
-  while (i<code.length&&depth>0){if(code[i]==="{")depth++;else if(code[i]==="}") depth--;i++;}
-  return {text:code.slice(match.index,i),start:match.index,end:i};
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// JAVASCRIPT/TYPESCRIPT REAL EXECUTION ENGINE
-// ══════════════════════════════════════════════════════════════════════════════
-function runJavaScript(code) {
-  const classMatches = [...code.matchAll(/\bclass\s+(\w+)/g)];
-  if (!classMatches.length) return {steps:[],errors:["No class definition found."],termLines:[]};
-
-  const llClass  = classMatches.find(m=>/list/i.test(m[1])) ?? classMatches[classMatches.length-1];
-  const className = llClass[1];
-  const nodeClass = classMatches.find(m=>/node/i.test(m[1]));
-  const nodeName  = nodeClass?.[1] ?? "Node";
-
-  let execCode = code;
-  const toRemove = [...classMatches].reverse();
-  for (const m of toRemove) {
-    const block = extractClassBlock(execCode, m[1]);
-    if (block) execCode = execCode.slice(0,block.start)+"\n"+execCode.slice(block.end);
-  }
-
-  const instrumented = `"use strict";
-const __S=[]; const __T=[];
-class ${nodeName}{constructor(v){this.value=v;this.next=null;}}
-class ${className}{
-  constructor(){this.head=null;this._size=0;}
-  get size(){return this._size;}
-  _toArr(){const a=[];let c=this.head;while(c){a.push(c.value);c=c.next;}return a;}
-  insertHead(value){
-    const node=new ${nodeName}(value);node.next=this.head;this.head=node;this._size++;
-    __S.push({type:"insertHead",value,nodes:this._toArr(),highlighted:0});
-    __T.push({kind:"success",text:\`insertHead(\${value})  →  added \${value} at HEAD  [size: \${this._size}]\`,op:"insertHead",val:value,size:this._size});
-  }
-  insertTail(value){
-    const node=new ${nodeName}(value);
-    if(!this.head){this.head=node;this._size++;__S.push({type:"insertTail",value,nodes:this._toArr(),highlighted:0});__T.push({kind:"success",text:\`insertTail(\${value})  →  added \${value} at TAIL  [size: \${this._size}]\`,op:"insertTail",val:value,size:this._size});return;}
-    let cur=this.head;while(cur.next)cur=cur.next;cur.next=node;this._size++;
-    __S.push({type:"insertTail",value,nodes:this._toArr(),highlighted:this._size-1});
-    __T.push({kind:"success",text:\`insertTail(\${value})  →  added \${value} at TAIL  [size: \${this._size}]\`,op:"insertTail",val:value,size:this._size});
-  }
-  insertAt(index,value){
-    const ci=Math.max(0,Math.min(index,this._size));
-    if(ci<=0){this.insertHead(value);return;}
-    if(ci>=this._size){this.insertTail(value);return;}
-    const node=new ${nodeName}(value);let cur=this.head,i=0;
-    while(cur&&i<ci-1){cur=cur.next;i++;}
-    node.next=cur.next;cur.next=node;this._size++;
-    __S.push({type:"insertAt",value,index:ci,nodes:this._toArr(),highlighted:ci});
-    __T.push({kind:"success",text:\`insertAt(\${ci}, \${value})  →  inserted \${value} at index \${ci}  [size: \${this._size}]\`,op:"insertAt",val:value,size:this._size});
-  }
-  deleteHead(){
-    if(!this.head){__S.push({type:"empty_error",value:null,nodes:[],highlighted:-1});__T.push({kind:"error",text:"deleteHead()  →  ✗ List is empty! Nothing to delete.",op:"deleteHead",size:0});return undefined;}
-    const val=this.head.value;this.head=this.head.next;this._size--;
-    __S.push({type:"deleteHead",value:val,nodes:this._toArr(),highlighted:-1});
-    __T.push({kind:"warn",text:\`deleteHead()  →  removed \${val} from HEAD  [size: \${this._size}]\`,op:"deleteHead",val,size:this._size});
-    return val;
-  }
-  deleteTail(){
-    if(!this.head){__S.push({type:"empty_error",value:null,nodes:[],highlighted:-1});__T.push({kind:"error",text:"deleteTail()  →  ✗ List is empty! Nothing to delete.",op:"deleteTail",size:0});return undefined;}
-    if(!this.head.next){const v=this.head.value;this.head=null;this._size--;__S.push({type:"deleteTail",value:v,nodes:[],highlighted:-1});__T.push({kind:"warn",text:\`deleteTail()  →  removed \${v} from TAIL  [size: \${this._size}]\`,op:"deleteTail",val:v,size:this._size});return v;}
-    let cur=this.head;while(cur.next.next)cur=cur.next;
-    const val=cur.next.value;cur.next=null;this._size--;
-    __S.push({type:"deleteTail",value:val,nodes:this._toArr(),highlighted:this._size-1});
-    __T.push({kind:"warn",text:\`deleteTail()  →  removed \${val} from TAIL  [size: \${this._size}]\`,op:"deleteTail",val,size:this._size});
-    return val;
-  }
-  delete(value){
-    if(!this.head){__S.push({type:"delete_error",value,nodes:[],highlighted:-1});__T.push({kind:"error",text:\`delete(\${value})  →  ✗ List is empty!\`,op:"delete",size:0});return false;}
-    if(this.head.value===value){this.head=this.head.next;this._size--;__S.push({type:"deleteVal",value,nodes:this._toArr(),highlighted:-1});__T.push({kind:"warn",text:\`delete(\${value})  →  node removed  [size: \${this._size}]\`,op:"delete",val:value,size:this._size});return true;}
-    let cur=this.head;
-    while(cur.next){if(cur.next.value===value){cur.next=cur.next.next;this._size--;__S.push({type:"deleteVal",value,nodes:this._toArr(),highlighted:-1});__T.push({kind:"warn",text:\`delete(\${value})  →  node removed  [size: \${this._size}]\`,op:"delete",val:value,size:this._size});return true;}cur=cur.next;}
-    __S.push({type:"delete_error",value,nodes:this._toArr(),highlighted:-1});
-    __T.push({kind:"error",text:\`delete(\${value})  →  ✗ Value \${value} not found in list!\`,op:"delete",size:this._size});
-    return false;
-  }
-  search(value){
-    let cur=this.head,idx=0;
-    while(cur){if(cur.value===value){__S.push({type:"search",value,result:idx,nodes:this._toArr(),highlighted:idx});__T.push({kind:"info",text:\`search(\${value})  →  found at index \${idx}  ✓\`,op:"search",val:value,result:idx,size:this._size});return idx;}cur=cur.next;idx++;}
-    __S.push({type:"search_miss",value,result:-1,nodes:this._toArr(),highlighted:-1});
-    __T.push({kind:"error",text:\`search(\${value})  →  ✗ Value \${value} not found (-1)\`,op:"search",size:this._size});
-    return -1;
-  }
-  traverse(){
-    const arr=this._toArr();
-    __S.push({type:"traverse",nodes:arr,highlighted:-2});
-    __T.push({kind:"info",text:\`traverse()  →  [\${arr.join(" → ")}]  (\${arr.length} nodes)\`,op:"traverse",size:arr.length});
-    return arr;
-  }
-  isEmpty(){
-    const e=this._size===0;
-    __S.push({type:"isEmpty",result:e,nodes:this._toArr(),highlighted:-1});
-    __T.push({kind:"info",text:\`isEmpty()  →  \${e}  (\${this._size} node\${this._size!==1?"s":""})\`,op:"isEmpty",result:e,size:this._size});
-    return e;
-  }
-  getSize(){
-    __S.push({type:"getSize",result:this._size,nodes:this._toArr(),highlighted:-1});
-    __T.push({kind:"info",text:\`getSize()  →  \${this._size}\`,op:"getSize",result:this._size,size:this._size});
-    return this._size;
-  }
-  prepend(v){return this.insertHead(v);}
-  append(v){return this.insertTail(v);}
-  push(v){return this.insertTail(v);}
-  unshift(v){return this.insertHead(v);}
-  pop(){return this.deleteTail();}
-  shift(){return this.deleteHead();}
-  remove(v){return this.delete(v);}
-  find(v){return this.search(v);}
-}
-${execCode}
-return {steps:__S,termLines:__T};`.trim();
-
-  let result;
-  try {
-    const stub={log:()=>{},warn:()=>{},error:()=>{},info:()=>{}};
-    // eslint-disable-next-line no-new-func
-    result = new Function("console",instrumented)(stub);
-  } catch(e) {
-    return {steps:[],errors:[e.message],termLines:[{kind:"error",text:`Runtime Error: ${e.message}`}]};
-  }
-
-  const {steps:rawSteps=[],termLines=[]} = result??{};
-  if (!rawSteps.length) return {steps:[],errors:["No list operations executed.\nCall insertHead(), insertTail(), deleteHead(), search(), etc."],termLines};
-
-  const lines = code.split("\n");
-  const allBlocks = [...classMatches];
-  let maxClassEnd=0;
-  for (const m of allBlocks){const block=extractClassBlock(code,m[1]);if(block&&block.end>maxClassEnd)maxClassEnd=block.end;}
-  let classEndLine=0,charCursor=0;
-  for(let i=0;i<lines.length;i++){if(charCursor>=maxClassEnd){classEndLine=i;break;}charCursor+=lines[i].length+1;}
-  const callLineNums=[];
-  const opRe=/\.(insertHead|insertTail|insertAt|deleteHead|deleteTail|delete|remove|search|find|traverse|isEmpty|is_empty|getSize|get_size|push|pop|unshift|shift|prepend|append)\s*\(/;
-  for(let i=classEndLine;i<lines.length;i++){const t=lines[i].trim();if(t.startsWith("//")||t.startsWith("*")||t.startsWith("/*"))continue;if(opRe.test(t))callLineNums.push(i);}
-
-  const steps=rawSteps.map((s,i)=>({
-    ...s,
-    lineNum:  callLineNums[i]??classEndLine,
-    codeLine: lines[callLineNums[i]??classEndLine]?.trim()??"",
-    message:  buildMessage(s),
-  }));
-  return {steps,errors:[],termLines};
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// SCOPE-AWARE PARSER  (Python, Java, C++, C#)
-// ══════════════════════════════════════════════════════════════════════════════
-function parseScoped(code,lang){
-  if(lang==="python") return parsePython(code);
-  return parseBraced(code,lang);
-}
-function parsePython(code){
-  const lines=code.split("\n"),execLines=[];
-  for(let i=0;i<lines.length;i++){
-    const line=lines[i],trimmed=line.trim();
-    if(!trimmed||trimmed.startsWith("#")) continue;
-    const indent=line.match(/^(\s*)/)?.[1]?.length??0;
-    if(indent===0&&!trimmed.startsWith("class ")&&!trimmed.startsWith("def ")&&
-       !trimmed.startsWith("import ")&&!trimmed.startsWith("from ")&&!trimmed.startsWith("if __name__"))
-      execLines.push({lineIdx:i,line:trimmed});
-  }
-  return simulateOps(execLines,code.split("\n"),lang);
-}
-function parseBraced(code,lang){
-  const lines=code.split("\n"),execLines=[];
-  let depth=0,inClass=false,classDepth=-1,inMain=false,mainDepth=-1,mlComment=false;
-  const needsMain=["java","cpp","csharp"];
-  for(let i=0;i<lines.length;i++){
-    const line=lines[i],trimmed=line.trim();
-    if(mlComment){if(trimmed.includes("*/")) mlComment=false;continue;}
-    if(trimmed.startsWith("/*")){mlComment=true;continue;}
-    if(trimmed.startsWith("//")||trimmed.startsWith("*")||trimmed.startsWith("#")||!trimmed) continue;
-    const{opens,closes}=countBraces(line);
-    const depthBefore=depth;depth+=opens-closes;
-    if(/\bclass\s+\w+/.test(trimmed)){inClass=true;classDepth=depthBefore;}
-    if(needsMain.includes(lang)&&/\bmain\s*\(/.test(trimmed)){inMain=true;mainDepth=depthBefore;}
-    if(inClass&&depth<=classDepth){inClass=false;classDepth=-1;}
-    if(inMain&&depth<=mainDepth){inMain=false;mainDepth=-1;}
-    const isExec=needsMain.includes(lang)?(inMain&&depth===mainDepth+1&&!inClass):(depth===0&&!inClass);
-    if(isExec) execLines.push({lineIdx:i,line:trimmed});
-  }
-  return simulateOps(execLines,lines,lang);
-}
-
-function simulateOps(execLines,allLines,lang){
-  const steps=[],errors=[],termLines=[],list=[];
-  const INS_HEAD=/\.(?:insertHead|prepend|unshift|insert_head|InsertHead)\s*\(\s*(-?[\d.]+)\s*\)/;
-  const INS_TAIL=/\.(?:insertTail|append|push|insert_tail|InsertTail)\s*\(\s*(-?[\d.]+)\s*\)/;
-  const INS_AT  =/\.(?:insertAt|insert_at|InsertAt)\s*\(\s*(\d+)\s*,\s*(-?[\d.]+)\s*\)/;
-  const DEL_HEAD=/\.(?:deleteHead|shift|delete_head|DeleteHead)\s*\(\s*\)/;
-  const DEL_TAIL=/\.(?:deleteTail|pop|delete_tail|DeleteTail)\s*\(\s*\)/;
-  const DEL_VAL =/\.(?:delete|remove|deleteVal|delete_val|Delete|Remove)\s*\(\s*(-?[\d.]+)\s*\)/;
-  const SEARCH  =/\.(?:search|find|indexOf|index_of|Search|Find)\s*\(\s*(-?[\d.]+)\s*\)/;
-  const TRAVERSE=/\.(?:traverse|toArray|to_list|print|display|toList|Traverse)\s*\(\s*\)/;
-  const ISEMPTY =/\.(?:isEmpty|IsEmpty|is_empty|empty|Empty)\s*\(\s*\)/;
-  const GETSIZE =/\.(?:getSize|GetSize|get_size|length|size|count|GetSize|Size)\s*\(\s*\)/;
-
-  for(const{lineIdx,line}of execLines){
-    const orig=allLines[lineIdx]?.trim()??line;
-    let m;
-    const push=(s)=>steps.push({...s,lineNum:lineIdx,codeLine:orig,message:buildMessage(s)});
-    const term=(t)=>termLines.push(t);
-
-    if((m=line.match(INS_HEAD))){
-      const v=parseFloat(m[1]);list.unshift(v);
-      push({type:"insertHead",value:v,nodes:[...list],highlighted:0});
-      term({kind:"success",text:`insertHead(${v})  →  added ${v} at HEAD  [size: ${list.length}]`,op:"insertHead",val:v,size:list.length});continue;
-    }
-    if((m=line.match(INS_TAIL))){
-      const v=parseFloat(m[1]);list.push(v);
-      push({type:"insertTail",value:v,nodes:[...list],highlighted:list.length-1});
-      term({kind:"success",text:`insertTail(${v})  →  added ${v} at TAIL  [size: ${list.length}]`,op:"insertTail",val:v,size:list.length});continue;
-    }
-    if((m=line.match(INS_AT))){
-      const idx=parseInt(m[1]),v=parseFloat(m[2]),ci=Math.max(0,Math.min(idx,list.length));
-      list.splice(ci,0,v);
-      push({type:"insertAt",value:v,index:ci,nodes:[...list],highlighted:ci});
-      term({kind:"success",text:`insertAt(${ci}, ${v})  →  inserted ${v} at index ${ci}  [size: ${list.length}]`,op:"insertAt",val:v,size:list.length});continue;
-    }
-    if(DEL_HEAD.test(line)){
-      if(!list.length){push({type:"empty_error",value:null,nodes:[],highlighted:-1});term({kind:"error",text:"deleteHead()  →  ✗ List is empty! Nothing to delete.",op:"deleteHead",size:0});}
-      else{const v=list.shift();push({type:"deleteHead",value:v,nodes:[...list],highlighted:-1});term({kind:"warn",text:`deleteHead()  →  removed ${v} from HEAD  [size: ${list.length}]`,op:"deleteHead",val:v,size:list.length});}
-      continue;
-    }
-    if(DEL_TAIL.test(line)){
-      if(!list.length){push({type:"empty_error",value:null,nodes:[],highlighted:-1});term({kind:"error",text:"deleteTail()  →  ✗ List is empty! Nothing to delete.",op:"deleteTail",size:0});}
-      else{const v=list.pop();push({type:"deleteTail",value:v,nodes:[...list],highlighted:list.length-1});term({kind:"warn",text:`deleteTail()  →  removed ${v} from TAIL  [size: ${list.length}]`,op:"deleteTail",val:v,size:list.length});}
-      continue;
-    }
-    if((m=line.match(DEL_VAL))){
-      const v=parseFloat(m[1]),fi=list.indexOf(v);
-      if(fi===-1){push({type:"delete_error",value:v,nodes:[...list],highlighted:-1});term({kind:"error",text:`delete(${v})  →  ✗ Value ${v} not found in list!`,op:"delete",size:list.length});}
-      else{list.splice(fi,1);push({type:"deleteVal",value:v,nodes:[...list],highlighted:-1});term({kind:"warn",text:`delete(${v})  →  node removed  [size: ${list.length}]`,op:"delete",val:v,size:list.length});}
-      continue;
-    }
-    if((m=line.match(SEARCH))){
-      const v=parseFloat(m[1]),fi=list.indexOf(v);
-      if(fi===-1){push({type:"search_miss",value:v,result:-1,nodes:[...list],highlighted:-1});term({kind:"error",text:`search(${v})  →  ✗ Value ${v} not found (-1)`,op:"search",size:list.length});}
-      else{push({type:"search",value:v,result:fi,nodes:[...list],highlighted:fi});term({kind:"info",text:`search(${v})  →  found at index ${fi}  ✓`,op:"search",val:v,result:fi,size:list.length});}
-      continue;
-    }
-    if(TRAVERSE.test(line)){
-      push({type:"traverse",nodes:[...list],highlighted:-2});
-      term({kind:"info",text:`traverse()  →  [${list.join(" → ")}]  (${list.length} nodes)`,op:"traverse",size:list.length});continue;
-    }
-    if(ISEMPTY.test(line)){
-      const e=list.length===0;
-      push({type:"isEmpty",result:e,nodes:[...list],highlighted:-1});
-      term({kind:"info",text:`isEmpty()  →  ${e}  (${list.length} node${list.length!==1?"s":""})`,op:"isEmpty",result:e,size:list.length});continue;
-    }
-    if(GETSIZE.test(line)){
-      push({type:"getSize",result:list.length,nodes:[...list],highlighted:-1});
-      term({kind:"info",text:`getSize()  →  ${list.length}`,op:"getSize",result:list.length,size:list.length});continue;
-    }
-  }
-  if(!steps.length) errors.push("No list operations detected.\nCall insertHead(N), insertTail(N), deleteHead(), search(N), etc.");
-  return{steps,errors,termLines};
-}
-
-function buildMessage(s){
-  switch(s.type){
-    case "insertHead":  return `insertHead(${s.value})  →  prepended ${s.value} · new HEAD · list size: ${s.nodes?.length}`;
-    case "insertTail":  return `insertTail(${s.value})  →  appended ${s.value} · new TAIL · list size: ${s.nodes?.length}`;
-    case "insertAt":    return `insertAt(${s.index}, ${s.value})  →  inserted ${s.value} at index ${s.index} · list size: ${s.nodes?.length}`;
-    case "deleteHead":  return `deleteHead()  →  removed ${s.value} from HEAD · head now → ${s.nodes?.[0]??'null'} · list size: ${s.nodes?.length}`;
-    case "deleteTail":  return `deleteTail()  →  removed ${s.value} from TAIL · list size: ${s.nodes?.length}`;
-    case "deleteVal":   return `delete(${s.value})  →  found and removed node ${s.value} · list size: ${s.nodes?.length}`;
-    case "delete_error":return `delete(${s.value})  →  ⚠ Value ${s.value} not found in list!`;
-    case "search":      return `search(${s.value})  →  ✓ found at index ${s.result}  ·  node highlighted`;
-    case "search_miss": return `search(${s.value})  →  ⚠ Value ${s.value} not found · returns -1`;
-    case "traverse":    return `traverse()  →  visited all ${s.nodes?.length} nodes: [${s.nodes?.join(" → ")}]`;
-    case "isEmpty":     return `isEmpty()  →  ${s.result}  ·  list has ${s.nodes?.length??0} node${s.nodes?.length!==1?"s":""}`;
-    case "getSize":     return `getSize()  →  ${s.result}  ·  ${s.result} node${s.result!==1?"s":""}`;
-    case "empty_error": return `⚠ Operation failed! The list is empty.`;
+// ── Parser / Simulator ───────────────────────────────────────────────────────
+function buildMessage(s) {
+  switch (s.type) {
+    case "insertFront": return `insertFront(${s.value})  ·  list: ${fmtList(s.list)}  (size: ${s.list.length})`;
+    case "insertBack":  return `insertBack(${s.value})   ·  list: ${fmtList(s.list)}  (size: ${s.list.length})`;
+    case "insertAt":    return `insertAt(${s.index}, ${s.value})  ·  list: ${fmtList(s.list)}`;
+    case "delete":      return s.found ? `delete(${s.value})  →  removed  ·  list: ${fmtList(s.list)}` : `delete(${s.value})  →  not found`;
+    case "search":      return s.result >= 0 ? `search(${s.value})  →  found at index ${s.result}` : `search(${s.value})  →  not found (-1)`;
+    case "traverse":    return `traverse  →  ${fmtList(s.list)}`;
+    case "reverse":     return `reverse()  ·  list: ${fmtList(s.list)}`;
+    case "size":        return `size()  →  ${s.result}`;
     default: return "";
   }
 }
-
-function runCode(code,lang){
-  const t=code.trim();
-  if(!t) return{steps:[],errors:["Please write some code first."],termLines:[]};
-  if(lang==="javascript"||lang==="typescript") return runJavaScript(code);
-  return parseScoped(code,lang);
+function fmtList(arr) {
+  if (!arr.length) return "NULL";
+  return arr.map(v => v).join(" → ") + " → NULL";
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// AI VALIDATION GATE
-// ══════════════════════════════════════════════════════════════════════════════
-async function validateWithAI(code, lang) {
-  const prompt = `You are a strict code reviewer for a Linked List data-structure visualizer.
-
-The user has written a Singly Linked List implementation in ${lang}. Your job:
-1. Check if it is a CORRECT and COMPLETE Linked List implementation.
-2. Look for logic bugs: wrong pointer updates, not updating head, not decrementing size, etc.
-3. Look for syntax errors.
-
-CRITICAL RULE: If there are ANY errors at all — even one — set "valid" to false.
-Do NOT be lenient. A single bug means valid=false.
-
-Return ONLY valid JSON (no markdown, no backticks):
-{
-  "valid": true,
-  "reason": "one sentence summary",
-  "errors": []
+function runLinkedList(code, lang) {
+  if (!code.trim()) return { steps: [], errors: ["Please write some code first."] };
+  if (lang === "javascript" || lang === "typescript") return runJSLinkedList(code);
+  return parseGenericLL(code, lang);
 }
 
+function runJSLinkedList(code) {
+  const steps = [];
+  const instrumented = `"use strict";
+const __S = [];
+
+class Node {
+  constructor(value) { this.value = value; this.next = null; }
+}
+
+class LinkedList {
+  constructor() { this.head = null; this.length = 0; }
+
+  _toArray() {
+    const a = []; let c = this.head;
+    while (c) { a.push(c.value); c = c.next; }
+    return a;
+  }
+
+  insertFront(value) {
+    const node = new Node(value);
+    node.next = this.head; this.head = node; this.length++;
+    __S.push({ type:"insertFront", value, list: this._toArray() });
+  }
+
+  insertBack(value) {
+    const node = new Node(value);
+    if (!this.head) { this.head = node; } else {
+      let cur = this.head; while (cur.next) cur = cur.next; cur.next = node;
+    }
+    this.length++;
+    __S.push({ type:"insertBack", value, list: this._toArray() });
+  }
+
+  insertAt(index, value) {
+    if (index <= 0) { this.insertFront(value); return; }
+    const node = new Node(value);
+    let cur = this.head, i = 0;
+    while (cur && i < index - 1) { cur = cur.next; i++; }
+    if (cur) { node.next = cur.next; cur.next = node; this.length++; }
+    __S.push({ type:"insertAt", index, value, list: this._toArray() });
+  }
+
+  delete(value) {
+    let found = false;
+    if (!this.head) { __S.push({ type:"delete", value, found: false, list: [] }); return false; }
+    if (this.head.value === value) {
+      this.head = this.head.next; this.length--; found = true;
+      __S.push({ type:"delete", value, found: true, list: this._toArray() }); return true;
+    }
+    let cur = this.head;
+    while (cur.next) {
+      if (cur.next.value === value) {
+        cur.next = cur.next.next; this.length--; found = true; break;
+      }
+      cur = cur.next;
+    }
+    __S.push({ type:"delete", value, found, list: this._toArray() });
+    return found;
+  }
+
+  search(value) {
+    let cur = this.head, idx = 0;
+    while (cur) { if (cur.value === value) { __S.push({ type:"search", value, result: idx, list: this._toArray() }); return idx; } cur = cur.next; idx++; }
+    __S.push({ type:"search", value, result: -1, list: this._toArray() });
+    return -1;
+  }
+
+  reverse() {
+    let prev = null, cur = this.head;
+    while (cur) { let n = cur.next; cur.next = prev; prev = cur; cur = n; }
+    this.head = prev;
+    __S.push({ type:"reverse", list: this._toArray() });
+  }
+
+  traverse() { __S.push({ type:"traverse", list: this._toArray() }); return this._toArray(); }
+  size() { __S.push({ type:"size", result: this.length, list: this._toArray() }); return this.length; }
+  get length_prop() { return this.length; }
+}
+
+// strip class definitions from user code
+${stripClassDefs(code)}
+return __S;`;
+
+  try {
+    const fn = new Function("console", instrumented);
+    const raw = fn({ log: () => {}, warn: () => {}, error: () => {}, info: () => {} });
+    if (!raw?.length) return { steps: [], errors: ["No linked list operations detected."] };
+
+    const lines = code.split("\n");
+    const opLines = [];
+    for (let i = 0; i < lines.length; i++) {
+      const t = lines[i].trim();
+      if (t.startsWith("//") || t.startsWith("*") || !t) continue;
+      if (/\.(insertFront|insertBack|insertAt|delete|search|reverse|traverse|size|insert_front|insert_back|delete_node|Delete|Insert|Search|Reverse|Size)\s*\(/.test(t))
+        opLines.push(i);
+    }
+
+    return {
+      steps: raw.map((s, ix) => ({
+        ...s, lineNum: opLines[ix] ?? 0,
+        codeLine: lines[opLines[ix] ?? 0]?.trim() ?? "",
+        message: buildMessage(s),
+      })),
+      errors: []
+    };
+  } catch (e) {
+    return { steps: [], errors: [e.message] };
+  }
+}
+
+function stripClassDefs(code) {
+  // Remove class Node and class LinkedList/Stack blocks
+  let result = code;
+  const classRe = /\bclass\s+(?:Node|LinkedList|Stack)\b/g;
+  let m;
+  const toRemove = [];
+  while ((m = classRe.exec(code)) !== null) {
+    let d = 1, i = code.indexOf("{", m.index) + 1;
+    while (i < code.length && d > 0) { if (code[i] === "{") d++; else if (code[i] === "}") d--; i++; }
+    toRemove.push([m.index, i]);
+  }
+  for (let i = toRemove.length - 1; i >= 0; i--) {
+    result = result.slice(0, toRemove[i][0]) + result.slice(toRemove[i][1]);
+  }
+  return result;
+}
+
+function parseGenericLL(code, lang) {
+  const steps = [], list = [];
+  const lines = code.split("\n");
+  const opLines = [];
+  for (let i = 0; i < lines.length; i++) {
+    const t = lines[i].trim();
+    if (!t || t.startsWith("//") || t.startsWith("#") || t.startsWith("*")) continue;
+    if (/\.(insertFront|insertBack|insert_front|insert_back|InsertFront|InsertBack|Push|push_front|push_back|append|prepend)\s*\(/.test(t) ||
+        /\.(delete|Delete|delete_node|remove|Remove)\s*\(/.test(t) ||
+        /\.(search|Search|find|Find|contains|Contains)\s*\(/.test(t) ||
+        /\.(reverse|Reverse)\s*\(\s*\)/.test(t) ||
+        /\.(size|Size|length|Length)\s*\(\s*\)/.test(t))
+      opLines.push(i);
+  }
+
+  for (const li of opLines) {
+    const line = lines[li].trim();
+    const codeLine = line;
+
+    const ibRe = /\.(insertBack|insert_back|InsertBack|append|Push|push_back)\s*\(\s*(-?[\d.]+)\s*\)/;
+    const ifRe = /\.(insertFront|insert_front|InsertFront|prepend|push_front)\s*\(\s*(-?[\d.]+)\s*\)/;
+    const delRe = /\.(delete|Delete|delete_node|remove|Remove)\s*\(\s*(-?[\d.]+)\s*\)/;
+    const srRe = /\.(search|Search|find|Find|contains|Contains)\s*\(\s*(-?[\d.]+)\s*\)/;
+    const revRe = /\.(reverse|Reverse)\s*\(\s*\)/;
+    const szRe  = /\.(size|Size|length|Length)\s*\(\s*\)/;
+
+    let m;
+    if ((m = ibRe.exec(line))) {
+      const v = parseFloat(m[2]); list.push(v);
+      steps.push({ type:"insertBack", value:v, list:[...list], lineNum:li, codeLine, message:buildMessage({type:"insertBack",value:v,list:[...list]}) });
+    } else if ((m = ifRe.exec(line))) {
+      const v = parseFloat(m[2]); list.unshift(v);
+      steps.push({ type:"insertFront", value:v, list:[...list], lineNum:li, codeLine, message:buildMessage({type:"insertFront",value:v,list:[...list]}) });
+    } else if ((m = delRe.exec(line))) {
+      const v = parseFloat(m[2]); const idx = list.indexOf(v); const found = idx >= 0;
+      if (found) list.splice(idx, 1);
+      steps.push({ type:"delete", value:v, found, list:[...list], lineNum:li, codeLine, message:buildMessage({type:"delete",value:v,found,list:[...list]}) });
+    } else if ((m = srRe.exec(line))) {
+      const v = parseFloat(m[2]); const result = list.indexOf(v);
+      steps.push({ type:"search", value:v, result, list:[...list], lineNum:li, codeLine, message:buildMessage({type:"search",value:v,result,list:[...list]}) });
+    } else if (revRe.test(line)) {
+      list.reverse();
+      steps.push({ type:"reverse", list:[...list], lineNum:li, codeLine, message:buildMessage({type:"reverse",list:[...list]}) });
+    } else if (szRe.test(line)) {
+      steps.push({ type:"size", result:list.length, list:[...list], lineNum:li, codeLine, message:buildMessage({type:"size",result:list.length,list:[...list]}) });
+    }
+  }
+
+  if (!steps.length) return { steps:[], errors:["No linked list operations detected.\nCall insertBack(N), insertFront(N), delete(N), search(N), reverse(), or size()."] };
+  return { steps, errors: [] };
+}
+
+// ── AI Validation (mirrors original VisuoSlayer stack validator) ─────────────
+async function validateWithVisuoSlayer(code, lang) {
+  const prompt = `You are a strict code reviewer for VisuoSlayer, a Linked List data-structure visualizer.
+The user wrote a Singly Linked List in ${lang}. Check:
+1. Is it a correct complete Singly Linked List with at minimum insertFront or insertBack, and delete or search?
+2. Logic bugs: wrong pointer links, delete not correctly relinking, search returning wrong index, reverse leaving broken pointers?
+3. Syntax errors?
+Return ONLY valid JSON (no markdown):
+{"valid":true|false,"reason":"one sentence","errors":[{"line":<1-based int>,"message":"<issue>"}]}
 Code:
 \`\`\`${lang}
 ${code}
 \`\`\``;
-
   try {
-    const res = await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
-        max_tokens:1000,
-        messages:[{role:"user",content:prompt}],
-      }),
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
     });
-    if(!res.ok) return{valid:true,reason:"",errors:[],apiError:`HTTP ${res.status}`};
     const data = await res.json();
-    if(data.error) return{valid:true,reason:`AI unavailable: ${data.error.message}`,errors:[],apiError:data.error.message};
-    const raw = data.content?.map(i=>i.text||"").join("")??"";
-    // Strip possible markdown fences
-    const cleaned = raw.replace(/^```json\s*/i,"").replace(/^```\s*/i,"").replace(/\s*```\s*$/,"").trim();
-    try {
-      const parsed = JSON.parse(cleaned);
-      return{valid:!!parsed.valid,reason:parsed.reason??"",errors:Array.isArray(parsed.errors)?parsed.errors:[],apiError:null};
-    } catch {
-      // If JSON parse fails, assume valid to avoid blocking
-      return{valid:true,reason:"",errors:[],apiError:"AI response parse error"};
-    }
-  } catch(e){
-    return{valid:true,reason:"",errors:[],apiError:e.message};
+    if (data.error) return { valid: true, reason: "", errors: [], apiError: data.error };
+    const raw = data.content ?? "";
+    const cleaned = raw.replace(/```json|```/gi, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return { valid: !!parsed.valid, reason: parsed.reason ?? "", errors: Array.isArray(parsed.errors) ? parsed.errors : [], apiError: null };
+  } catch (e) {
+    return { valid: true, reason: "", errors: [], apiError: e.message };
   }
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ARROW & NULL MARKER
-// ══════════════════════════════════════════════════════════════════════════════
-function Arrow({color="rgba(96,165,250,0.5)", animated=false}){
-  const id = `ah${Math.abs(color.split("").reduce((a,c)=>a+c.charCodeAt(0),0))}`;
-  return(
-    <svg width="44" height="20" viewBox="0 0 44 20" style={{flexShrink:0,display:"block",overflow:"visible"}}>
-      <defs>
-        <marker id={id} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-          <polygon points="0 0,7 3.5,0 7" fill={color}/>
-        </marker>
-      </defs>
-      <line x1="2" y1="10" x2="34" y2="10"
-        stroke={color} strokeWidth="2"
-        strokeDasharray={animated?"5 3":"none"}
-        markerEnd={`url(#${id})`}
-        opacity="0.9">
-        {animated&&<animate attributeName="stroke-dashoffset" from="8" to="0" dur="0.45s" repeatCount="indefinite"/>}
-      </line>
-    </svg>
-  );
-}
-function NullMarker(){
-  return(
-    <div style={{
-      width:36,height:36,borderRadius:7,
-      border:"1.5px dashed rgba(255,255,255,0.12)",
-      display:"flex",alignItems:"center",justifyContent:"center",
-      fontFamily:"'JetBrains Mono',monospace",fontSize:8,
-      color:"rgba(255,255,255,0.18)",flexShrink:0,
-      background:"rgba(255,255,255,0.02)",letterSpacing:"0.05em",
-    }}>NULL</div>
+// ── Terminal ─────────────────────────────────────────────────────────────────
+function Terminal({ lines, sessionId, validating }) {
+  const bodyRef = useRef(null);
+  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [lines, validating]);
+  return (
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:"#07090f", minHeight:0, fontFamily:"'JetBrains Mono',monospace", fontSize:"11.5px" }}>
+      <div ref={bodyRef} style={{ flex:1, overflowY:"auto", padding:"10px 0 10px", scrollbarWidth:"thin", scrollbarColor:"#151e2e transparent" }}>
+        {lines.length === 0 && !validating && (
+          <div style={{ padding:"3px 18px", display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ color:"#4ade80", userSelect:"none" }}>$</span>
+            <span style={{ animation:"cur 1.1s step-end infinite", color:"#1e3a22", marginLeft:4 }}>_</span>
+          </div>
+        )}
+        {lines.map((line, i) => <TermLine key={i} line={line} isLast={i === lines.length - 1 && !validating} />)}
+        {validating && (
+          <div style={{ padding:"3px 18px", display:"flex", alignItems:"center", gap:9 }}>
+            <span style={{ display:"inline-block", width:11, height:11, borderRadius:"50%", border:"1.5px solid rgba(76,201,240,0.18)", borderTopColor:"#4cc9f0", animation:"spin 0.7s linear infinite", flexShrink:0 }} />
+            <span style={{ color:"#2d3f5a", fontSize:11 }}>VisuoSlayer is reviewing your implementation…</span>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// LINKED LIST VISUALIZATION
-// ══════════════════════════════════════════════════════════════════════════════
-function LinkedListViz({step, animKey, idle}){
-  const [flyItem, setFlyItem] = useState(null);
-  const [traverseIdx, setTraverseIdx] = useState(-1);
-  const traverseTimer = useRef(null);
-
-  useEffect(()=>{
-    clearInterval(traverseTimer.current);
-    setTraverseIdx(-1);
-    if(step?.type==="traverse"&&step.nodes?.length){
-      let i=0;setTraverseIdx(0);
-      traverseTimer.current=setInterval(()=>{
-        i++;
-        if(i>=step.nodes.length){clearInterval(traverseTimer.current);setTraverseIdx(-3);}
-        else setTraverseIdx(i);
-      },240);
-    }
-    return()=>clearInterval(traverseTimer.current);
-  },[animKey,step?.type]);
-
-  useEffect(()=>{
-    const isDelete=["deleteHead","deleteTail","deleteVal"].includes(step?.type);
-    if(isDelete&&step.value!=null){
-      setFlyItem({v:step.value,type:step.type,key:animKey});
-      const t=setTimeout(()=>setFlyItem(null),900);
-      return()=>clearTimeout(t);
-    }
-  },[animKey,step?.type]);
-
-  const nodes=step?.nodes??[];
-  const isErr=["delete_error","search_miss","empty_error"].includes(step?.type);
-
-  const getHL=(i)=>{
-    if(step?.type==="traverse"){
-      if(traverseIdx===-3) return "done";
-      if(i===traverseIdx) return "active";
-      if(i<traverseIdx) return "visited";
-      return "none";
-    }
-    if(step?.type==="search"&&step.highlighted===i) return "found";
-    if(step?.type==="insertAt"&&step.highlighted===i) return "new";
-    if(step?.type==="insertHead"&&i===0) return "new";
-    if(step?.type==="insertTail"&&i===nodes.length-1) return "new";
-    return "none";
+function TermLine({ line, isLast }) {
+  const [vis, setVis] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setVis(true), 15); return () => clearTimeout(t); }, []);
+  if (line.type === "separator") return <div style={{ margin:"5px 18px", borderTop:"1px solid rgba(255,255,255,0.04)", opacity:vis?1:0, transition:"opacity 0.12s" }} />;
+  if (line.type === "blank") return <div style={{ height:7 }} />;
+  if (line.type === "prompt") return (
+    <div style={{ padding:"2px 18px", display:"flex", alignItems:"center", gap:7, opacity:vis?1:0, transition:"opacity 0.1s" }}>
+      <span style={{ color:"#4ade80", userSelect:"none", flexShrink:0 }}>$</span>
+      <span style={{ color:"#3d6e9a" }}>{line.text}</span>
+    </div>
+  );
+  const cm = {
+    insertFront:"#4cc9f0", insertBack:"#39d98a", delete:"#f72585", search:"#c77dff",
+    reverse:"#ffd60a", size:"#4895ef", traverse:"#ff6b35",
+    error:"#f87171", stderr:"#f87171", success:"#39d98a", warn:"#fbbf24", info:"#60a5fa",
+    output:"#4a5e7a", stdout:"#4a6080", prompt:"#2a4060"
   };
+  const pm = {
+    insertFront:"⬅", insertBack:"➡", delete:"✂", search:"🔍", reverse:"⇄", size:"#", traverse:"→",
+    error:"✗", stderr:"✗", success:"✓", warn:"⚠", info:"·", output:"", stdout:""
+  };
+  const c = cm[line.type] ?? "#3a4a62";
+  const pfx = pm[line.type] ?? "";
+  return (
+    <div style={{ padding:"1.5px 18px", display:"flex", alignItems:"flex-start", opacity:vis?1:0, transition:"opacity 0.09s" }}>
+      <span style={{ color:c, width:20, flexShrink:0, fontSize:10, paddingTop:2 }}>{pfx}</span>
+      <span style={{ color:c, wordBreak:"break-word", lineHeight:1.65, flex:1 }}>
+        {line.text}
+        {isLast && <span style={{ animation:"cur 1.1s step-end infinite", color:"#1e2535" }}> _</span>}
+      </span>
+      {line.lineNum && <span style={{ marginLeft:10, color:"#141c28", fontSize:9, flexShrink:0, paddingTop:3 }}>:{line.lineNum}</span>}
+    </div>
+  );
+}
 
-  return(
-    <div className={`llv${isErr?" llv-err":""}`} key={isErr?`e${animKey}`:"llv"}>
+// ── Code Editor ──────────────────────────────────────────────────────────────
+function CodeEditor({ code, setCode, step, errorLineSet, onKeyDown, taRef }) {
+  const lnRef = useRef(null);
+  const lines = code.split("\n");
+  const syncScroll = useCallback(() => { if (taRef.current && lnRef.current) lnRef.current.scrollTop = taRef.current.scrollTop; }, [taRef]);
+  useEffect(() => {
+    const ta = taRef.current; if (!ta) return;
+    ta.addEventListener("scroll", syncScroll, { passive:true });
+    return () => ta.removeEventListener("scroll", syncScroll);
+  }, [syncScroll]);
+
+  return (
+    <div style={{ flex:1, display:"flex", minHeight:0, overflow:"hidden", position:"relative" }}>
+      <div ref={lnRef} style={{ width:44, flexShrink:0, background:"rgba(4,7,18,0.7)", borderRight:"1px solid rgba(255,255,255,0.04)", overflowY:"hidden", overflowX:"hidden", paddingTop:16, paddingBottom:16, display:"flex", flexDirection:"column", userSelect:"none", pointerEvents:"none", scrollbarWidth:"none" }}>
+        {lines.map((_, i) => {
+          const isAct = step?.lineNum === i;
+          const isErr = errorLineSet.has(i);
+          return (
+            <div key={i} style={{ height:LINE_H, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:9, fontFamily:"'JetBrains Mono',monospace", fontSize:10.5, lineHeight:1, color:isErr?"#ef4444":isAct?"#4cc9f0":"#1c2738", background:isErr?"rgba(239,68,68,0.07)":isAct?"rgba(76,201,240,0.06)":"transparent", borderRadius:3, transition:"color 0.12s,background 0.12s" }}>{i + 1}</div>
+          );
+        })}
+      </div>
+      {step && (
+        <div style={{ position:"absolute", left:44, right:0, height:LINE_H, top:16+step.lineNum*LINE_H, background:"rgba(76,201,240,0.04)", borderLeft:"2px solid rgba(76,201,240,0.38)", pointerEvents:"none", transition:"top 0.18s ease", zIndex:1 }} />
+      )}
+      {[...errorLineSet].map(i => (
+        <div key={`e${i}`} style={{ position:"absolute", left:44, right:0, height:LINE_H, top:16+i*LINE_H, background:"rgba(239,68,68,0.05)", borderLeft:"2px solid rgba(239,68,68,0.4)", pointerEvents:"none", zIndex:1 }} />
+      ))}
+      <textarea ref={taRef} style={{ flex:1, padding:`16px 16px 16px 12px`, background:"transparent", border:"none", outline:"none", color:"#7ecfff", fontFamily:"'JetBrains Mono',monospace", fontSize:11.5, lineHeight:`${LINE_H}px`, resize:"none", caretColor:"#4cc9f0", tabSize:2, whiteSpace:"pre", overflowY:"auto", overflowX:"auto", scrollbarWidth:"thin", scrollbarColor:"#151e2e transparent", position:"relative", zIndex:2 }}
+        value={code} onChange={e => setCode(e.target.value)} onKeyDown={onKeyDown} spellCheck={false}
+        placeholder="// Write your LinkedList implementation here…"
+      />
+    </div>
+  );
+}
+
+// ── Linked List Visualizer ───────────────────────────────────────────────────
+function LLNode({ value, index, isHead, isTail, isHighlighted, isNew, isDeleting, animKey, showPointer }) {
+  const c = col(value);
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:0 }}>
+      <div
+        className={[
+          "ll-node",
+          isNew ? "ll-node-new" : "",
+          isDeleting ? "ll-node-del" : "",
+          isHighlighted ? "ll-node-hi" : "",
+        ].join(" ")}
+        style={{
+          background:`linear-gradient(135deg,${c.g1},${c.g2})`,
+          boxShadow: isHighlighted
+            ? `0 0 40px ${c.glow}, 0 0 80px ${c.glow}40, inset 0 1px 0 rgba(255,255,255,0.3)`
+            : `0 0 18px ${c.glow}60, inset 0 1px 0 rgba(255,255,255,0.15)`,
+          borderColor: isHighlighted ? c.border : "rgba(255,255,255,0.12)",
+          position:"relative",
+        }}
+      >
+        {/* Shine */}
+        <div style={{ position:"absolute", top:0, left:0, right:0, bottom:0, borderRadius:"inherit", background:"linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 50%)", pointerEvents:"none" }} />
+        {/* Index label */}
+        <div style={{ position:"absolute", top:-20, left:"50%", transform:"translateX(-50%)", fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"rgba(180,210,255,0.45)", whiteSpace:"nowrap", fontWeight:600 }}>[{index}]</div>
+        {/* Hover tooltip */}
+        <div className="ll-node-tip">val: {value} · idx: {index}</div>
+        {/* HEAD / TAIL badge */}
+        {isHead && <div className="ll-badge" style={{ top:-34, left:"50%", transform:"translateX(-50%)", background:"rgba(76,201,240,0.15)", border:"1px solid rgba(76,201,240,0.4)", color:"#4cc9f0" }}>HEAD</div>}
+        {isTail && <div className="ll-badge" style={{ bottom:-34, left:"50%", transform:"translateX(-50%)", background:"rgba(247,37,133,0.15)", border:"1px solid rgba(247,37,133,0.4)", color:"#f72585" }}>TAIL</div>}
+        {/* Value + Next split */}
+        <div style={{ display:"flex", alignItems:"stretch", gap:0 }}>
+          <div style={{ padding:"8px 14px", display:"flex", alignItems:"center", justifyContent:"center", minWidth:44 }}>
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:15, fontWeight:700, color:"#fff", textShadow:`0 2px 8px rgba(0,0,0,0.4)` }}>{value}</span>
+          </div>
+          <div style={{ width:1, background:"rgba(255,255,255,0.15)", margin:"6px 0" }} />
+          <div style={{ padding:"8px 10px", display:"flex", alignItems:"center", justifyContent:"center", minWidth:32 }}>
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"rgba(180,210,255,0.5)", fontWeight:600 }}>{showPointer ? "→" : "∅"}</span>
+          </div>
+        </div>
+      </div>
+      {/* Arrow connector */}
+      {showPointer && (
+        <div className="ll-arrow" style={{ "--gc1":c.g1, "--gc2":c.g2 }}>
+          <div className="ll-arrow-line" />
+          <div className="ll-arrow-head" />
+          <div className="ll-arrow-particles">
+            {[0,1,2].map(i => <div key={i} className="ll-particle" style={{ "--delay":`${i * 0.3}s`, background:c.g1 }} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NullTerminator() {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:0 }}>
+      <div className="ll-null" >
+        <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:10, color:"rgba(180,200,230,0.35)", letterSpacing:"0.1em" }}>NULL</span>
+      </div>
+    </div>
+  );
+}
+
+function LinkedListViz({ step, animKey, idle, prevList }) {
+  const list = step?.list ?? [];
+  const isReverse = step?.type === "reverse";
+  const isDelete = step?.type === "delete";
+  const isSearch = step?.type === "search";
+  const isInsertFront = step?.type === "insertFront";
+  const isInsertBack = step?.type === "insertBack";
+  const isEmpty = list.length === 0;
+
+  // Determine which node to highlight
+  let highlightIdx = -1;
+  if (isSearch && step.result >= 0) highlightIdx = step.result;
+  if (isInsertFront) highlightIdx = 0;
+  if (isInsertBack) highlightIdx = list.length - 1;
+
+  // Determine which was newly added
+  const newIdx = isInsertFront ? 0 : isInsertBack ? list.length - 1 : -1;
+  // Determine which was deleted
+  const deletedValue = isDelete && step.found ? step.value : null;
+
+  const metrics = [
+    { lbl:"SIZE",   val:list.length,                    c:"#4cc9f0" },
+    { lbl:"HEAD",   val:list.length ? list[0] : "NULL", c:"#4cc9f0" },
+    { lbl:"TAIL",   val:list.length ? list[list.length-1] : "NULL", c:"#f72585" },
+    { lbl:"TYPE",   val:"SINGLY",                       c:"#c77dff" },
+  ];
+
+  return (
+    <div className="ll-viz">
       {/* Metrics bar */}
-      <div className="llv-metrics">
-        {[
-          {lbl:"SIZE",  val:nodes.length,                              c:"#60a5fa"},
-          {lbl:"HEAD",  val:nodes.length?nodes[0]:"NULL",             c:"#4ade80"},
-          {lbl:"TAIL",  val:nodes.length?nodes[nodes.length-1]:"NULL",c:"#fbbf24"},
-          {lbl:"TYPE",  val:"SINGLY →",                               c:"#a78bfa"},
-        ].map(m=>(
-          <div className="llv-m" key={m.lbl}>
-            <span className="llv-ml">{m.lbl}</span>
-            <span className="llv-mv" style={{color:m.c}}>{String(m.val)}</span>
+      <div className="sv-metrics">
+        {metrics.map(m => (
+          <div className="sv-m" key={m.lbl}>
+            <span className="sv-ml">{m.lbl}</span>
+            <span className="sv-mv" style={{ color:m.c }}>{String(m.val)}</span>
           </div>
         ))}
       </div>
 
-      {/* Chain area */}
-      <div className="llv-chain-wrap">
-        {flyItem&&(
-          <div key={flyItem.key} className={`llv-fly llv-fly-${flyItem.type}`}
-            style={{
-              background:`linear-gradient(135deg,${col(flyItem.v).g1},${col(flyItem.v).g2})`,
-              boxShadow:`0 0 28px ${col(flyItem.v).glow}`,
-            }}>
-            <span className="llv-fly-v">{flyItem.v}</span>
-            <span className="llv-fly-tag">✕ DEL</span>
-          </div>
-        )}
+      {/* Canvas area */}
+      <div className="ll-canvas">
+        {/* Ambient glow blobs */}
+        <div className="ll-blob ll-blob-1" />
+        <div className="ll-blob ll-blob-2" />
+        <div className="ll-blob ll-blob-3" />
 
-        {nodes.length>0&&(
-          <div className="llv-pointer-row">
-            <div className="llv-head-ptr">
-              <div className="llv-ptr-chip llv-ptr-head">HEAD</div>
-              <svg width="2" height="18" viewBox="0 0 2 18"><line x1="1" y1="0" x2="1" y2="18" stroke="#4ade80" strokeWidth="1.5"/></svg>
-              <svg width="12" height="8" viewBox="0 0 12 8"><polygon points="0,0 12,0 6,8" fill="#4ade80"/></svg>
-            </div>
-            {nodes.length>1&&(
-              <div className="llv-tail-ptr" style={{marginLeft:`${(nodes.length-1)*130}px`}}>
-                <svg width="12" height="8" viewBox="0 0 12 8"><polygon points="0,8 12,8 6,0" fill="#fbbf24"/></svg>
-                <svg width="2" height="18" viewBox="0 0 2 18"><line x1="1" y1="0" x2="1" y2="18" stroke="#fbbf24" strokeWidth="1.5"/></svg>
-                <div className="llv-ptr-chip llv-ptr-tail">TAIL</div>
-              </div>
-            )}
-          </div>
-        )}
+        {/* Grid pattern */}
+        <div className="ll-grid" />
+        {/* Scanline sweep */}
+        <div className="ll-scan" />
 
-        <div className="llv-chain">
-          {nodes.length===0?(
-            <div className={`llv-empty${isErr?" llv-empty-err":""}`}>
-              <div className="llv-ei">{idle?"🔗":isErr?"⚠":"∅"}</div>
-              <div className="llv-et">{idle?"Run code to start":isErr?"Operation failed!":"List is empty"}</div>
+        {/* Reverse animation overlay */}
+        {isReverse && <div className="ll-reverse-overlay" key={`rev-${animKey}`}><div className="ll-reverse-text">REVERSING ⇄</div></div>}
+
+        {/* Nodes container */}
+        <div className="ll-nodes-wrap">
+          {isEmpty ? (
+            <div className="ll-empty">
+              <div className="ll-empty-icon">{idle ? "🔗" : "∅"}</div>
+              <div className="ll-empty-text">{idle ? "Run code to see your list" : "List is empty"}</div>
             </div>
-          ):nodes.map((v,i)=>{
-            const hl=getHL(i);
-            const c=col(v);
-            const isNew=hl==="new";
-            const isFound=hl==="found";
-            const isVisited=hl==="visited";
-            const isActive=hl==="active";
-            const isDone=hl==="done";
-            const arrowColor=isActive||isDone?"#34d399":isVisited?"rgba(52,211,153,0.6)":isFound?"#fbbf24":"rgba(96,165,250,0.45)";
-            return(
-              <div key={`${v}-${i}-${isNew?animKey:"n"}`} className="llv-node-group">
-                <div className={["llv-node",isNew?"llv-node-new":"",isFound?"llv-node-found":"",isVisited?"llv-node-visited":"",isActive?"llv-node-active":"",isDone?"llv-node-done":""].join(" ")}
-                  style={{
-                    background:`linear-gradient(135deg,${c.g1},${c.g2})`,
-                    boxShadow:isFound
-                      ?`0 0 36px ${c.glow},0 0 0 2.5px #fbbf24,0 8px 22px rgba(0,0,0,0.55)`
-                      :isActive
-                      ?`0 0 36px rgba(52,211,153,0.7),0 0 0 2px #34d399,0 8px 22px rgba(0,0,0,0.55)`
-                      :`0 0 28px ${c.glow},0 6px 18px rgba(0,0,0,0.5)`,
-                  }}>
-                  <div className="llv-node-top">
-                    <span className="llv-node-idx">[{i}]</span>
-                    {i===0&&<span className="llv-badge llv-badge-h">H</span>}
-                    {i===nodes.length-1&&nodes.length>1&&<span className="llv-badge llv-badge-t">T</span>}
-                  </div>
-                  <span className="llv-node-val">{v}</span>
-                  <div className="llv-node-ptr">
-                    <span className="llv-ptr-label">next</span>
-                    <div className="llv-ptr-dot" style={{background:i<nodes.length-1?arrowColor:"rgba(255,255,255,0.2)"}}/>
-                  </div>
-                  {isFound&&<div className="llv-found-ring" key={`fr-${animKey}`}/>}
-                  {isFound&&<div className="llv-found-ring llv-fr2" key={`fr2-${animKey}`}/>}
-                  {isNew&&<div className="llv-new-glow" key={`ng-${animKey}`}/>}
-                </div>
-                {i<nodes.length-1&&<Arrow color={arrowColor} animated={isActive||isVisited}/>}
-                {i===nodes.length-1&&<><Arrow color="rgba(255,255,255,0.12)"/><NullMarker/></>}
+          ) : (
+            <div className={`ll-nodes-row${isReverse ? " ll-nodes-reversing" : ""}`} key={isReverse ? `rev-${animKey}` : "nodes"}>
+              {/* HEAD pointer */}
+              <div className="ll-head-ptr">
+                <div className="ll-head-ptr-line" />
+                <div className="ll-head-ptr-label">HEAD</div>
               </div>
-            );
-          })}
+              {list.map((v, i) => (
+                <LLNode
+                  key={`${v}-${i}-${isReverse ? animKey : "s"}`}
+                  value={v}
+                  index={i}
+                  isHead={i === 0}
+                  isTail={i === list.length - 1}
+                  isHighlighted={i === highlightIdx}
+                  isNew={i === newIdx}
+                  isDeleting={false}
+                  animKey={animKey}
+                  showPointer={i < list.length - 1}
+                />
+              ))}
+              <NullTerminator />
+            </div>
+          )}
         </div>
-
-        {nodes.length>0&&(
-          <div className="llv-addrs">
-            {nodes.map((v,i)=>(
-              <div key={i} className="llv-addr">
-                <span>0x{(0xA000+i*0x18).toString(16).toUpperCase()}</span>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
     </div>
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// ENHANCED TERMINAL — with copy, timestamps, filtering, detail rows
-// ══════════════════════════════════════════════════════════════════════════════
-function Terminal({lines, currentStep, isRunning, hasErrors, errorLines, onJumpToStep}){
-  const termRef = useRef(null);
-  const [filter, setFilter] = useState("all");
-  const [copied, setCopied]  = useState(false);
-  const [expandedRow, setExpandedRow] = useState(null);
-
-  // Auto-scroll to active line
-  useEffect(()=>{
-    if(termRef.current){
-      const active = termRef.current.querySelector(".term-row-active");
-      if(active) active.scrollIntoView({block:"nearest",behavior:"smooth"});
-      else if(currentStep<0) termRef.current.scrollTop=0;
-    }
-  },[lines, currentStep]);
-
-  const kindMeta = {
-    success:{ c:"#4ade80", bg:"rgba(74,222,128,0.07)", border:"rgba(74,222,128,0.15)", icon:"✓", label:"INSERT" },
-    warn:   { c:"#fbbf24", bg:"rgba(251,191,36,0.07)",  border:"rgba(251,191,36,0.15)",  icon:"−", label:"DELETE" },
-    error:  { c:"#f87171", bg:"rgba(248,113,113,0.07)", border:"rgba(248,113,113,0.15)", icon:"✗", label:"ERROR"  },
-    info:   { c:"#818cf8", bg:"rgba(129,140,248,0.07)", border:"rgba(129,140,248,0.15)", icon:"›", label:"INFO"   },
-    system: { c:"#64748b", bg:"transparent",            border:"transparent",           icon:"#", label:"SYS"    },
-  };
-
-  const filtered = filter==="all" ? lines : lines.filter(l=>l.kind===filter);
-  const counts = lines.reduce((a,l)=>({...a,[l.kind]:(a[l.kind]||0)+1}),{});
-
-  const copyAll = () => {
-    const txt = [
-      ...errorLines.map(e=>`[ERROR] ${e}`),
-      ...lines.map((l,i)=>`[${String(i+1).padStart(3,"0")}] [${l.kind.toUpperCase()}] ${l.text}`)
-    ].join("\n");
-    navigator.clipboard?.writeText(txt).then(()=>{setCopied(true);setTimeout(()=>setCopied(false),1800);});
-  };
-
-  const statusColor = hasErrors ? "#f87171" : lines.length>0 ? "#4ade80" : "#334155";
-  const statusText  = hasErrors ? "ERROR" : isRunning ? "RUNNING" : lines.length>0 ? "DONE" : "IDLE";
-
-  const getOpColor = (op) => {
-    if(!op) return "#64748b";
-    if(["insertHead","insertTail","insertAt"].includes(op)) return "#4ade80";
-    if(["deleteHead","deleteTail","delete"].includes(op)) return "#fbbf24";
-    if(["search"].includes(op)) return "#818cf8";
-    if(["traverse"].includes(op)) return "#34d399";
-    return "#60a5fa";
-  };
-
-  // Compute stats for summary bar
-  const totalInserts = (counts.success||0);
-  const totalDeletes = (counts.warn||0);
-  const totalErrors  = (counts.error||0);
-  const totalInfo    = (counts.info||0);
-
-  return(
-    <div className="term-wrap">
-      {/* Terminal chrome */}
-      <div className="term-header">
-        <div className="term-dots">
-          <span className="term-dot" style={{background:"#ff5f57"}}/>
-          <span className="term-dot" style={{background:"#ffbd2e"}}/>
-          <span className="term-dot" style={{background:"#28c840"}}/>
-        </div>
-        <span className="term-title">
-          <span style={{fontSize:9,opacity:0.6}}>⬛</span> OUTPUT
-        </span>
-        <div className="term-status-pill" style={{
-          color:statusColor,
-          background:`${statusColor}14`,
-          border:`1px solid ${statusColor}35`,
-        }}>
-          <span className="term-status-dot" style={{background:statusColor,boxShadow:`0 0 5px ${statusColor}`}}/>
-          {statusText}
-          {isRunning&&<span className="term-cursor-sm"/>}
-        </div>
-        <div style={{flex:1}}/>
-        {lines.length>0&&(
-          <button className="term-copy-btn" onClick={copyAll} title="Copy all output">
-            {copied?"✓ Copied":"⎘ Copy"}
-          </button>
-        )}
-      </div>
-
-      {/* Filter bar — only show if there are lines */}
-      {(lines.length>0||errorLines.length>0)&&(
-        <div className="term-filter-bar">
-          <button
-            className={`tfilter-btn${filter==="all"?" tfilter-active":""}`}
-            onClick={()=>setFilter("all")}
-            style={filter==="all"?{color:"#94a3b8",borderColor:"rgba(148,163,184,0.28)"}:{}}>
-            ALL <span className="tfilter-count">{lines.length}</span>
-          </button>
-          {[
-            {k:"success", icon:"✓", label:"Insert"},
-            {k:"warn",    icon:"−", label:"Delete"},
-            {k:"error",   icon:"✗", label:"Error"},
-            {k:"info",    icon:"›", label:"Info"},
-          ].map(({k,icon,label})=>(counts[k]>0||true)&&(
-            <button
-              key={k}
-              className={`tfilter-btn${filter===k?" tfilter-active":""}`}
-              onClick={()=>setFilter(k)}
-              style={filter===k?{color:kindMeta[k]?.c,borderColor:`${kindMeta[k]?.c}40`}:{}}>
-              <span style={{color:kindMeta[k]?.c}}>{icon}</span> {label} <span className="tfilter-count" style={{color:filter===k?kindMeta[k]?.c:undefined}}>{counts[k]||0}</span>
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Terminal body */}
-      <div className="term-body" ref={termRef}>
-        {lines.length===0&&errorLines.length===0&&(
-          <div className="term-idle-screen">
-            <div className="term-idle-prompt-row">
-              <span className="term-prompt-char">$</span>
-              <span className="term-idle-text">
-                {isRunning?"Reviewing your implementation…":"Waiting for execution…"}
-              </span>
-              {isRunning&&<span className="term-cursor"/>}
-            </div>
-            <div className="term-hint-row">
-              <span>Press <kbd className="term-kbd">▶ Run</kbd> or <kbd className="term-kbd">Ctrl+Enter</kbd> to execute</span>
-            </div>
-          </div>
-        )}
-
-        {/* AI/runtime error lines */}
-        {errorLines.length>0&&(
-          <div className="term-error-block">
-            <div className="term-error-block-header">
-              <span style={{color:"#f87171"}}>⚠ ERRORS DETECTED — VISUALIZATION BLOCKED</span>
-            </div>
-            {errorLines.map((e,i)=>(
-              <div key={`ae${i}`} className="term-error-row">
-                <span className="term-err-bullet">✗</span>
-                <span className="term-err-text">{e}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Operation rows */}
-        {filtered.map((line,i)=>{
-          const k = kindMeta[line.kind]??kindMeta.info;
-          // Find original index in unfiltered lines for syncing with visualizer
-          const origIdx = filter==="all" ? i : lines.indexOf(line);
-          const isActive = !hasErrors && origIdx===currentStep;
-          const isExpanded = expandedRow===i;
-          const opColor = getOpColor(line.op);
-
-          return(
-            <div key={i}
-              className={`term-row${isActive?" term-row-active":""}`}
-              style={{
-                background:isActive?k.bg:"transparent",
-                borderLeft:isActive?`2px solid ${k.c}`:"2px solid transparent",
-              }}
-              onClick={()=>{
-                setExpandedRow(isExpanded?null:i);
-                if(onJumpToStep&&filter==="all") onJumpToStep(i);
-              }}>
-
-              {/* Line number */}
-              <span className="term-lnum">{String(origIdx+1).padStart(3,"0")}</span>
-
-              {/* Kind icon */}
-              <span className="term-kind-icon" style={{color:k.c}}>{k.icon}</span>
-
-              {/* Op tag */}
-              {line.op&&(
-                <span className="term-op-tag" style={{color:opColor,background:`${opColor}18`,borderColor:`${opColor}35`}}>
-                  {line.op}
-                </span>
-              )}
-
-              {/* Main text */}
-              <span className="term-text" style={{color:isActive?k.c:"#4a5568"}}>{line.text}</span>
-
-              {/* Active cursor */}
-              {isActive&&<span className="term-cursor"/>}
-
-              {/* Size badge */}
-              {line.size!=null&&(
-                <span className="term-size-badge" style={{color:"#1e3a5f"}}>
-                  n={line.size}
-                </span>
-              )}
-            </div>
-          );
-        })}
-
-        {/* Summary footer */}
-        {lines.length>0&&!hasErrors&&currentStep>=lines.length-1&&(
-          <div className="term-summary-bar">
-            <span className="term-sum-icon">🏁</span>
-            <span style={{color:"#374151"}}>{lines.length} operation{lines.length!==1?"s":""} completed</span>
-            {totalInserts>0&&<span className="term-sum-chip" style={{color:"#4ade80",background:"rgba(74,222,128,0.1)",borderColor:"rgba(74,222,128,0.2)"}}>✓ {totalInserts} insert{totalInserts!==1?"s":""}</span>}
-            {totalDeletes>0&&<span className="term-sum-chip" style={{color:"#fbbf24",background:"rgba(251,191,36,0.1)",borderColor:"rgba(251,191,36,0.2)"}}>− {totalDeletes} delete{totalDeletes!==1?"s":""}</span>}
-            {totalInfo>0&&<span className="term-sum-chip" style={{color:"#818cf8",background:"rgba(129,140,248,0.1)",borderColor:"rgba(129,140,248,0.2)"}}>› {totalInfo} query{totalInfo!==1?"s":""}</span>}
-            {totalErrors>0&&<span className="term-sum-chip" style={{color:"#f87171",background:"rgba(248,113,113,0.1)",borderColor:"rgba(248,113,113,0.2)"}}>✗ {totalErrors} error{totalErrors!==1?"s":""}</span>}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// MAIN PAGE
-// ══════════════════════════════════════════════════════════════════════════════
-export default function LinkedListPage(){
-  const [lang,       setLang]       = useState("javascript");
-  const [code,       setCode]       = useState(TPL.javascript);
-  const [steps,      setSteps]      = useState([]);
-  const [termLines,  setTermLines]  = useState([]);
-  const [idx,        setIdx]        = useState(-1);
-  const [error,      setError]      = useState("");
-  const [playing,    setPlaying]    = useState(false);
-  const [speed,      setSpeed]      = useState(1.1);
-  const [animKey,    setAnimKey]    = useState(0);
-  const [done,       setDone]       = useState(false);
+// ── Main ─────────────────────────────────────────────────────────────────────
+export default function LinkedListPage() {
+  const [lang, setLang]           = useState("javascript");
+  const [code, setCode]           = useState(TPL.javascript);
+  const [steps, setSteps]         = useState([]);
+  const [idx, setIdx]             = useState(-1);
+  const [error, setError]         = useState("");
+  const [playing, setPlaying]     = useState(false);
+  const [speed, setSpeed]         = useState(1.1);
+  const [animKey, setAnimKey]     = useState(0);
+  const [done, setDone]           = useState(false);
   const [validating, setValidating] = useState(false);
-  const [aiErrors,   setAiErrors]   = useState([]);
-  const [aiReason,   setAiReason]   = useState("");
-  const [apiNote,    setApiNote]    = useState("");
-  const [activeTab,  setActiveTab]  = useState("viz");
+  const [aiErrors, setAiErrors]   = useState([]);
+  const [termLines, setTermLines] = useState([]);
+  const [sessionId]               = useState(() => Math.random().toString(36).slice(2, 8).toUpperCase());
 
-  const timerRef = useRef(null);
-  const taRef    = useRef(null);
-  const listRef  = useRef(null);
-  const bump     = () => setAnimKey(k=>k+1);
+  const [toast, setToast]       = useState(null);
+  const [termOpen, setTermOpen] = useState(true);
+  const timerRef = useRef(null), taRef = useRef(null), listRef = useRef(null);
+  const bump = () => setAnimKey(k => k + 1);
 
-  const doReset = useCallback(()=>{
+  const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2200); };
+
+  const copyListState = () => {
+    if (!step) return;
+    const txt = step.list.length ? step.list.join(" → ") + " → NULL" : "NULL (empty)";
+    navigator.clipboard?.writeText(txt).then(() => showToast("📋 Copied: " + txt)).catch(() => showToast("📋 " + txt));
+  };
+
+  const doReset = useCallback(() => {
     clearInterval(timerRef.current);
-    setSteps([]); setIdx(-1); setError(""); setTermLines([]);
-    setPlaying(false); setDone(false);
-    setAiErrors([]); setAiReason(""); setApiNote("");
-  },[]);
+    setSteps([]); setIdx(-1); setError(""); setPlaying(false); setDone(false); setAiErrors([]); setTermLines([]);
+  }, []);
 
-  const changeLang = (l)=>{ setLang(l); setCode(TPL[l]??""); doReset(); };
+  const handleChangeLang = (l) => { setLang(l); setCode(TPL[l] ?? ""); doReset(); };
 
-  const handleRun = async ()=>{
-    doReset();
-    setValidating(true);
-
-    const validation = await validateWithAI(code, lang);
-    setValidating(false);
-
-    if(validation.apiError) setApiNote(validation.apiError);
-
-    if(!validation.valid){
-      setAiReason(validation.reason??"");
-      setAiErrors(validation.errors??[]);
-      setActiveTab("terminal");
-      return;
+  const buildTerm = (stps, errs, aiErrs, aiReason) => {
+    const ls = [];
+    const ts = new Date().toTimeString().slice(0, 8);
+    ls.push({ type:"output", text:`VisuoSlayer v2.0  ·  LinkedList  ·  ${ts}  ·  pid:${sessionId}` });
+    ls.push({ type:"separator" });
+    if (aiErrs.length > 0) {
+      ls.push({ type:"prompt", text:`visualoslayer validate --lang=${lang} --ds=linked-list` });
+      ls.push({ type:"blank" });
+      if (aiReason) ls.push({ type:"stderr", text:aiReason });
+      aiErrs.forEach(e => ls.push({ type:"error", text:`  L${e.line ?? "?"}  ${e.message}`, lineNum:e.line }));
+      ls.push({ type:"blank" });
+      ls.push({ type:"error", text:"Process exited with code 1" });
+      return ls;
     }
-
-    const{steps:s,errors,termLines:tl}=runCode(code,lang);
-
-    if(errors.length){
-      setError(errors.join("\n"));
-      setActiveTab("terminal");
-      return;
+    if (errs.length > 0) {
+      ls.push({ type:"prompt", text:`visualoslayer run --lang=${lang}` });
+      ls.push({ type:"blank" });
+      errs.forEach(e => ls.push({ type:"stderr", text:e }));
+      ls.push({ type:"blank" });
+      ls.push({ type:"error", text:"Process exited with code 1" });
+      return ls;
     }
-
-    setTermLines(tl);
-    setSteps(s);
-    setIdx(0);
-    bump();
-    setPlaying(true);
-    setActiveTab("viz");
-  };
-
-  const goTo = useCallback((i)=>{
-    clearInterval(timerRef.current); setPlaying(false);
-    const c=Math.max(0,Math.min(i,steps.length-1));
-    setIdx(c); bump();
-  },[steps.length]);
-
-  useEffect(()=>{
-    const h=(e)=>{ if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();handleRun();} };
-    window.addEventListener("keydown",h);
-    return()=>window.removeEventListener("keydown",h);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[code,lang]);
-
-  useEffect(()=>{
-    if(!playing||!steps.length) return;
-    timerRef.current=setInterval(()=>{
-      setIdx(prev=>{
-        if(prev>=steps.length-1){clearInterval(timerRef.current);setPlaying(false);setDone(true);return prev;}
-        bump(); return prev+1;
+    if (stps.length > 0) {
+      ls.push({ type:"prompt", text:`visualoslayer run --lang=${lang} --ds=linked-list` });
+      ls.push({ type:"blank" });
+      stps.forEach(s => {
+        const ie = s.type === "error";
+        let out = "";
+        switch (s.type) {
+          case "insertFront": out = `insertFront(${s.value})  →  ${fmtList(s.list)}`; break;
+          case "insertBack":  out = `insertBack(${s.value})   →  ${fmtList(s.list)}`; break;
+          case "delete":      out = s.found ? `delete(${s.value})  →  removed  ·  ${fmtList(s.list)}` : `delete(${s.value})  →  not found`; break;
+          case "search":      out = s.result >= 0 ? `search(${s.value})  →  index ${s.result}` : `search(${s.value})  →  not found`; break;
+          case "reverse":     out = `reverse()  →  ${fmtList(s.list)}`; break;
+          case "size":        out = `size()  →  ${s.result}`; break;
+          case "traverse":    out = `traverse()  →  ${fmtList(s.list)}`; break;
+        }
+        ls.push({ type: ie ? "error" : s.type, text: out, lineNum: s.lineNum + 1 });
       });
-    },speed*1000);
-    return()=>clearInterval(timerRef.current);
-  },[playing,steps,speed]);
-
-  useEffect(()=>{
-    listRef.current?.querySelector(".sl-active")?.scrollIntoView({block:"nearest",behavior:"smooth"});
-  },[idx]);
-
-  const onKeyDown=(e)=>{
-    if(e.key!=="Tab") return;
-    e.preventDefault();
-    const s=e.target.selectionStart,en=e.target.selectionEnd;
-    const nv=code.slice(0,s)+"  "+code.slice(en);
-    setCode(nv);
-    requestAnimationFrame(()=>{if(taRef.current){taRef.current.selectionStart=s+2;taRef.current.selectionEnd=s+2;}});
+      ls.push({ type:"blank" });
+      ls.push({ type:"success", text:`${stps.length} op${stps.length !== 1 ? "s" : ""} completed  ·  Process exited with code 0` });
+    }
+    return ls;
   };
 
-  const step       = steps[idx]??null;
-  const os         = step?(OP[step.type]??OP.insertTail):null;
-  const prog       = steps.length?Math.round(((idx+1)/steps.length)*100):0;
-  const hasAiErrors= aiErrors.length>0;
-  const hasAnyErr  = hasAiErrors||!!error;
-  const idle       = steps.length===0&&!error&&!hasAiErrors;
-  const lm         = LANGS[lang];
-  const codeLines  = code.split("\n");
-  const errorLineSet=new Set(aiErrors.map(e=>(e.line??1)-1));
+  const handleRun = async () => {
+    doReset(); setValidating(true);
+    const v = await validateWithVisuoSlayer(code, lang);
+    setValidating(false);
+    if (!v.valid) {
+      setAiErrors(v.errors ?? []);
+      setTermLines(buildTerm([], [], v.errors ?? [], v.reason ?? ""));
+      return;
+    }
+    const { steps: s, errors } = runLinkedList(code, lang);
+    if (errors.length) { setError(errors.join("\n")); setTermLines(buildTerm([], errors, [], "")); return; }
+    setSteps(s); setIdx(0); bump(); setPlaying(true); setTermLines(buildTerm(s, [], [], ""));
+  };
 
-  const termErrorLines=[
-    ...(aiReason?[`🤖 AI Review: ${aiReason}`]:[]),
-    ...aiErrors.map(e=>`Line ${e.line??'?'}: ${e.message}`),
-    ...(error?[error]:[]),
-  ];
+  const goTo = useCallback((i) => {
+    clearInterval(timerRef.current); setPlaying(false); setIdx(Math.max(0, Math.min(i, steps.length - 1))); bump();
+  }, [steps.length]);
 
-  return(
+  useEffect(() => {
+    const h = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); handleRun(); } };
+    window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h);
+  }, [code, lang]);
+
+  useEffect(() => {
+    if (!playing || !steps.length) return;
+    timerRef.current = setInterval(() => {
+      setIdx(p => {
+        if (p >= steps.length - 1) { clearInterval(timerRef.current); setPlaying(false); setDone(true); return p; }
+        bump(); return p + 1;
+      });
+    }, speed * 1000);
+    return () => clearInterval(timerRef.current);
+  }, [playing, steps, speed]);
+
+  useEffect(() => { listRef.current?.querySelector(".sl-active")?.scrollIntoView({ block:"nearest", behavior:"smooth" }); }, [idx]);
+
+  const onKeyDown = (e) => {
+    if (e.key !== "Tab") return; e.preventDefault();
+    const s = e.target.selectionStart, en = e.target.selectionEnd;
+    const nv = code.slice(0, s) + "  " + code.slice(en); setCode(nv);
+    requestAnimationFrame(() => { if (taRef.current) { taRef.current.selectionStart = s + 2; taRef.current.selectionEnd = s + 2; } });
+  };
+
+  const step = steps[idx] ?? null;
+  const os = step ? (OP[step.type] ?? OP.insertBack) : null;
+  const prog = steps.length ? Math.round(((idx + 1) / steps.length) * 100) : 0;
+  const hasAiErrors = aiErrors.length > 0;
+  const idle = steps.length === 0 && !error && !hasAiErrors;
+  const lm = LANGS[lang];
+  const errorLineSet = new Set(aiErrors.map(e => (e.line ?? 1) - 1));
+  const prevList = idx > 0 ? steps[idx - 1].list : [];
+
+  return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        html{scroll-behavior:smooth}
-        body{background:#030612;color:#e2e8f0;font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden}
+        html,body{height:100%;overflow:hidden}
+        body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
 
-        /* ── PAGE ──────────────────────────────────────────── */
-        .pg{min-height:100vh;display:flex;flex-direction:column;
-          background:
-            radial-gradient(ellipse 55% 40% at 8% 0%,rgba(52,211,153,0.10) 0%,transparent 60%),
-            radial-gradient(ellipse 45% 35% at 92% 100%,rgba(167,139,250,0.09) 0%,transparent 58%),
-            radial-gradient(ellipse 35% 30% at 50% 52%,rgba(96,165,250,0.04) 0%,transparent 55%),
-            #030612}
-
-        /* ── HEADER ────────────────────────────────────────── */
-        .hd{position:sticky;top:0;z-index:200;display:flex;align-items:center;gap:14px;
-          padding:13px 36px;background:rgba(3,6,18,0.92);backdrop-filter:blur(24px) saturate(170%);
-          border-bottom:1px solid rgba(52,211,153,0.1)}
-        .hd-logo{width:38px;height:38px;border-radius:11px;flex-shrink:0;
-          background:linear-gradient(135deg,#059669,#34d399);
-          display:flex;align-items:center;justify-content:center;font-size:18px;
-          box-shadow:0 0 20px rgba(52,211,153,0.45)}
-        .hd-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;letter-spacing:-0.3px;
-          background:linear-gradient(90deg,#6ee7b7,#34d399,#a78bfa 80%);
-          -webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .hd-sub{font-size:9.5px;color:#1e3a5f;font-family:'JetBrains Mono',monospace;margin-top:2px;letter-spacing:0.06em}
-        .hd-right{margin-left:auto;display:flex;align-items:center;gap:10px}
-        .hd-badge{background:rgba(52,211,153,0.08);border:1px solid rgba(52,211,153,0.22);
-          color:#34d399;font-size:9.5px;font-family:'JetBrains Mono',monospace;
-          padding:4px 11px;border-radius:20px;letter-spacing:0.06em;white-space:nowrap}
-        .hd-lang-badge{font-size:9.5px;font-family:'JetBrains Mono',monospace;
-          padding:4px 11px;border-radius:20px;border:1px solid;white-space:nowrap}
-
-        /* ── MAIN GRID ─────────────────────────────────────── */
-        .main{display:grid;grid-template-columns:1fr 1fr;gap:16px;
-          padding:18px 36px 56px;max-width:1480px;margin:0 auto;width:100%;flex:1}
-        @media(max-width:980px){
-          .main{grid-template-columns:1fr;padding:14px 14px 56px}
-          .hd{padding:11px 16px}
+        /* ── DESIGN TOKENS ── */
+        :root {
+          --cyan:#4cc9f0; --cyan-dim:rgba(76,201,240,0.18); --cyan-glow:rgba(76,201,240,0.45);
+          --pink:#f72585; --pink-dim:rgba(247,37,133,0.15); --pink-glow:rgba(247,37,133,0.4);
+          --purple:#c77dff; --purple-dim:rgba(199,125,255,0.15);
+          --green:#39d98a; --green-dim:rgba(57,217,138,0.15); --green-glow:rgba(57,217,138,0.4);
+          --yellow:#ffd60a; --orange:#ff6b35;
+          --text-primary:#d4e4f7; --text-secondary:#6b8aaa; --text-muted:#3d5470;
+          --border-subtle:rgba(255,255,255,0.07); --border-medium:rgba(255,255,255,0.12);
+          --surface-0:#050818; --surface-1:rgba(8,14,36,0.95); --surface-2:rgba(12,20,48,0.8);
+          --surface-3:rgba(16,26,58,0.7);
         }
 
-        /* ── PANEL ─────────────────────────────────────────── */
-        .panel{background:rgba(6,10,26,0.82);border:1px solid rgba(255,255,255,0.065);
-          border-radius:16px;display:flex;flex-direction:column;overflow:hidden;
-          box-shadow:0 20px 52px rgba(0,0,0,0.52),inset 0 1px 0 rgba(255,255,255,0.04)}
-        .ph{padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.055);
-          background:rgba(10,18,40,0.65);display:flex;align-items:center;gap:7px;flex-shrink:0}
-        .pd{width:10px;height:10px;border-radius:50%}
-        .pt{font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e3a5f;
-          text-transform:uppercase;letter-spacing:1.6px;margin-left:8px}
+        /* ── KEYFRAMES ── */
+        @keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes nodeIn{
+          0%{transform:translateY(-70px) scale(0.65) rotate(-10deg);opacity:0;filter:blur(4px)}
+          55%{transform:translateY(8px) scale(1.08) rotate(1.5deg);opacity:1;filter:blur(0)}
+          75%{transform:translateY(-3px) scale(0.97) rotate(-0.5deg)}
+          100%{transform:none;opacity:1;filter:blur(0)}
+        }
+        @keyframes nodeDel{
+          0%{transform:scale(1);opacity:1;filter:blur(0)}
+          30%{transform:scale(1.15) translateY(-8px);filter:blur(1px);opacity:0.7}
+          100%{transform:scale(0.2) translateY(-80px) rotate(15deg);opacity:0;filter:blur(6px)}
+        }
+        @keyframes nodeHi{
+          0%{filter:brightness(1) saturate(1)}
+          25%{filter:brightness(1.9) saturate(1.6) drop-shadow(0 0 12px currentColor)}
+          50%{filter:brightness(2.2) saturate(1.8) drop-shadow(0 0 20px currentColor)}
+          75%{filter:brightness(1.9) saturate(1.6) drop-shadow(0 0 12px currentColor)}
+          100%{filter:brightness(1) saturate(1)}
+        }
+        @keyframes revNodes{
+          0%{transform:scaleX(1) perspective(600px) rotateY(0)}
+          30%{transform:scaleX(0.05) perspective(600px) rotateY(90deg)}
+          60%{transform:scaleX(1.04) perspective(600px) rotateY(-3deg)}
+          80%{transform:scaleX(0.98) perspective(600px) rotateY(1deg)}
+          100%{transform:scaleX(1) perspective(600px) rotateY(0)}
+        }
+        @keyframes particleFlow{
+          0%{opacity:0;transform:translateX(0) scale(0.3)}
+          20%{opacity:1;transform:translateX(8px) scale(1)}
+          80%{opacity:0.8;transform:translateX(30px) scale(0.7)}
+          100%{opacity:0;transform:translateX(42px) scale(0.2)}
+        }
+        @keyframes arrowGlow{0%,100%{opacity:0.45;filter:brightness(1)}50%{opacity:1;filter:brightness(1.5)}}
+        @keyframes blobFloat{
+          0%,100%{transform:translate(0,0) scale(1)}
+          33%{transform:translate(24px,-18px) scale(1.06)}
+          66%{transform:translate(-14px,22px) scale(0.95)}
+        }
+        @keyframes blob2{
+          0%,100%{transform:translate(0,0) scale(1)}
+          40%{transform:translate(-28px,15px) scale(1.09)}
+          70%{transform:translate(20px,-24px) scale(0.93)}
+        }
+        @keyframes revOverlay{
+          0%{opacity:0;backdrop-filter:blur(0px)}
+          15%{opacity:1;backdrop-filter:blur(8px)}
+          80%{opacity:1}
+          100%{opacity:0;backdrop-filter:blur(0px)}
+        }
+        @keyframes revText{
+          0%{letter-spacing:-4px;opacity:0;transform:scaleX(0.6)}
+          25%{letter-spacing:6px;opacity:1;transform:scaleX(1.02)}
+          65%{letter-spacing:6px;opacity:1;transform:scaleX(1)}
+          100%{letter-spacing:18px;opacity:0;transform:scaleX(1.1)}
+        }
+        @keyframes headPtrPulse{0%,100%{opacity:0.4;transform:scaleY(1)}50%{opacity:1;transform:scaleY(1.06)}}
+        @keyframes rPulse{0%,100%{box-shadow:0 0 20px var(--cyan-glow)}50%{box-shadow:0 0 42px var(--cyan-glow),0 0 80px rgba(76,201,240,0.2)}}
+        @keyframes gridScroll{0%{background-position:0 0}100%{background-position:40px 40px}}
+        @keyframes nullBlink{0%,100%{opacity:0.25;border-color:rgba(255,255,255,0.1)}50%{opacity:0.6;border-color:rgba(255,255,255,0.25)}}
+        @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+        @keyframes scanline{0%{top:-10%}100%{top:110%}}
+        @keyframes metricPop{0%{transform:scale(1)}50%{transform:scale(1.12)}100%{transform:scale(1)}}
+        @keyframes toastIn{0%{opacity:0;transform:translateY(8px) scale(0.94)}100%{opacity:1;transform:none}}
+        @keyframes toastOut{0%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px) scale(0.94)}}
+        @keyframes stepPop{0%{transform:scale(0.88);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
+        @keyframes trailFade{0%{opacity:0.6}100%{opacity:0}}
 
-        /* ── LANG TABS ─────────────────────────────────────── */
-        .lb{display:flex;gap:4px;flex-wrap:wrap;padding:10px 14px;
-          border-bottom:1px solid rgba(255,255,255,0.045);background:rgba(8,14,32,0.55);flex-shrink:0}
-        .lt{padding:4px 10px;border-radius:7px;cursor:pointer;
-          font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;
-          border:1px solid rgba(255,255,255,0.065);background:transparent;color:#1e3a5f;
-          transition:all 0.16s;letter-spacing:0.04em}
-        .lt:hover{color:#475569;border-color:rgba(255,255,255,0.12)}
-        .lt.la{background:rgba(52,211,153,0.14);border-color:rgba(52,211,153,0.35);color:#6ee7b7}
+        /* ── PAGE ── */
+        .pg{height:100vh;display:flex;flex-direction:column;overflow:hidden;
+          background:
+            radial-gradient(ellipse 60% 45% at 5% 0%,rgba(76,201,240,0.09) 0%,transparent 55%),
+            radial-gradient(ellipse 50% 40% at 95% 100%,rgba(247,37,133,0.08) 0%,transparent 52%),
+            radial-gradient(ellipse 40% 35% at 50% 50%,rgba(114,9,183,0.04) 0%,transparent 60%),
+            #050818}
 
-        /* ── CODE EDITOR ───────────────────────────────────── */
-        .cw{flex:1;position:relative;display:flex;flex-direction:column;min-height:0}
-        .ln-col{position:absolute;left:0;top:0;bottom:0;width:42px;padding:18px 0;
-          border-right:1px solid rgba(255,255,255,0.038);overflow:hidden;pointer-events:none;
-          display:flex;flex-direction:column}
-        .ln{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#1e2d47;
-          text-align:right;padding-right:9px;line-height:1.7;height:22px;flex-shrink:0;
-          transition:color 0.15s}
-        .ln.aln{color:#34d399;background:rgba(52,211,153,0.08);border-radius:3px}
-        .ln.eln{color:#ef4444!important;background:rgba(239,68,68,0.1);border-radius:3px}
-        .al-overlay{position:absolute;left:42px;right:0;height:22px;pointer-events:none;
-          background:rgba(52,211,153,0.048);border-left:2px solid rgba(52,211,153,0.42);
-          transition:top 0.18s ease}
-        .err-line-overlay{position:absolute;left:42px;right:0;height:22px;pointer-events:none;
-          background:rgba(239,68,68,0.06);border-left:2px solid rgba(239,68,68,0.5)}
-        .ta{flex:1;padding:18px 16px 18px 52px;background:transparent;border:none;outline:none;
-          color:#7dd3fc;font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.7;
-          resize:none;caret-color:#34d399;min-height:300px;tab-size:2;white-space:pre}
-        .ta::selection{background:rgba(52,211,153,0.18)}
+        /* ── HEADER ── */
+        .hd{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:9px 24px;
+          background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);
+          border-bottom:1px solid rgba(76,201,240,0.12);
+          box-shadow:0 1px 0 rgba(76,201,240,0.06),0 4px 24px rgba(0,0,0,0.4)}
+        .hd-logo{width:34px;height:34px;border-radius:9px;flex-shrink:0;
+          background:linear-gradient(135deg,#0ea5e9,#4cc9f0 40%,#7209b7);
+          display:flex;align-items:center;justify-content:center;font-size:17px;
+          box-shadow:0 0 20px rgba(76,201,240,0.5),0 0 40px rgba(76,201,240,0.15);
+          animation:rPulse 3s ease-in-out infinite}
+        .hd-brand{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.4px;
+          background:linear-gradient(90deg,#4cc9f0 0%,#a78bfa 50%,#f72585 100%);
+          background-size:200% auto;
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+          animation:shimmer 4s linear infinite}
+        .hd-tagline{font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;letter-spacing:0.04em}
+        .hd-r{margin-left:auto;display:flex;align-items:center;gap:8px}
+        .hd-pill{font-family:'JetBrains Mono',monospace;font-size:8.5px;padding:3px 10px;border-radius:20px;letter-spacing:0.07em;white-space:nowrap;font-weight:700}
+        .hd-pid{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);padding:3px 9px;border-radius:20px;border:1px solid var(--border-subtle);background:var(--surface-2)}
+        .hd-ds-badge{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--cyan);padding:3px 9px;border-radius:20px;border:1px solid rgba(76,201,240,0.25);background:rgba(76,201,240,0.07);letter-spacing:0.08em}
 
-        /* Active line bar */
-        .alb{display:flex;align-items:center;gap:9px;padding:6px 14px;
-          border-top:1px solid rgba(255,255,255,0.045);border-left:3px solid;min-height:32px;
-          flex-shrink:0;animation:alIn 0.2s ease}
-        @keyframes alIn{from{opacity:0;transform:translateX(-7px)}to{opacity:1;transform:none}}
-        .alb-icon{font-size:12px}
-        .alb-lnum{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;white-space:nowrap}
-        .alb-code{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#334155;
+        /* ── GRID ── */
+        .main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:10px 24px;min-height:0;overflow:hidden}
+
+        /* ── PANELS ── */
+        .panel{background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:14px;
+          display:flex;flex-direction:column;overflow:hidden;
+          box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);min-height:0}
+        .ph{padding:9px 14px;border-bottom:1px solid var(--border-subtle);
+          background:rgba(8,14,38,0.85);display:flex;align-items:center;gap:7px;flex-shrink:0}
+        .dot{width:9px;height:9px;border-radius:50%;transition:box-shadow 0.3s}
+        .ptl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);
+          text-transform:uppercase;letter-spacing:1.5px;margin-left:8px;font-weight:600}
+
+        /* ── LEFT LAYOUT ── */
+        .left{display:flex;flex-direction:column;min-height:0}
+        .ed-wrap{flex:0 0 58%;display:flex;flex-direction:column;min-height:0;border-bottom:1px solid var(--border-subtle)}
+        .tm-wrap{flex:1;display:flex;flex-direction:column;min-height:110px}
+
+        /* ── LANG TABS ── */
+        .lb{display:flex;gap:3px;flex-wrap:wrap;padding:8px 12px;
+          border-bottom:1px solid var(--border-subtle);background:rgba(6,11,30,0.8);flex-shrink:0}
+        .lt{padding:4px 10px;border-radius:6px;cursor:pointer;
+          font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;
+          border:1px solid var(--border-subtle);background:transparent;
+          color:var(--text-muted);transition:all 0.15s;letter-spacing:0.05em}
+        .lt:hover{color:var(--text-secondary);border-color:var(--border-medium);background:rgba(255,255,255,0.04)}
+        .lt.la{border-color:transparent;color:#e8f4ff;background:rgba(255,255,255,0.06);
+          box-shadow:inset 0 1px 0 rgba(255,255,255,0.1)}
+
+        /* ── ACTIVE LINE BAR ── */
+        .alb{display:flex;align-items:center;gap:8px;padding:5px 14px;
+          border-left:2px solid;min-height:28px;border-top:1px solid var(--border-subtle);
+          flex-shrink:0;animation:fadeIn 0.18s ease;backdrop-filter:blur(4px)}
+        .alb-ln{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;white-space:nowrap}
+        .alb-code{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);
           overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 
-        /* Validating bar */
-        .validating-bar{margin:8px 14px;padding:10px 14px;display:flex;align-items:center;gap:10px;
-          background:rgba(52,211,153,0.06);border:1px solid rgba(52,211,153,0.25);border-radius:11px;
-          flex-shrink:0;animation:fadeIn 0.2s ease}
-        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-        .vld-spinner{width:15px;height:15px;border-radius:50%;border:2px solid rgba(52,211,153,0.22);
-          border-top-color:#34d399;animation:spin 0.65s linear infinite;flex-shrink:0}
-        @keyframes spin{to{transform:rotate(360deg)}}
-        .vld-txt{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:#34d399;letter-spacing:0.04em}
-
-        /* AI error panel */
-        .ai-err{margin:8px 14px;border-radius:12px;overflow:hidden;
-          border:1px solid rgba(239,68,68,0.32);flex-shrink:0;animation:errSh 0.36s ease}
-        @keyframes errSh{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
-        .ai-err-head{padding:9px 14px;background:rgba(239,68,68,0.12);
-          display:flex;align-items:center;gap:9px;border-bottom:1px solid rgba(239,68,68,0.18)}
-        .ai-err-icon{font-size:14px}
-        .ai-err-title{font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;color:#ef4444;flex:1}
-        .ai-err-badge{font-family:'JetBrains Mono',monospace;font-size:8.5px;padding:2px 8px;
-          border-radius:20px;background:rgba(239,68,68,0.14);border:1px solid rgba(239,68,68,0.28);
-          color:#fca5a5;letter-spacing:0.06em}
-        .ai-err-blocked{padding:8px 14px;background:rgba(239,68,68,0.07);
-          border-bottom:1px solid rgba(239,68,68,0.12);
-          display:flex;align-items:center;gap:7px;
-          font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#f87171;letter-spacing:0.04em}
-        .ai-err-reason{padding:8px 14px;font-family:'DM Sans',sans-serif;font-size:11.5px;
-          color:#94a3b8;background:rgba(239,68,68,0.04);border-bottom:1px solid rgba(239,68,68,0.08);line-height:1.5}
-        .ai-err-list{display:flex;flex-direction:column;gap:0;max-height:170px;overflow-y:auto}
-        .ai-err-list::-webkit-scrollbar{width:3px}
-        .ai-err-list::-webkit-scrollbar-thumb{background:rgba(239,68,68,0.28);border-radius:4px}
-        .ai-err-row{display:flex;align-items:flex-start;gap:10px;padding:7px 14px;
-          border-bottom:1px solid rgba(239,68,68,0.06);cursor:pointer;transition:background 0.14s}
-        .ai-err-row:hover{background:rgba(239,68,68,0.06)}
-        .ai-err-row:last-child{border-bottom:none}
-        .ai-err-ln{font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;
-          color:#ef4444;white-space:nowrap;min-width:40px;padding-top:1px}
-        .ai-err-msg{font-family:'DM Sans',sans-serif;font-size:11.5px;color:#fca5a5;line-height:1.5}
-        .ai-err-code{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#475569;
-          margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:340px}
-
-        /* Runtime error */
-        .err{margin:8px 14px;padding:12px 14px;background:rgba(239,68,68,0.06);
-          border:1px solid rgba(239,68,68,0.25);border-radius:11px;
-          color:#fca5a5;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.65;
-          flex-shrink:0;animation:errSh 0.36s ease}
-        .err-t{font-weight:700;color:#ef4444;margin-bottom:6px;display:flex;align-items:center;gap:7px;font-size:11.5px}
-
-        .api-note{margin:5px 14px 0;padding:6px 11px;border-radius:8px;flex-shrink:0;
-          background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.15);
-          font-family:'JetBrains Mono',monospace;font-size:9px;color:#064e3b;line-height:1.5}
-
-        /* Run row */
-        .rr{padding:11px 14px;border-top:1px solid rgba(255,255,255,0.045);
-          display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0}
-        .btn-run{padding:9px 24px;border-radius:9px;
-          background:linear-gradient(135deg,#065f46,#059669,#34d399);border:none;color:#fff;
-          font-family:'JetBrains Mono',monospace;font-size:11.5px;font-weight:700;cursor:pointer;
-          transition:all 0.2s;box-shadow:0 0 18px rgba(52,211,153,0.38),0 4px 12px rgba(0,0,0,0.3);
-          letter-spacing:0.04em}
-        .btn-run:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 32px rgba(52,211,153,0.6),0 8px 20px rgba(0,0,0,0.3)}
+        /* ── RUN BAR ── */
+        .rr{padding:9px 13px;border-top:1px solid var(--border-subtle);
+          display:flex;align-items:center;gap:8px;flex-shrink:0;background:rgba(4,8,22,0.6)}
+        .btn-run{padding:7px 20px;border-radius:8px;
+          background:linear-gradient(135deg,#0369a1,#0ea5e9,#4cc9f0);
+          border:1px solid rgba(76,201,240,0.3);color:#fff;
+          font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:700;cursor:pointer;
+          transition:all 0.18s;box-shadow:0 0 20px rgba(76,201,240,0.3),0 2px 8px rgba(0,0,0,0.4);
+          letter-spacing:0.04em;position:relative;overflow:hidden}
+        .btn-run::after{content:'';position:absolute;inset:0;
+          background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%);
+          border-radius:inherit;pointer-events:none}
+        .btn-run:hover:not(:disabled){transform:translateY(-2px);
+          box-shadow:0 0 36px rgba(76,201,240,0.55),0 6px 20px rgba(0,0,0,0.5)}
         .btn-run:active:not(:disabled){transform:translateY(0)}
-        .btn-run.running{animation:rPulse 1s ease-in-out infinite;
-          background:linear-gradient(135deg,#064e3b,#065f46)}
-        .btn-run:disabled{opacity:0.62;cursor:not-allowed}
-        @keyframes rPulse{0%,100%{box-shadow:0 0 18px rgba(52,211,153,0.35)}50%{box-shadow:0 0 36px rgba(52,211,153,0.7)}}
-        .btn-rst{padding:9px 14px;border-radius:9px;background:transparent;
-          border:1px solid rgba(255,255,255,0.09);color:#334155;
-          font-family:'JetBrains Mono',monospace;font-size:10.5px;cursor:pointer;transition:all 0.17s}
-        .btn-rst:hover{color:#f87171;border-color:rgba(248,113,113,0.38)}
-        .rr-hint{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:#1e2d47;letter-spacing:0.08em}
+        .btn-run.running{animation:rPulse 1.2s ease-in-out infinite;
+          background:linear-gradient(135deg,#023e8a,#0077b6,#0ea5e9)}
+        .btn-run:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
+        .btn-rst{padding:7px 13px;border-radius:8px;background:transparent;
+          border:1px solid rgba(248,113,113,0.25);color:#f87171;
+          font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:600;cursor:pointer;
+          transition:all 0.16s}
+        .btn-rst:hover{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.5);
+          box-shadow:0 0 14px rgba(248,113,113,0.2)}
+        .rr-hint{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);
+          letter-spacing:0.07em;padding:3px 7px;border-radius:5px;border:1px solid var(--border-subtle);
+          background:var(--surface-2)}
 
-        /* ══ RIGHT PANEL TABS ══════════════════════════════════ */
-        .rtabs{display:flex;border-bottom:1px solid rgba(255,255,255,0.055);
-          background:rgba(10,18,40,0.65);flex-shrink:0}
-        .rtab{flex:1;padding:10px 14px;cursor:pointer;
-          font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;
-          letter-spacing:0.06em;text-transform:uppercase;
-          border:none;background:transparent;color:#1e3a5f;
-          transition:all 0.17s;position:relative;border-bottom:2px solid transparent}
-        .rtab:hover{color:#475569}
-        .rtab.rtab-active{color:#34d399;border-bottom-color:#34d399;background:rgba(52,211,153,0.04)}
-        .rtab-badge{display:inline-flex;align-items:center;justify-content:center;
-          width:16px;height:16px;border-radius:50%;margin-left:6px;font-size:8px;font-weight:700;
-          background:rgba(239,68,68,0.2);color:#f87171;border:1px solid rgba(239,68,68,0.3);
-          vertical-align:middle}
-        .rtab-badge.rb-ok{background:rgba(52,211,153,0.15);color:#34d399;border-color:rgba(52,211,153,0.3)}
+        /* ── TERMINAL BAR ── */
+        .term-bar{display:flex;align-items:center;gap:6px;padding:7px 14px;
+          background:rgba(4,7,18,0.95);border-bottom:1px solid var(--border-subtle);
+          border-top:1px solid var(--border-subtle);flex-shrink:0}
 
-        /* ══ VIZ PANEL ════════════════════════════════════════ */
-        .vb{flex:1;display:flex;flex-direction:column;overflow:hidden}
-        .vb-content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+        /* ── METRICS BAR ── */
+        .sv-metrics{display:flex;border-bottom:1px solid var(--border-subtle);
+          background:rgba(4,8,26,0.75);flex-shrink:0}
+        .sv-m{flex:1;padding:8px 10px;text-align:center;
+          border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:3px;
+          transition:background 0.2s}
+        .sv-m:last-child{border-right:none}
+        .sv-m.sv-m-active{background:rgba(76,201,240,0.05);animation:metricPop 0.3s ease}
+        .sv-ml{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:var(--text-muted);
+          letter-spacing:0.2em;text-transform:uppercase;font-weight:600}
+        .sv-mv{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;line-height:1.1;
+          transition:color 0.3s}
 
-        /* Linked list viz */
-        .llv{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
-        .llv.llv-err{animation:errSh 0.4s ease}
-        .llv-metrics{display:flex;gap:0;border-bottom:1px solid rgba(255,255,255,0.045);background:rgba(6,10,24,0.55);flex-shrink:0}
-        .llv-m{flex:1;padding:8px 10px;text-align:center;border-right:1px solid rgba(255,255,255,0.045);display:flex;flex-direction:column;gap:3px}
-        .llv-m:last-child{border-right:none}
-        .llv-ml{font-family:'JetBrains Mono',monospace;font-size:7px;color:#1e2d47;letter-spacing:0.14em;text-transform:uppercase}
-        .llv-mv{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;line-height:1}
-        .llv-chain-wrap{flex:1;display:flex;flex-direction:column;align-items:center;
-          justify-content:center;padding:16px 16px 4px;position:relative;min-height:180px;overflow:hidden}
-        .llv-pointer-row{display:flex;align-items:flex-end;width:100%;position:relative;height:42px;flex-shrink:0;margin-bottom:2px}
-        .llv-head-ptr{display:flex;flex-direction:column;align-items:center;position:absolute;left:32px}
-        .llv-tail-ptr{display:flex;flex-direction:column;align-items:center;position:absolute;transition:margin 0.3s ease}
-        .llv-ptr-chip{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
-          padding:2px 7px;border-radius:5px;letter-spacing:0.08em}
-        .llv-ptr-head{background:rgba(74,222,128,0.14);border:1px solid rgba(74,222,128,0.3);color:#4ade80}
-        .llv-ptr-tail{background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.28);color:#fbbf24}
-        .llv-chain{display:flex;align-items:center;gap:0;flex-nowrap:nowrap;
-          overflow-x:auto;padding:4px 8px 12px;width:100%;justify-content:safe center;
-          scrollbar-width:thin;scrollbar-color:#1e2d47 transparent}
-        .llv-chain::-webkit-scrollbar{height:3px}
-        .llv-chain::-webkit-scrollbar-thumb{background:#1e2d47;border-radius:4px}
-        .llv-node-group{display:flex;align-items:center;flex-shrink:0}
-        .llv-node{width:78px;height:68px;border-radius:12px;border:1.5px solid rgba(255,255,255,0.16);
-          position:relative;display:flex;flex-direction:column;flex-shrink:0;
-          overflow:visible;transition:transform 0.22s,box-shadow 0.22s}
-        .llv-node::before{content:'';position:absolute;inset:0;
-          background:linear-gradient(138deg,rgba(255,255,255,0.17) 0%,transparent 55%);
-          border-radius:inherit;pointer-events:none;z-index:1}
-        .llv-node-new{animation:nodeDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) both}
-        @keyframes nodeDrop{0%{transform:translateY(-65px) scale(0.75);opacity:0}62%{transform:translateY(4px) scale(1.04);opacity:1}82%{transform:translateY(-2px) scale(0.98)}100%{transform:translateY(0) scale(1)}}
-        .llv-node-found{animation:nodePulse 0.5s ease 3 both}
-        @keyframes nodePulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.5) saturate(1.5)}}
-        .llv-node-active{animation:nodeActive 0.38s ease both}
-        @keyframes nodeActive{0%{filter:brightness(1)}60%{filter:brightness(1.38)}100%{filter:brightness(1.18)}}
-        .llv-node-visited{opacity:0.72}
-        .llv-node-done{animation:nodeDone 0.3s ease both}
-        @keyframes nodeDone{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
-        .llv-node-top{display:flex;align-items:center;justify-content:space-between;padding:5px 7px 0;position:relative;z-index:2}
-        .llv-node-idx{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.4)}
-        .llv-badge{width:15px;height:15px;border-radius:4px;display:flex;align-items:center;justify-content:center;
-          font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;color:#000}
-        .llv-badge-h{background:#4ade80;box-shadow:0 0 8px rgba(74,222,128,0.55)}
-        .llv-badge-t{background:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,0.55)}
-        .llv-node-val{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#fff;
-          flex:1;display:flex;align-items:center;justify-content:center;
-          text-shadow:0 2px 7px rgba(0,0,0,0.4);line-height:1;position:relative;z-index:2}
-        .llv-node-ptr{display:flex;align-items:center;gap:4px;margin:0 7px 5px;
-          border-top:1px solid rgba(255,255,255,0.12);padding-top:3px;position:relative;z-index:2}
-        .llv-ptr-label{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:rgba(255,255,255,0.36);letter-spacing:0.04em}
-        .llv-ptr-dot{width:6px;height:6px;border-radius:50%;margin-left:auto;border:1.5px solid rgba(255,255,255,0.25);transition:background 0.2s}
-        .llv-found-ring{position:absolute;inset:-5px;border-radius:16px;border:2px solid #fbbf24;
-          animation:fndRing 0.65s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none;z-index:10}
-        .llv-fr2{animation-delay:0.17s}
-        @keyframes fndRing{0%{transform:scale(1);opacity:0.9}100%{transform:scale(1.38);opacity:0}}
-        .llv-new-glow{position:absolute;inset:0;border-radius:12px;background:rgba(255,255,255,0.14);
-          animation:newGlow 0.55s ease forwards;pointer-events:none;z-index:0}
-        @keyframes newGlow{0%{opacity:1}100%{opacity:0}}
-        .llv-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;
-          width:200px;height:76px;border:1px dashed rgba(255,255,255,0.065);border-radius:12px;gap:7px}
-        .llv-empty.llv-empty-err{border-color:rgba(239,68,68,0.32);animation:errSh 0.36s ease}
-        .llv-ei{font-size:20px;opacity:0.4}
-        .llv-et{font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e2d47;letter-spacing:0.08em}
-        .llv-addrs{display:flex;gap:0;padding:4px 8px 6px;overflow-x:auto;justify-content:safe center;flex-shrink:0}
-        .llv-addr{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:#0f1a2e;
-          width:78px;text-align:center;flex-shrink:0;margin:0 22px 0 0;letter-spacing:0.04em}
-        .llv-addr:last-child{margin-right:0}
-        .llv-fly{position:absolute;top:14px;right:18%;
-          width:72px;height:54px;border-radius:12px;display:flex;flex-direction:column;
-          align-items:center;justify-content:center;gap:1px;z-index:20;pointer-events:none;
-          border:1.5px solid rgba(255,255,255,0.24)}
-        .llv-fly-deleteHead{animation:flyLeft 0.8s cubic-bezier(0.22,1,0.36,1) forwards}
-        @keyframes flyLeft{0%{opacity:1;transform:translateX(0) translateY(0) scale(1)}100%{opacity:0;transform:translateX(-110px) translateY(-72px) scale(0.48) rotate(-22deg)}}
-        .llv-fly-deleteTail{animation:flyRight 0.8s cubic-bezier(0.22,1,0.36,1) forwards}
-        @keyframes flyRight{0%{opacity:1;transform:translateX(0) translateY(0) scale(1)}100%{opacity:0;transform:translateX(110px) translateY(-72px) scale(0.48) rotate(22deg)}}
-        .llv-fly-deleteVal{animation:flyUp 0.8s cubic-bezier(0.22,1,0.36,1) forwards}
-        @keyframes flyUp{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-100px) scale(0.42) rotate(14deg)}}
-        .llv-fly-v{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:#fff}
-        .llv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:rgba(255,255,255,0.65);letter-spacing:0.06em}
+        /* ── CANVAS ── */
+        .ll-canvas{flex:1;position:relative;overflow:hidden;
+          display:flex;align-items:center;justify-content:flex-start;padding:52px 24px 42px}
 
-        /* Op info */
-        .oi{padding:12px 16px;border-top:1px solid rgba(255,255,255,0.045);
-          background:rgba(6,10,24,0.55);min-height:72px;flex-shrink:0}
+        /* Animated grid */
+        .ll-grid{position:absolute;inset:0;pointer-events:none;
+          background-image:
+            linear-gradient(rgba(76,201,240,0.06) 1px,transparent 1px),
+            linear-gradient(90deg,rgba(76,201,240,0.06) 1px,transparent 1px);
+          background-size:38px 38px;animation:gridScroll 10s linear infinite}
+
+        /* Scanline sweep */
+        .ll-scan{position:absolute;left:0;right:0;height:80px;pointer-events:none;z-index:1;
+          background:linear-gradient(to bottom,transparent,rgba(76,201,240,0.03),transparent);
+          animation:scanline 6s ease-in-out infinite}
+
+        /* Ambient blobs */
+        .ll-blob{position:absolute;border-radius:50%;pointer-events:none;filter:blur(70px);mix-blend-mode:screen}
+        .ll-blob-1{width:260px;height:260px;top:-60px;left:20px;
+          background:radial-gradient(circle,rgba(76,201,240,0.14),transparent 65%);
+          animation:blobFloat 14s ease-in-out infinite}
+        .ll-blob-2{width:200px;height:200px;bottom:-20px;right:40px;
+          background:radial-gradient(circle,rgba(247,37,133,0.11),transparent 65%);
+          animation:blob2 11s ease-in-out infinite}
+        .ll-blob-3{width:160px;height:160px;top:45%;left:48%;transform:translate(-50%,-50%);
+          background:radial-gradient(circle,rgba(199,125,255,0.09),transparent 65%);
+          animation:blobFloat 18s ease-in-out infinite reverse}
+
+        /* ── NODES WRAP ── */
+        .ll-nodes-wrap{position:relative;z-index:2;width:100%;
+          overflow-x:auto;overflow-y:visible;
+          padding:52px 8px 52px;
+          scrollbar-width:thin;scrollbar-color:rgba(76,201,240,0.25) transparent}
+        .ll-nodes-row{display:flex;align-items:center;gap:0;width:max-content}
+        .ll-nodes-reversing{animation:revNodes 0.75s cubic-bezier(0.4,0,0.2,1) both}
+
+        /* HEAD pointer */
+        .ll-head-ptr{display:flex;flex-direction:column;align-items:center;margin-right:10px;flex-shrink:0}
+        .ll-head-ptr-line{width:2px;height:32px;
+          background:linear-gradient(to bottom,transparent,var(--cyan));
+          animation:headPtrPulse 2.2s ease-in-out infinite;border-radius:2px}
+        .ll-head-ptr-label{font-family:'JetBrains Mono',monospace;font-size:7.5px;
+          color:var(--cyan);letter-spacing:0.12em;font-weight:700;opacity:0.85}
+
+        /* ── NODE ── */
+        .ll-node{border-radius:11px;border:1.5px solid rgba(255,255,255,0.15);
+          position:relative;overflow:visible;flex-shrink:0;
+          transition:box-shadow 0.25s,border-color 0.25s;cursor:default}
+        .ll-node:hover{border-color:rgba(255,255,255,0.28)!important}
+        .ll-node-new{animation:nodeIn 0.55s cubic-bezier(0.34,1.56,0.64,1) both}
+        .ll-node-del{animation:nodeDel 0.5s cubic-bezier(0.4,0,1,1) both}
+        .ll-node-hi{animation:nodeHi 0.7s ease both}
+
+        /* Node tooltip on hover */
+        .ll-node:hover .ll-node-tip{opacity:1;transform:translateY(0)}
+        .ll-node-tip{position:absolute;bottom:-30px;left:50%;transform:translateX(-50%) translateY(4px);
+          background:rgba(10,18,45,0.95);border:1px solid var(--border-medium);border-radius:6px;
+          padding:3px 8px;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-secondary);
+          white-space:nowrap;pointer-events:none;opacity:0;transition:all 0.15s;z-index:20;
+          box-shadow:0 4px 12px rgba(0,0,0,0.4)}
+
+        .ll-badge{position:absolute;font-family:'JetBrains Mono',monospace;font-size:7.5px;font-weight:700;
+          padding:2px 8px;border-radius:20px;letter-spacing:0.1em;white-space:nowrap;
+          box-shadow:0 2px 8px rgba(0,0,0,0.4)}
+
+        /* ── ARROW ── */
+        .ll-arrow{display:flex;align-items:center;position:relative;width:44px;flex-shrink:0;height:44px}
+        .ll-arrow-line{flex:1;height:2px;
+          background:linear-gradient(90deg,rgba(76,201,240,0.35),rgba(76,201,240,0.8));
+          position:relative;animation:arrowGlow 2s ease-in-out infinite;border-radius:1px}
+        .ll-arrow-head{width:0;height:0;
+          border-top:5px solid transparent;border-bottom:5px solid transparent;
+          border-left:9px solid rgba(76,201,240,0.85);
+          filter:drop-shadow(0 0 4px rgba(76,201,240,0.6))}
+        .ll-arrow-particles{position:absolute;top:50%;left:2px;transform:translateY(-50%);
+          width:calc(100% - 10px);overflow:hidden;height:10px;pointer-events:none}
+        .ll-particle{position:absolute;top:50%;transform:translateY(-50%);
+          width:4px;height:4px;border-radius:50%;
+          animation:particleFlow 1.4s ease-in-out infinite;animation-delay:var(--delay);
+          box-shadow:0 0 4px currentColor}
+
+        /* ── NULL TERMINATOR ── */
+        .ll-null{padding:8px 14px;border-radius:9px;border:1px dashed rgba(255,255,255,0.18);
+          background:rgba(255,255,255,0.025);flex-shrink:0;
+          animation:nullBlink 2.5s ease-in-out infinite;display:flex;align-items:center;
+          box-shadow:inset 0 1px 0 rgba(255,255,255,0.05)}
+
+        /* ── EMPTY STATE ── */
+        .ll-empty{display:flex;flex-direction:column;align-items:center;gap:10px;
+          padding:20px;border:1px dashed rgba(76,201,240,0.12);border-radius:14px;
+          background:rgba(76,201,240,0.02)}
+        .ll-empty-icon{font-size:36px;opacity:0.35;animation:blobFloat 4s ease-in-out infinite}
+        .ll-empty-text{font-family:'JetBrains Mono',monospace;font-size:9.5px;
+          color:var(--text-muted);letter-spacing:0.1em}
+
+        /* ── REVERSE OVERLAY ── */
+        .ll-reverse-overlay{position:absolute;inset:0;display:flex;align-items:center;
+          justify-content:center;pointer-events:none;z-index:10;
+          animation:revOverlay 1.4s ease forwards;background:rgba(5,8,24,0.35)}
+        .ll-reverse-text{font-family:'Space Grotesk',sans-serif;font-size:30px;font-weight:800;
+          background:linear-gradient(90deg,var(--yellow),var(--orange),var(--pink),var(--yellow));
+          background-size:200% auto;
+          -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+          animation:revText 1.4s ease forwards,shimmer 1s linear infinite;letter-spacing:6px;
+          filter:drop-shadow(0 0 20px rgba(255,214,10,0.5))}
+
+        /* ── OP INFO ── */
+        .oi{padding:9px 15px;border-top:1px solid var(--border-subtle);
+          background:rgba(4,8,24,0.6);min-height:58px;flex-shrink:0}
         .oi-badge{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;
-          border-radius:20px;margin-bottom:7px;font-family:'JetBrains Mono',monospace;
-          font-size:10px;font-weight:700;animation:bdIn 0.26s ease;border:1px solid}
-        @keyframes bdIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:none}}
-        .oi-msg{font-family:'JetBrains Mono',monospace;font-size:11px;color:#334155;line-height:1.55;animation:mgIn 0.28s ease}
-        @keyframes mgIn{from{opacity:0}to{opacity:1}}
-        .oi-idle{display:flex;align-items:center;gap:9px;font-family:'JetBrains Mono',monospace;
-          font-size:10px;color:#1e2d47;letter-spacing:0.06em;padding:6px 0}
+          border-radius:20px;margin-bottom:5px;font-family:'JetBrains Mono',monospace;
+          font-size:9.5px;font-weight:700;animation:stepPop 0.22s ease;border:1px solid;letter-spacing:0.04em}
+        .oi-msg{font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.6;
+          animation:fadeUp 0.2s ease;color:var(--text-secondary)}
+        .oi-idle{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;
+          font-size:9px;color:var(--text-muted);letter-spacing:0.04em;padding:6px 0}
 
-        /* Controls */
-        .ctrl{display:flex;align-items:center;gap:6px;padding:8px 14px;
-          border-top:1px solid rgba(255,255,255,0.045);background:rgba(4,8,20,0.55);
+        /* ── CONTROLS ── */
+        .ctrl{display:flex;align-items:center;gap:5px;padding:7px 13px;
+          border-top:1px solid var(--border-subtle);background:rgba(3,6,18,0.65);
           flex-wrap:wrap;flex-shrink:0}
-        .cb{width:32px;height:30px;border-radius:7px;border:1px solid rgba(255,255,255,0.08);
-          background:rgba(255,255,255,0.03);color:#334155;font-size:11px;cursor:pointer;
-          display:flex;align-items:center;justify-content:center;transition:all 0.16s}
-        .cb:hover:not(:disabled){background:rgba(52,211,153,0.12);color:#6ee7b7;border-color:rgba(52,211,153,0.32)}
-        .cb:disabled{opacity:0.24;cursor:not-allowed}
-        .cp{height:30px;padding:0 11px;border-radius:7px;
-          background:linear-gradient(135deg,#065f46,#34d399);border:none;color:#fff;
-          font-size:12px;cursor:pointer;box-shadow:0 0 14px rgba(52,211,153,0.38);transition:all 0.18s}
-        .cp:hover:not(:disabled){transform:scale(1.05);box-shadow:0 0 24px rgba(52,211,153,0.58)}
-        .cp:disabled{opacity:0.34;cursor:not-allowed;transform:none}
-        .cs{width:1px;height:18px;background:rgba(255,255,255,0.065);margin:0 2px}
-        .spd{display:flex;gap:3px}
-        .sb{padding:4px 7px;border-radius:5px;cursor:pointer;
-          font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;
-          border:1px solid rgba(255,255,255,0.065);background:transparent;color:#1e2d47;transition:all 0.13s}
-        .sb:hover{color:#475569}
-        .sb.sa{background:rgba(52,211,153,0.12);border-color:rgba(52,211,153,0.32);color:#6ee7b7}
+        .cb{width:29px;height:27px;border-radius:7px;border:1px solid var(--border-medium);
+          background:var(--surface-3);color:var(--text-secondary);font-size:11px;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;transition:all 0.14s;
+          box-shadow:0 1px 3px rgba(0,0,0,0.3)}
+        .cb:hover:not(:disabled){background:var(--cyan-dim);color:var(--cyan);
+          border-color:rgba(76,201,240,0.45);box-shadow:0 0 12px var(--cyan-glow)}
+        .cb:active:not(:disabled){transform:scale(0.93)}
+        .cb:disabled{opacity:0.22;cursor:not-allowed}
+        .cp{height:27px;padding:0 14px;border-radius:7px;
+          background:linear-gradient(135deg,#0369a1,#0ea5e9,#4cc9f0);
+          border:1px solid rgba(76,201,240,0.35);color:#fff;font-size:11px;font-weight:700;
+          cursor:pointer;box-shadow:0 0 16px rgba(76,201,240,0.35);transition:all 0.15s;
+          letter-spacing:0.02em}
+        .cp:hover{transform:scale(1.06);box-shadow:0 0 28px rgba(76,201,240,0.55)}
+        .cp:active{transform:scale(0.97)}
+        .cp:disabled{opacity:0.25;cursor:not-allowed;transform:none;box-shadow:none}
+        .csep{width:1px;height:16px;background:var(--border-subtle);margin:0 3px}
+        .spd{display:flex;gap:2px}
+        .sb{padding:3px 8px;border-radius:5px;cursor:pointer;
+          font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
+          border:1px solid var(--border-subtle);background:transparent;
+          color:var(--text-muted);transition:all 0.12s}
+        .sb:hover{color:var(--text-secondary);border-color:var(--border-medium)}
+        .sb.sa{background:var(--cyan-dim);border-color:rgba(76,201,240,0.4);
+          color:var(--cyan);box-shadow:0 0 8px rgba(76,201,240,0.2)}
 
-        /* Progress bar */
-        .pr{display:flex;align-items:center;gap:8px;padding:6px 16px;
-          border-top:1px solid rgba(255,255,255,0.038);flex-shrink:0}
-        .pt2{flex:1;height:4px;background:rgba(255,255,255,0.045);border-radius:99px;overflow:hidden}
-        .pf{height:100%;border-radius:99px;transition:width 0.4s ease;
-          background:linear-gradient(90deg,#065f46,#34d399,#6ee7b7);
-          box-shadow:0 0 8px rgba(52,211,153,0.5)}
-        .ptx{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#1e2d47;white-space:nowrap}
+        /* ── PROGRESS ── */
+        .pr{display:flex;align-items:center;gap:8px;padding:6px 15px;
+          border-top:1px solid var(--border-subtle);flex-shrink:0}
+        .pt2{flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;
+          box-shadow:inset 0 1px 2px rgba(0,0,0,0.3)}
+        .pf{height:100%;border-radius:99px;transition:width 0.4s cubic-bezier(0.4,0,0.2,1);
+          background:linear-gradient(90deg,#0369a1,#4cc9f0,#c77dff);
+          box-shadow:0 0 8px rgba(76,201,240,0.5)}
+        .ptx{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);
+          min-width:32px;text-align:right}
 
-        /* Done banner */
-        .db{padding:10px 16px;border-top:1px solid rgba(74,222,128,0.18);
-          background:rgba(74,222,128,0.05);display:flex;align-items:center;gap:9px;flex-shrink:0;
-          animation:dbIn 0.5s cubic-bezier(0.22,1,0.36,1)}
-        @keyframes dbIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
-        .db-tx{font-family:'JetBrains Mono',monospace;font-size:11px;color:#4ade80}
-        .db-sp{display:inline-block;animation:spSpin 0.6s ease}
-        @keyframes spSpin{0%{transform:scale(0) rotate(-180deg)}60%{transform:scale(1.3) rotate(10deg)}100%{transform:scale(1) rotate(0)}}
+        /* ── OP LOG ── */
+        .slh{padding:6px 15px 3px;font-family:'JetBrains Mono',monospace;font-size:7px;
+          color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-weight:600;
+          border-top:1px solid var(--border-subtle);flex-shrink:0;
+          display:flex;align-items:center;justify-content:space-between}
+        .slh-count{font-size:7px;color:var(--cyan);opacity:0.7}
+        .sl{overflow-y:auto;padding:3px 8px 8px;display:flex;flex-direction:column;gap:1.5px;
+          max-height:95px;flex-shrink:0;
+          scrollbar-width:thin;scrollbar-color:rgba(76,201,240,0.2) transparent}
+        .si{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:5px;
+          cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8px;
+          color:var(--text-muted);transition:all 0.12s;border:1px solid transparent}
+        .si:hover{background:var(--cyan-dim);color:var(--text-secondary);border-color:rgba(76,201,240,0.12)}
+        .sl-active{background:rgba(76,201,240,0.09)!important;border-color:rgba(76,201,240,0.22)!important;
+          color:var(--cyan)!important;box-shadow:inset 3px 0 0 var(--cyan)}
+        .si-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;transition:all 0.15s}
+        .si-v{opacity:0.55;margin-left:2px}
+        .si-ln{margin-left:auto;font-size:7px;color:var(--text-muted);opacity:0.7}
+        .si-past .si-dot{background:var(--green)!important;box-shadow:0 0 5px var(--green-glow)}
 
-        /* Steps list */
-        .slh{padding:8px 16px 4px;font-family:'JetBrains Mono',monospace;font-size:7.5px;color:#1e2d47;
-          letter-spacing:0.13em;text-transform:uppercase;border-top:1px solid rgba(255,255,255,0.038);flex-shrink:0}
-        .sl{max-height:120px;overflow-y:auto;padding:0 10px 8px;display:flex;flex-direction:column;gap:2px;flex-shrink:0}
-        .sl::-webkit-scrollbar{width:3px}
-        .sl::-webkit-scrollbar-track{background:transparent}
-        .sl::-webkit-scrollbar-thumb{background:#1e2d47;border-radius:4px}
-        .si{display:flex;align-items:center;gap:7px;padding:3px 8px;border-radius:6px;
-          cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e2d47;
-          transition:all 0.13s;border:1px solid transparent}
-        .si:hover{background:rgba(52,211,153,0.05);color:#334155}
-        .sl-active{background:rgba(52,211,153,0.09)!important;border-color:rgba(52,211,153,0.18)!important;color:#6ee7b7!important}
-        .si-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
-        .si-v{opacity:0.45;margin-left:2px}
-        .si-ln{margin-left:auto;font-size:7.5px;color:#1e2d47}
+        /* ── TOAST ── */
+        .toast{position:fixed;bottom:24px;right:24px;padding:8px 16px;border-radius:9px;
+          font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;
+          background:rgba(10,20,50,0.97);border:1px solid var(--border-medium);
+          color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.5),0 0 16px var(--green-glow);
+          z-index:9999;animation:toastIn 0.25s ease,toastOut 0.3s ease 1.8s forwards}
 
-        /* ══ ENHANCED TERMINAL ═══════════════════════════════════ */
-        .term-wrap{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;
-          background:rgba(3,5,15,0.6)}
+        @keyframes termSlideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+        @keyframes termSlideUp{from{opacity:1;transform:none}to{opacity:0;transform:translateY(-8px)}}
 
-        .term-header{display:flex;align-items:center;gap:8px;padding:10px 14px;
-          border-bottom:1px solid rgba(255,255,255,0.05);
-          background:rgba(8,12,28,0.85);flex-shrink:0}
-        .term-dots{display:flex;gap:5px;align-items:center}
-        .term-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-        .term-title{font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e3050;
-          letter-spacing:0.14em;text-transform:uppercase;display:flex;align-items:center;gap:5px}
+        .tm-wrap{display:flex;flex-direction:column;min-height:0;
+          transition:flex-basis 0.32s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;overflow:hidden}
+        .tm-wrap.tm-open{flex:1;min-height:110px;}
+        .tm-wrap.tm-closed{flex:0 0 0px;min-height:0;opacity:0;pointer-events:none;}
 
-        .term-status-pill{display:flex;align-items:center;gap:5px;margin-left:4px;
-          font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;
-          letter-spacing:0.08em;padding:3px 10px;border-radius:20px}
-        .term-status-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+        .term-body-wrap{flex:1;display:flex;flex-direction:column;min-height:0;
+          animation:termSlideDown 0.28s cubic-bezier(0.4,0,0.2,1)}
 
-        .term-cursor-sm{display:inline-block;width:5px;height:10px;background:currentColor;
-          vertical-align:middle;margin-left:4px;border-radius:1px;
-          animation:blink 1s step-end infinite;opacity:0.7}
-        @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+        .term-toggle{display:flex;align-items:center;justify-content:center;
+          width:18px;height:18px;border-radius:5px;border:1px solid var(--border-medium);
+          background:rgba(255,255,255,0.04);cursor:pointer;flex-shrink:0;
+          color:var(--text-secondary);font-size:9px;font-weight:700;
+          transition:all 0.15s;margin-left:auto;font-family:'JetBrains Mono',monospace;
+          line-height:1;user-select:none}
+        .term-toggle:hover{background:var(--cyan-dim);color:var(--cyan);
+          border-color:rgba(76,201,240,0.4);box-shadow:0 0 8px var(--cyan-glow)}
 
-        .term-copy-btn{padding:4px 10px;border-radius:6px;cursor:pointer;
-          font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:600;
-          border:1px solid rgba(255,255,255,0.08);background:rgba(255,255,255,0.04);
-          color:#334155;transition:all 0.15s;letter-spacing:0.04em;white-space:nowrap}
-        .term-copy-btn:hover{color:#6ee7b7;border-color:rgba(52,211,153,0.3);background:rgba(52,211,153,0.06)}
-
-        /* Filter bar */
-        .term-filter-bar{display:flex;align-items:center;gap:3px;padding:7px 12px;
-          border-bottom:1px solid rgba(255,255,255,0.04);background:rgba(6,10,22,0.7);
-          flex-shrink:0;overflow-x:auto;scrollbar-width:none}
-        .term-filter-bar::-webkit-scrollbar{display:none}
-        .tfilter-btn{padding:3px 9px;border-radius:6px;cursor:pointer;
-          font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:700;
-          border:1px solid rgba(255,255,255,0.06);background:transparent;color:#1e3050;
-          transition:all 0.13s;letter-spacing:0.04em;white-space:nowrap;display:flex;align-items:center;gap:4px}
-        .tfilter-btn:hover{color:#334155;background:rgba(255,255,255,0.03)}
-        .tfilter-active{background:rgba(255,255,255,0.05)!important}
-        .tfilter-count{font-size:8px;opacity:0.7;font-weight:400}
-
-        /* Body */
-        .term-body{flex:1;overflow-y:auto;font-family:'JetBrains Mono',monospace;
-          background:transparent;scrollbar-width:thin;scrollbar-color:#1e2d47 transparent}
-        .term-body::-webkit-scrollbar{width:3px}
-        .term-body::-webkit-scrollbar-thumb{background:#1e2d47;border-radius:4px}
-
-        /* Idle screen */
-        .term-idle-screen{padding:24px 20px;display:flex;flex-direction:column;gap:12px}
-        .term-idle-prompt-row{display:flex;align-items:center;gap:9px;font-size:12px;color:#1e3050}
-        .term-prompt-char{color:#34d399;font-size:14px;font-weight:700}
-        .term-idle-text{color:#1e3050;font-size:11px;letter-spacing:0.03em}
-        .term-cursor{display:inline-block;width:7px;height:13px;background:#34d399;
-          vertical-align:middle;margin-left:5px;border-radius:1px;
-          animation:blink 1s step-end infinite}
-        .term-hint-row{font-size:9.5px;color:#0f1a2e;letter-spacing:0.05em}
-        .term-kbd{display:inline-block;padding:1px 6px;border-radius:4px;font-size:8.5px;
-          background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#334155}
-
-        /* Error block */
-        .term-error-block{margin:10px 12px;border-radius:10px;overflow:hidden;
-          border:1px solid rgba(248,113,113,0.25);animation:errSh 0.36s ease}
-        .term-error-block-header{padding:8px 14px;background:rgba(248,113,113,0.1);
-          font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;
-          letter-spacing:0.08em;border-bottom:1px solid rgba(248,113,113,0.15)}
-        .term-error-row{display:flex;align-items:flex-start;gap:8px;padding:7px 14px;
-          border-bottom:1px solid rgba(248,113,113,0.07);background:rgba(248,113,113,0.04)}
-        .term-error-row:last-child{border-bottom:none}
-        .term-err-bullet{color:#f87171;font-size:10px;flex-shrink:0;padding-top:1px}
-        .term-err-text{font-size:11px;color:#fca5a5;line-height:1.55}
-
-        /* Operation rows */
-        .term-row{display:flex;align-items:center;gap:0;padding:4px 0;
-          transition:background 0.12s,border-color 0.12s;cursor:pointer;
-          border-left:2px solid transparent;margin:0 8px;border-radius:4px}
-        .term-row:hover{background:rgba(255,255,255,0.02)}
-        .term-row-active{background:rgba(52,211,153,0.05)!important}
-
-        .term-lnum{font-size:8px;color:#0f1926;min-width:38px;padding:0 8px;
-          text-align:right;flex-shrink:0;user-select:none;font-family:'JetBrains Mono',monospace}
-        .term-kind-icon{font-size:10px;min-width:18px;text-align:center;flex-shrink:0;font-weight:700}
-
-        .term-op-tag{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;
-          padding:1px 6px;border-radius:4px;border:1px solid;margin-right:6px;flex-shrink:0;
-          letter-spacing:0.04em;white-space:nowrap}
-
-        .term-text{font-size:10.5px;color:#334155;padding:0 6px 0 0;line-height:1.6;
-          word-break:break-all;flex:1;transition:color 0.12s;letter-spacing:0.01em}
-
-        .term-size-badge{font-family:'JetBrains Mono',monospace;font-size:8px;
-          padding:1px 6px;border-radius:4px;background:rgba(255,255,255,0.03);
-          border:1px solid rgba(255,255,255,0.05);flex-shrink:0;margin-right:8px;
-          white-space:nowrap}
-
-        /* Summary footer */
-        .term-summary-bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;
-          padding:10px 14px;border-top:1px solid rgba(255,255,255,0.04);margin-top:4px;
-          font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e2d47;
-          background:rgba(6,10,22,0.5)}
-        .term-sum-icon{font-size:11px}
-        .term-sum-chip{padding:2px 8px;border-radius:5px;border:1px solid;font-size:8px;
-          font-weight:700;letter-spacing:0.04em}
+        .term-bar-closed{display:flex;align-items:center;gap:6px;padding:7px 14px;
+          background:rgba(4,7,18,0.95);border-top:1px solid var(--border-subtle);flex-shrink:0;
+          cursor:pointer;transition:background 0.15s}
+        .term-bar-closed:hover{background:rgba(8,14,32,0.95)}
+        ::-webkit-scrollbar{width:4px;height:4px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(76,201,240,0.2);border-radius:4px}
+        ::-webkit-scrollbar-thumb:hover{background:rgba(76,201,240,0.4)}
+        textarea::-webkit-scrollbar{width:4px}
+        .ll-nodes-wrap::-webkit-scrollbar{height:4px}
       `}</style>
 
       <div className="pg">
-        {/* ── HEADER ── */}
+        {/* HEADER */}
         <header className="hd">
           <div className="hd-logo">🔗</div>
           <div>
-            <div className="hd-title">Linked List DS Visualizer</div>
-            <div className="hd-sub">Write · Validate · Visualize — real execution engine with AI review</div>
+            <div className="hd-brand">VisuoSlayer</div>
+            <div className="hd-tagline">Linked List DS Visualizer · Write · Run · Step through every pointer</div>
           </div>
-          <div className="hd-right">
-            <div className="hd-lang-badge" style={{color:lm.accent,background:`${lm.accent}12`,borderColor:`${lm.accent}30`}}>
-              {lm.name}
-            </div>
-            <div className="hd-badge">Singly Linked List</div>
+          <div className="hd-r">
+            <div className="hd-ds-badge">SINGLY LINKED LIST</div>
+            <div className="hd-pill" style={{ color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28` }}>{lm.name}</div>
+            <div className="hd-pid">pid:{sessionId}</div>
           </div>
         </header>
 
-        {/* ── MAIN GRID ── */}
         <main className="main">
-
-          {/* LEFT: Code editor */}
-          <div className="panel">
+          {/* LEFT: editor + terminal */}
+          <div className="panel left">
             <div className="ph">
-              <span className="pd" style={{background:"#ff5f57"}}/>
-              <span className="pd" style={{background:"#ffbd2e"}}/>
-              <span className="pd" style={{background:"#28c840"}}/>
-              <span className="pt">Code Editor</span>
-              <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:9,
-                color:lm.accent,background:`${lm.accent}16`,border:`1px solid ${lm.accent}33`,
-                padding:"2px 9px",borderRadius:20}}>{lm.name}</span>
+              <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 6px #ff5f57" }} />
+              <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 6px #ffbd2e" }} />
+              <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 6px #28c840" }} />
+              <span className="ptl">Code Editor</span>
+              <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28`, padding:"2px 8px", borderRadius:20, fontWeight:700 }}>{lm.name}</span>
             </div>
 
-            {/* Language selector */}
-            <div className="lb">
-              {Object.entries(LANGS).map(([k,m])=>(
-                <button key={k}
-                  className={`lt${lang===k?" la":""}`}
-                  onClick={()=>changeLang(k)}
-                  style={lang===k?{borderColor:`${m.accent}50`,color:m.accent,background:`${m.accent}12`}:{}}>
-                  {m.ext}
-                </button>
-              ))}
-            </div>
-
-            {/* Editor */}
-            <div className="cw">
-              <div className="ln-col">
-                {codeLines.map((_,i)=>(
-                  <div key={i} className={["ln",step?.lineNum===i?"aln":"",errorLineSet.has(i)?"eln":""].join(" ")}>{i+1}</div>
+            <div className="ed-wrap" style={{ flex: termOpen ? "0 0 58%" : "1" }}>
+              <div className="lb">
+                {Object.entries(LANGS).map(([k, m]) => (
+                  <button key={k} className={`lt${lang === k ? " la" : ""}`}
+                    onClick={() => handleChangeLang(k)}
+                    style={lang === k ? { borderColor:`${m.accent}35`, color:m.accent, background:`${m.accent}0e` } : {}}
+                  >{m.ext}</button>
                 ))}
               </div>
-              {step&&<div className="al-overlay" style={{top:`${18+step.lineNum*22}px`}}/>}
-              {[...errorLineSet].map(i=>(
-                <div key={`el${i}`} className="err-line-overlay" style={{top:`${18+i*22}px`}}/>
-              ))}
-              <textarea ref={taRef} className="ta"
-                value={code}
-                onChange={e=>{setCode(e.target.value);if(steps.length||hasAiErrors) doReset();}}
-                onKeyDown={onKeyDown}
-                spellCheck={false}
-                placeholder="// Write your LinkedList + Node class here, then use it below..."
-              />
-            </div>
 
-            {/* Active line indicator */}
-            {step&&os&&(
-              <div className="alb" style={{borderColor:os.bd,background:os.bg}}>
-                <span className="alb-icon" style={{color:os.c}}>{os.icon}</span>
-                <span className="alb-lnum" style={{color:os.c}}>line {step.lineNum+1}</span>
-                <code className="alb-code">{step.codeLine}</code>
-              </div>
-            )}
+              <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef} />
 
-            {/* Validating */}
-            {validating&&(
-              <div className="validating-bar">
-                <div className="vld-spinner"/>
-                <span className="vld-txt">🤖 AI is reviewing your implementation…</span>
-              </div>
-            )}
-
-            {/* AI errors */}
-            {hasAiErrors&&(
-              <div className="ai-err">
-                <div className="ai-err-head">
-                  <span className="ai-err-icon">🤖</span>
-                  <span className="ai-err-title">Implementation Error — Visualization Blocked</span>
-                  <span className="ai-err-badge">{aiErrors.length} issue{aiErrors.length!==1?"s":""}</span>
+              {step && os && (
+                <div className="alb" style={{ borderColor:os.bd, background:os.bg }}>
+                  <span style={{ color:os.c, fontSize:10 }}>{os.icon}</span>
+                  <span className="alb-ln" style={{ color:os.c }}>L{step.lineNum + 1}</span>
+                  <code className="alb-code">{step.codeLine}</code>
                 </div>
-                <div className="ai-err-blocked">
-                  <span>🚫</span>
-                  <span>Fix all errors below before the visualization can run</span>
-                </div>
-                {aiReason&&<div className="ai-err-reason">{aiReason}</div>}
-                <div className="ai-err-list">
-                  {aiErrors.map((e,i)=>(
-                    <div key={i} className="ai-err-row"
-                      onClick={()=>{const lh=22;if(taRef.current)taRef.current.scrollTop=Math.max(0,((e.line??1)-4))*lh;}}>
-                      <span className="ai-err-ln">L{e.line??"?"}</span>
-                      <div>
-                        <div className="ai-err-msg">{e.message}</div>
-                        {codeLines[(e.line??1)-1]&&<div className="ai-err-code">{codeLines[(e.line??1)-1].trim()}</div>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Runtime errors */}
-            {error&&(
-              <div className="err">
-                <div className="err-t"><span>⚠</span> Execution Error — Visualization Blocked</div>
-                <pre style={{whiteSpace:"pre-wrap",fontFamily:"'JetBrains Mono',monospace",fontSize:10.5}}>{error}</pre>
-              </div>
-            )}
-
-            {apiNote&&<div className="api-note">ℹ {apiNote} — visualization ran without AI check.</div>}
-
-            {/* Run row */}
-            <div className="rr">
-              <button className={`btn-run${playing||validating?" running":""}`}
-                onClick={handleRun} disabled={playing||validating}>
-                {validating?"🤖 Checking…":playing?"▶ Running…":"▶  Run & Visualize"}
-              </button>
-              {(steps.length>0||error||hasAiErrors)&&(
-                <button className="btn-rst" onClick={doReset}>↺ Reset</button>
               )}
-              <span className="rr-hint">CTRL + ENTER</span>
-              {hasAnyErr&&<span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"#f87171"}}>🚫 FIX ERRORS TO VISUALIZE</span>}
+
+              <div className="rr">
+                <button className={`btn-run${playing || validating ? " running" : ""}`} onClick={handleRun} disabled={playing || validating}>
+                  {validating ? "⟳ VisuoSlayer…" : playing ? "▶ Running…" : "▶  Run & Visualize"}
+                </button>
+                {(steps.length > 0 || error || hasAiErrors) && (
+                  <button className="btn-rst" onClick={doReset}>↺ Reset</button>
+                )}
+                <span className="rr-hint">CTRL+ENTER</span>
+              </div>
             </div>
+
+            <div className={`tm-wrap${termOpen ? " tm-open" : " tm-closed"}`}>
+              <div className="term-body-wrap" key={termOpen ? "open" : "closed"}>
+                <div className="term-bar">
+                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }} />
+                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }} />
+                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }} />
+                  <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px", userSelect:"none" }}>visualoslayer — bash</span>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)", marginLeft:8 }}>pid:{sessionId}</span>
+                  <button className="term-toggle" onClick={() => setTermOpen(false)} title="Collapse terminal">▾</button>
+                </div>
+                <Terminal lines={termLines} sessionId={sessionId} validating={validating} />
+              </div>
+            </div>
+
+            {!termOpen && (
+              <div className="term-bar-closed" onClick={() => setTermOpen(true)} title="Expand terminal">
+                <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 4px #ff5f57" }} />
+                <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 4px #ffbd2e" }} />
+                <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 4px #28c840" }} />
+                <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px" }}>visualoslayer — bash</span>
+                {termLines.some(l => l.type === "error" || l.type === "stderr") && (
+                  <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#f87171", background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", padding:"1px 7px", borderRadius:10 }}>errors</span>
+                )}
+                {termLines.some(l => l.type === "success") && (
+                  <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--green)", background:"var(--green-dim)", border:"1px solid rgba(57,217,138,0.25)", padding:"1px 7px", borderRadius:10 }}>ok</span>
+                )}
+                <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--cyan)", fontWeight:700 }}>▴ open</span>
+              </div>
+            )}
           </div>
 
-          {/* RIGHT: Visualizer + Terminal */}
+          {/* RIGHT: viz + info + controls + log */}
           <div className="panel">
             <div className="ph">
-              <span className="pd" style={{background:"#34d399"}}/>
-              <span className="pd" style={{background:"#a78bfa"}}/>
-              <span className="pd" style={{background:"#fbbf24"}}/>
-              <span className="pt">Visualizer</span>
-              {steps.length>0&&(
-                <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#334155"}}>{steps.length} ops</span>
+              <span className="dot" style={{ background:"#4cc9f0", boxShadow:"0 0 6px #4cc9f0" }} />
+              <span className="dot" style={{ background:"#f72585", boxShadow:"0 0 6px #f72585" }} />
+              <span className="dot" style={{ background:"#ffd60a", boxShadow:"0 0 6px #ffd60a" }} />
+              <span className="ptl">Linked List Visualization</span>
+              {steps.length > 0 && (
+                <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(76,201,240,0.25)", padding:"2px 9px", borderRadius:20, fontWeight:700 }}>
+                  {idx + 1} / {steps.length}
+                </span>
               )}
             </div>
 
-            {/* Tab switcher */}
-            <div className="rtabs">
-              <button className={`rtab${activeTab==="viz"?" rtab-active":""}`}
-                onClick={()=>setActiveTab("viz")}>
-                ⬡ Visualization
-                {steps.length>0&&<span className="rtab-badge rb-ok">{steps.length}</span>}
-              </button>
-              <button className={`rtab${activeTab==="terminal"?" rtab-active":""}`}
-                onClick={()=>setActiveTab("terminal")}>
-                ⬛ Terminal
-                {hasAnyErr&&(
-                  <span className="rtab-badge">{aiErrors.length||"!"}</span>
-                )}
-                {!hasAnyErr&&termLines.length>0&&(
-                  <span className="rtab-badge rb-ok">{termLines.length}</span>
-                )}
-              </button>
-            </div>
+            <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, overflow:"hidden" }}>
+              <LinkedListViz step={step} animKey={animKey} idle={idle} prevList={prevList} />
 
-            <div className="vb">
-              {/* ── VIZ TAB ── */}
-              {activeTab==="viz"&&(
-                <div className="vb-content">
-                  <LinkedListViz step={step} animKey={animKey} idle={idle&&!hasAnyErr}/>
-
-                  <div className="oi">
-                    {step&&os?(
-                      <>
-                        <div className="oi-badge" style={{color:os.c,background:os.bg,borderColor:os.bd}}>
-                          <span>{os.icon}</span>
-                          <span>{os.label}</span>
-                          {["insertHead","insertTail","insertAt"].includes(step.type)&&(
-                            <span style={{opacity:0.6}}>({step.value})</span>
-                          )}
-                          {["deleteHead","deleteTail","deleteVal"].includes(step.type)&&step.value!=null&&(
-                            <span style={{opacity:0.6}}>→ {step.value}</span>
-                          )}
-                          {step.type==="search"&&<span style={{opacity:0.6}}>→ [{step.result}]</span>}
-                          {step.type==="search_miss"&&<span style={{opacity:0.6}}>→ -1</span>}
-                          {step.type==="isEmpty"&&<span style={{opacity:0.6}}>→ {String(step.result)}</span>}
-                          {step.type==="getSize"&&<span style={{opacity:0.6}}>→ {step.result}</span>}
-                        </div>
-                        <div className="oi-msg">{step.message}</div>
-                      </>
-                    ):(
-                      <div className="oi-idle">
-                        <span>🔗</span>
-                        <span>
-                          {hasAnyErr?"🚫 Fix all errors — visualization is blocked until code is correct"
-                           :idle?"Write your LinkedList class, call operations below it, then click Run"
-                           :validating?"Reviewing your code…"
-                           :"Waiting…"}
-                        </span>
-                      </div>
-                    )}
+              <div className="oi">
+                {step && os ? (
+                  <>
+                    <div className="oi-badge" style={{ color:os.c, background:os.bg, borderColor:os.bd }}>
+                      <span>{os.icon}</span>
+                      <span>{os.label}</span>
+                      {step.value != null && <span style={{ opacity:0.55 }}>({step.value})</span>}
+                      {step.type === "search" && <span style={{ opacity:0.55 }}>→ {step.result >= 0 ? `idx ${step.result}` : "not found"}</span>}
+                      {step.type === "size" && <span style={{ opacity:0.55 }}>→ {step.result}</span>}
+                      {step.type === "delete" && <span style={{ opacity:0.55 }}>→ {step.found ? "removed" : "not found"}</span>}
+                    </div>
+                    <div className="oi-msg">{step.message}</div>
+                  </>
+                ) : (
+                  <div className="oi-idle">
+                    <span>🔗</span>
+                    <span style={{ color:"var(--text-muted)" }}>{idle ? "Write a LinkedList class, use it below, hit Run" : hasAiErrors ? "VisuoSlayer found errors — see terminal" : error ? "Fix errors and run again" : validating ? "VisuoSlayer reviewing your code…" : "Waiting…"}</span>
                   </div>
+                )}
+              </div>
 
-                  {done&&(
-                    <div className="db">
-                      <span className="db-sp">🎉</span>
-                      <span className="db-tx">All {steps.length} operation{steps.length!==1?"s":""} visualized!</span>
-                    </div>
-                  )}
-
-                  {steps.length>0&&(
-                    <div className="ctrl">
-                      <button className="cb" title="First" onClick={()=>goTo(0)} disabled={idx<=0}>⏮</button>
-                      <button className="cb" title="Prev"  onClick={()=>goTo(idx-1)} disabled={idx<=0}>◀</button>
-                      <button className="cp"
-                        onClick={()=>{
-                          if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}
-                          else{clearInterval(timerRef.current);setPlaying(p=>!p);}
-                        }}>
-                        {playing?"⏸":done?"↺":"▶"}
-                      </button>
-                      <button className="cb" title="Next" onClick={()=>goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
-                      <button className="cb" title="Last" onClick={()=>goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
-                      <div className="cs"/>
-                      <div className="spd">
-                        {[[2,"0.5×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl])=>(
-                          <button key={s} className={`sb${speed===s?" sa":""}`} onClick={()=>setSpeed(s)}>{lbl}</button>
-                        ))}
-                      </div>
-                      <div className="cs"/>
-                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"#1e2d47"}}>
-                        {idx+1} / {steps.length}
-                      </span>
-                    </div>
-                  )}
-
-                  {steps.length>0&&(
-                    <div className="pr">
-                      <div className="pt2"><div className="pf" style={{width:`${prog}%`}}/></div>
-                      <span className="ptx">{prog}%</span>
-                    </div>
-                  )}
-
-                  {steps.length>0&&(
-                    <>
-                      <div className="slh">OPERATION LOG — click any step to jump</div>
-                      <div className="sl" ref={listRef}>
-                        {steps.map((s,i)=>{
-                          const sm=OP[s.type]??OP.insertTail;
-                          const past=i<idx,active=i===idx;
-                          return(
-                            <div key={i} className={`si${active?" sl-active":""}`} onClick={()=>goTo(i)}>
-                              <span className="si-dot" style={{
-                                background:past?"#34d399":active?sm.c:"#1e2d47",
-                                boxShadow:active?`0 0 6px ${sm.c}`:"none",
-                              }}/>
-                              <span style={{color:active?sm.c:past?"#334155":"#1e2d47"}}>
-                                {sm.label}
-                                {["insertHead","insertTail","insertAt"].includes(s.type)&&<span className="si-v">({s.value})</span>}
-                                {["deleteHead","deleteTail","deleteVal"].includes(s.type)&&s.value!=null&&<span className="si-v"> → {s.value}</span>}
-                                {s.type==="search"&&<span className="si-v"> → [{s.result}]</span>}
-                                {s.type==="search_miss"&&<span className="si-v"> → -1</span>}
-                                {s.type==="isEmpty"&&<span className="si-v"> = {String(s.result)}</span>}
-                                {s.type==="getSize"&&<span className="si-v"> = {s.result}</span>}
-                                {["delete_error","search_miss","empty_error"].includes(s.type)&&<span style={{color:"#ef4444",opacity:0.8}}> ⚠</span>}
-                              </span>
-                              <span className="si-ln">L{s.lineNum+1}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  )}
+              {steps.length > 0 && (
+                <div className="ctrl">
+                  <button className="cb" title="First step" onClick={() => goTo(0)} disabled={idx <= 0}>⏮</button>
+                  <button className="cb" title="Previous step" onClick={() => goTo(idx - 1)} disabled={idx <= 0}>◀</button>
+                  <button className="cp" title={playing ? "Pause" : done ? "Restart" : "Play"} onClick={() => {
+                    if (done || idx >= steps.length - 1) { setIdx(0); bump(); setDone(false); setPlaying(true); }
+                    else { clearInterval(timerRef.current); setPlaying(p => !p); }
+                  }}>{playing ? "⏸" : done ? "↺" : "▶"}</button>
+                  <button className="cb" title="Next step" onClick={() => goTo(idx + 1)} disabled={idx >= steps.length - 1}>▶</button>
+                  <button className="cb" title="Last step" onClick={() => goTo(steps.length - 1)} disabled={idx >= steps.length - 1}>⏭</button>
+                  <div className="csep" />
+                  <div className="spd">
+                    {[[2, "0.5×"], [1.1, "1×"], [0.55, "2×"]].map(([s, lbl]) => (
+                      <button key={s} className={`sb${speed === s ? " sa" : ""}`} onClick={() => setSpeed(s)} title={`Playback speed ${lbl}`}>{lbl}</button>
+                    ))}
+                  </div>
+                  <div className="csep" />
+                  <button className="cb" title="Copy current list state to clipboard" onClick={copyListState} style={{ fontSize:12 }}>📋</button>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-secondary)", marginLeft:2 }}>
+                    <span style={{ color:"var(--cyan)", fontWeight:700 }}>{idx + 1}</span>
+                    <span style={{ color:"var(--text-muted)" }}>/{steps.length}</span>
+                  </span>
                 </div>
               )}
 
-              {/* ── TERMINAL TAB ── */}
-              {activeTab==="terminal"&&(
-                <Terminal
-                  lines={termLines}
-                  currentStep={idx}
-                  isRunning={validating||playing}
-                  hasErrors={hasAnyErr}
-                  errorLines={termErrorLines}
-                  onJumpToStep={(i)=>{ if(steps.length>i) goTo(i); }}
-                />
+              {steps.length > 0 && (
+                <div className="pr">
+                  <div className="pt2"><div className="pf" style={{ width:`${prog}%` }} /></div>
+                  <span className="ptx">{prog}%</span>
+                </div>
+              )}
+
+              {steps.length > 0 && (
+                <>
+                  <div className="slh">
+                    <span>OPERATION LOG — click to jump</span>
+                    <span className="slh-count">{steps.length} ops</span>
+                  </div>
+                  <div className="sl" ref={listRef}>
+                    {steps.map((s, i) => {
+                      const sm = OP[s.type] ?? OP.insertBack;
+                      const past = i < idx, active = i === idx;
+                      return (
+                        <div key={i} className={`si${active ? " sl-active" : ""}${past ? " si-past" : ""}`} onClick={() => goTo(i)}>
+                          <span className="si-dot" style={{ background:past ? "var(--green)" : active ? sm.c : "var(--text-muted)", boxShadow:active ? `0 0 6px ${sm.c}` : past ? "0 0 5px var(--green-glow)" : "none" }} />
+                          <span style={{ color:active ? sm.c : past ? "var(--text-secondary)" : "var(--text-muted)" }}>
+                            {sm.label}
+                            {s.value != null && <span className="si-v">({s.value})</span>}
+                            {s.type === "search" && <span className="si-v"> → {s.result >= 0 ? `idx ${s.result}` : "–1"}</span>}
+                            {s.type === "size" && <span className="si-v"> = {s.result}</span>}
+                            {s.type === "delete" && <span style={{ color:s.found ? "var(--green)" : "#f87171", opacity:0.75 }}> {s.found ? "✓" : "✗"}</span>}
+                          </span>
+                          <span className="si-ln">L{s.lineNum + 1}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
               )}
             </div>
           </div>
-
         </main>
       </div>
+      {toast && <div className="toast">{toast}</div>}
     </>
   );
 }
