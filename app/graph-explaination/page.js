@@ -1540,14 +1540,30 @@ export default function GraphPage() {
             ))}
           </div>
           <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#2d3748",marginBottom:22 }}>{seenSections.size} / {NAV_SECTIONS.length} sections visited</div>
-          <div style={{ display:"flex",gap:9,justifyContent:"center",flexWrap:"wrap",marginBottom:20 }}>
-            {["💻 Code BFS","💻 Code Dijkstra","💻 Code Kruskal's","💻 Code Topological Sort"].map(t => (
-              <button key={t} style={{ padding:"8px 16px",borderRadius:22,cursor:"pointer",background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.24)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#38bdf8",letterSpacing:"0.04em",transition:"all 0.22s" }}
-                onMouseEnter={e=>{e.currentTarget.style.background="rgba(56,189,248,0.2)";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(56,189,248,0.1)";}}>
-                {t}
-              </button>
-            ))}
-          </div>
+         <div style={{ display:"flex", gap:9, justifyContent:"center", flexWrap:"wrap", marginBottom:20 }}>
+        {["💻 Code BFS","💻 Code Dijkstra","💻 Code Kruskal's","💻 Code Topological Sort"].map(t => (
+          <button
+            key={t}
+            onClick={() => router.push('/graph-vis')} // <-- navigation added
+            style={{
+              padding:"8px 16px",
+              borderRadius:22,
+              cursor:"pointer",
+              background:"rgba(56,189,248,0.1)",
+              border:"1px solid rgba(56,189,248,0.24)",
+              fontFamily:"'JetBrains Mono',monospace",
+              fontSize:10,
+              color:"#38bdf8",
+              letterSpacing:"0.04em",
+              transition:"all 0.22s"
+            }}
+            onMouseEnter={e=>{e.currentTarget.style.background="rgba(56,189,248,0.2)";}}
+            onMouseLeave={e=>{e.currentTarget.style.background="rgba(56,189,248,0.1)";}}
+          >
+            {t}
+          </button>
+        ))}
+      </div>
           <button onClick={() => setShortcutsOpen(true)} style={{ background:"none",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,cursor:"pointer",padding:"6px 16px",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",transition:"all 0.2s" }}>⌨️ VIEW KEYBOARD SHORTCUTS</button>
         </div>
 
