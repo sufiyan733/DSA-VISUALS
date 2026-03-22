@@ -50,7 +50,7 @@ function voiceSpeak(text, onEnd, rate) {
 function voiceStop() { typeof window !== "undefined" && window.speechSynthesis?.cancel(); }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// NARRATIONS
+// NARRATIONS (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 const NARR = {
   intro: `An array is the most fundamental data structure in computer science. Imagine a row of numbered mailboxes in a post office — each box has a fixed address and holds exactly one item. That is an array. Elements are stored in contiguous memory locations, meaning they sit right next to each other with no gaps. This gives arrays their superpower: accessing any element by its index takes exactly the same time, whether it is the first element or the millionth. Arrays are everywhere — your pixels on screen are an array, a song file is an array of audio samples, and almost every algorithm you will ever write touches an array.`,
@@ -118,7 +118,24 @@ function ProgressBar() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SPEED CONTROL PANEL
+// SPEAKING WAVE
+// ═══════════════════════════════════════════════════════════════════════════════
+function SpeakingWave({ color = "#60a5fa", size = 16 }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:2, height:size }}>
+      {[0,1,2,3].map(i => (
+        <div key={i} style={{
+          width: size * 0.18, height: size * 0.5,
+          background: color, borderRadius:99,
+          animation:`wave 1.1s ease-in-out ${i*0.15}s infinite`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPEED PANEL (reused inside RightSidebar)
 // ═══════════════════════════════════════════════════════════════════════════════
 function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
   const [open, setOpen] = useState(false);
@@ -171,71 +188,351 @@ function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STICKY NAV
+// MEDIA QUERY HOOK (for responsiveness)
 // ═══════════════════════════════════════════════════════════════════════════════
-function StickyNav({ active, speaking, speed, setSpeed, onRestart }) {
-  const [show, setShow] = useState(false);
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
   useEffect(() => {
-    const h = () => setShow(window.scrollY > 500);
-    window.addEventListener("scroll", h, { passive:true });
-    return () => window.removeEventListener("scroll", h);
-  }, []);
-  return (
-    <nav style={{
-      position:"fixed", top:14, left:"50%", transform:"translateX(-50%)",
-      zIndex:900, display:"flex", alignItems:"center", gap:2, padding:"5px 8px",
-      background:"rgba(6,8,18,0.92)", backdropFilter:"blur(28px) saturate(180%)",
-      borderRadius:22, border:"1px solid rgba(255,255,255,0.08)",
-      boxShadow:"0 12px 48px rgba(0,0,0,0.6)",
-      opacity: show ? 1 : 0, pointerEvents: show ? "auto" : "none",
-      transition:"opacity 0.3s ease",
-      maxWidth:"calc(100vw - 24px)",
-    }}>
-      <div className="nav-pills" style={{ display:"flex", gap:2, flexWrap:"wrap", justifyContent:"center" }}>
-        {NAV_SECTIONS.map(s => (
-          <button key={s.id}
-            onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior:"smooth" })}
-            title={s.label}
-            style={{
-              width:34, height:34, borderRadius:12, border:"none", cursor:"pointer",
-              background: active===s.id ? `${s.col}22` : "transparent",
-              outline: active===s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
-              fontSize:15, transition:"all 0.2s", display:"flex", alignItems:"center", justifyContent:"center",
-            }}>
-            {s.icon}
-          </button>
-        ))}
-      </div>
-      <div style={{ width:1, height:20, background:"rgba(255,255,255,0.08)", margin:"0 4px" }}/>
-      <SpeedPanel speed={speed} setSpeed={setSpeed} speaking={!!speaking} onRestart={onRestart}/>
-      {speaking && (
-        <div style={{
-          marginLeft:4, display:"flex", alignItems:"center", gap:5,
-          padding:"4px 10px", borderRadius:14,
-          background:"rgba(96,165,250,0.12)", border:"1px solid rgba(96,165,250,0.3)",
-        }}>
-          <SpeakingWave color="#60a5fa" size={14}/>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:"#60a5fa", fontWeight:700 }}>ON</span>
-        </div>
-      )}
-    </nav>
-  );
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SPEAKING WAVE
+// RIGHT SIDEBAR (copied from Stack page, adapted for Array)
 // ═══════════════════════════════════════════════════════════════════════════════
-function SpeakingWave({ color = "#60a5fa", size = 16 }) {
+function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount, open, setOpen }) {
+  const [show, setShow] = useState(false);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 600px)');
+  const router = useRouter();
+
+  useEffect(() => {
+    const h = () => setShow(window.scrollY > 500);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+
+  const goToStack = () => { router.push("/stack"); };
+  const goToTree = () => { router.push("/tree"); };
+
+  if (!open) {
+    const btnSize = isMobile ? 36 : 40;
+    const btnRight = isMobile ? 12 : 16;
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          right: btnRight,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 950,
+          width: btnSize,
+          height: btnSize,
+          borderRadius: btnSize / 2,
+          background: "rgba(96,165,250,0.2)",
+          border: "1px solid rgba(96,165,250,0.4)",
+          backdropFilter: "blur(12px)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: isMobile ? 18 : 20,
+          color: "#60a5fa",
+          transition: "all 0.2s",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        }}
+      >
+        ◀
+      </button>
+    );
+  }
+
+  // Mobile values (reduced width for compactness)
+  const mobileBtnSize = 32;
+  const mobileGap = 3;
+  const mobilePadding = "8px 6px";
+  const mobileFontIcon = 18;
+  const mobileFontText = 9;
+  const mobileCodePadding = "4px 8px";
+  const mobileProgressPillPadding = "4px 8px";
+  const mobileProgressBarWidth = 24;
+  const mobileSpeakingPadding = "4px 8px";
+
+  const isMobileView = isMobile;
+  const btnSize = isMobileView ? mobileBtnSize : 36;
+  const gap = isMobileView ? mobileGap : 4;
+  const padding = isMobileView ? mobilePadding : "8px 6px";
+  const fontSizeIcon = isMobileView ? mobileFontIcon : 16;
+  const fontSizeText = isMobileView ? mobileFontText : 8;
+  const codePadding = isMobileView ? mobileCodePadding : "4px 8px";
+  const progressPillPadding = isMobileView ? mobileProgressPillPadding : "3px 6px";
+  const progressBarWidth = isMobileView ? mobileProgressBarWidth : 24;
+  const speakingPadding = isMobileView ? mobileSpeakingPadding : "3px 6px";
+
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:2, height:size }}>
-      {[0,1,2,3].map(i => (
-        <div key={i} style={{
-          width: size * 0.18, height: size * 0.5,
-          background: color, borderRadius:99,
-          animation:`wave 1.1s ease-in-out ${i*0.15}s infinite`,
-        }}/>
+    <nav
+      style={{
+        position: "fixed",
+        right: isMobileView ? 12 : 16,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 900,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap,
+        padding,
+        background: "rgba(3,6,18,0.94)",
+        backdropFilter: "blur(28px) saturate(180%)",
+        borderRadius: isMobileView ? 24 : 24,
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? "auto" : "none",
+        transition: "opacity 0.3s ease",
+        width: "auto",
+        maxHeight: isMobileView ? "85vh" : "auto",
+        overflowY: isMobileView ? "auto" : "visible",
+        scrollbarWidth: "thin",
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={() => setOpen(false)}
+        style={{
+          width: btnSize,
+          height: btnSize,
+          borderRadius: 10,
+          border: "none",
+          background: "rgba(255,255,255,0.05)",
+          cursor: "pointer",
+          fontSize: isMobileView ? 14 : 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#94a3b8",
+          marginBottom: 2,
+        }}
+      >
+        ✕
+      </button>
+
+      {/* Section icons */}
+      {NAV_SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
+          title={s.label}
+          style={{
+            width: btnSize,
+            height: btnSize,
+            borderRadius: 8,
+            border: "none",
+            cursor: "pointer",
+            background: active === s.id ? `${s.col}22` : "transparent",
+            outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
+            fontSize: fontSizeIcon,
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            flexShrink: 0,
+          }}
+        >
+          {s.icon}
+        </button>
       ))}
-    </div>
+
+      {/* Progress pill */}
+      <div
+        style={{
+          padding: progressPillPadding,
+          borderRadius: 16,
+          background: "rgba(96,165,250,0.08)",
+          border: "1px solid rgba(96,165,250,0.2)",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          width: "auto",
+        }}
+      >
+        <div
+          style={{
+            width: progressBarWidth,
+            height: isMobileView ? 3 : 4,
+            borderRadius: 99,
+            background: "rgba(255,255,255,0.06)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${(seenCount / NAV_SECTIONS.length) * 100}%`,
+              background: "#60a5fa",
+              borderRadius: 99,
+              transition: "width 0.5s ease",
+            }}
+          />
+        </div>
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: isMobileView ? 8 : 7,
+            color: "#60a5fa",
+            fontWeight: 700,
+          }}
+        >
+          {seenCount}/{NAV_SECTIONS.length}
+        </span>
+      </div>
+
+      {/* Code buttons – adapted for Array page: Stack & Tree */}
+      <button
+        onClick={goToStack}
+        style={{
+          padding: codePadding,
+          borderRadius: 16,
+          cursor: "pointer",
+          background: "rgba(96,165,250,0.12)",
+          border: "1px solid rgba(96,165,250,0.35)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: fontSizeText,
+          fontWeight: 700,
+          color: "#60a5fa",
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        📚 {isMobileView ? "Stack" : "Stack DS"}
+      </button>
+      <button
+        onClick={goToTree}
+        style={{
+          padding: codePadding,
+          borderRadius: 16,
+          cursor: "pointer",
+          background: "rgba(74,222,128,0.12)",
+          border: "1px solid rgba(74,222,128,0.35)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: fontSizeText,
+          fontWeight: 700,
+          color: "#4ade80",
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        🌲 {isMobileView ? "Tree" : "Tree DS"}
+      </button>
+
+      {/* Speed Panel */}
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setSpeedOpen((o) => !o)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: codePadding,
+            borderRadius: 16,
+            cursor: "pointer",
+            background: speedOpen ? "rgba(96,165,250,0.2)" : "rgba(255,255,255,0.05)",
+            border: `1.5px solid ${speedOpen ? "#60a5fa" : "rgba(255,255,255,0.1)"}`,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: fontSizeText,
+            fontWeight: 700,
+            color: speedOpen ? "#93c5fd" : "#64748b",
+            transition: "all 0.2s",
+          }}
+        >
+          ⚡ {speed}×
+        </button>
+        {speedOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: "calc(100% + 8px)",
+              background: "rgba(5,8,20,0.97)",
+              backdropFilter: "blur(28px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              padding: "4px 4px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              zIndex: 1000,
+              minWidth: 80,
+              boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
+              animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 6,
+                color: "#2d3748",
+                letterSpacing: "0.1em",
+                padding: "1px 5px 3px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              SPEED
+            </div>
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  currentRate = s;
+                  setSpeed(s);
+                  setSpeedOpen(false);
+                  if (speaking) onRestart();
+                }}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: 5,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  background: speed === s ? "rgba(96,165,250,0.2)" : "transparent",
+                  border: `1px solid ${speed === s ? "rgba(96,165,250,0.45)" : "transparent"}`,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  color: speed === s ? "#93c5fd" : "#475569",
+                  transition: "all 0.15s",
+                }}
+              >
+                {s === 1.25 ? `${s}× ★` : `${s}×`}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Speaking indicator */}
+      {speaking && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: speakingPadding,
+            borderRadius: 12,
+            background: "rgba(96,165,250,0.12)",
+            border: "1px solid rgba(96,165,250,0.3)",
+          }}
+        >
+          <SpeakingWave color="#60a5fa" size={isMobileView ? 10 : 9} />
+        </div>
+      )}
+    </nav>
   );
 }
 
@@ -284,7 +581,7 @@ function CompletedBadge({ seen }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HERO
+// HERO (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function Hero({ onStart, onVoice }) {
   const [frame, setFrame] = useState(0);
@@ -449,7 +746,7 @@ function Hero({ onStart, onVoice }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION WRAPPER
+// SECTION WRAPPER (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice, seen }) {
   const [ref, vis] = useVisible(0.07);
@@ -526,7 +823,7 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Intro — Array with index pointer
+// VISUAL: Intro — Array with index pointer (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisIntro() {
   const [ptr, setPtr] = useState(0);
@@ -584,7 +881,7 @@ function VisIntro() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Memory Layout
+// VISUAL: Memory Layout (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisMemory() {
   const [hov, setHov] = useState(null);
@@ -649,7 +946,7 @@ function VisMemory() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Operations
+// VISUAL: Operations (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisOperations() {
   const [op, setOp] = useState("access");
@@ -775,7 +1072,7 @@ function VisOperations() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Types
+// VISUAL: Types (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisTypes() {
   const [tab, setTab] = useState(0);
@@ -881,7 +1178,7 @@ function VisTypes() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Searching
+// VISUAL: Searching (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisSearching() {
   const [mode, setMode] = useState("linear");
@@ -997,7 +1294,7 @@ function VisSearching() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Sorting
+// VISUAL: Sorting (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisSorting() {
   const [algo, setAlgo] = useState("bubble");
@@ -1135,7 +1432,7 @@ function VisSorting() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Two Pointer
+// VISUAL: Two Pointer (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisTwoPointer() {
   const [mode, setMode] = useState("twosum");
@@ -1253,7 +1550,7 @@ function VisTwoPointer() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Prefix Sum
+// VISUAL: Prefix Sum (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisPrefixSum() {
   const [l, setL] = useState(1);
@@ -1349,7 +1646,7 @@ function VisPrefixSum() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COMPLEXITY TABLE
+// COMPLEXITY TABLE (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function ComplexityTable() {
   const [hov, setHov] = useState(null);
@@ -1382,7 +1679,7 @@ function ComplexityTable() {
                   <span style={{ width:7, height:7, borderRadius:"50%", background:r.c, flexShrink:0, boxShadow:hov===i?`0 0 8px ${r.c}`:"none", transition:"box-shadow 0.2s" }}/>
                   <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:700, color:"#e2e8f0" }}>{r.nm}</span>
                 </div>
-               </td>
+              </td>
               <td style={{ padding:"10px 14px", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:r.s.includes("log")||r.s==="O(1)"||r.s==="O(1)*"?700:400, color:r.s==="—"?"#253046":r.s.includes("log")||r.s==="O(1)"||r.s==="O(1)*"?"#4ade80":"#ef4444", whiteSpace:"nowrap" }}>{r.s}</td>
               <td style={{ padding:"10px 14px", fontFamily:"'JetBrains Mono',monospace", fontSize:11, fontWeight:r.i.includes("log")||r.i==="O(1)"||r.i==="O(1)*"?700:400, color:r.i==="—"?"#253046":r.i.includes("log")||r.i==="O(1)"||r.i==="O(1)*"?"#4ade80":"#ef4444", whiteSpace:"nowrap" }}>{r.i}</td>
               <td style={{ padding:"10px 14px", fontFamily:"'DM Sans',sans-serif", fontSize:11, color:"#475569" }}>{r.n}</td>
@@ -1395,7 +1692,7 @@ function ComplexityTable() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// KEYBOARD SHORTCUTS MODAL
+// KEYBOARD SHORTCUTS MODAL (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function ShortcutsModal({ open, onClose }) {
   if (!open) return null;
@@ -1433,7 +1730,7 @@ function ShortcutsModal({ open, onClose }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUIZ
+// QUIZ (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function Quiz({ onDone }) {
   const QS = [
@@ -1537,7 +1834,7 @@ function Quiz({ onDone }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// FLOATING VOICE MINI PLAYER
+// FLOATING VOICE MINI PLAYER (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
   if (!speaking) return null;
@@ -1579,6 +1876,7 @@ export default function ArrayPage() {
   const [speed,    setSpeed]    = useState(1.25);
   const [seenSections, setSeenSections] = useState(new Set());
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(true);     // <-- right sidebar open/close state
   const currentNarr = useRef(null);
 
   /* Load fonts + warm-up voices */
@@ -1750,7 +2048,6 @@ export default function ArrayPage() {
 
         @media(max-width:760px){
           .sg{grid-template-columns:1fr !important}
-          .nav-pills button{width:30px !important;height:30px !important;font-size:13px !important}
         }
         @media(max-width:480px){
           .sg{gap:12px !important}
@@ -1758,7 +2055,16 @@ export default function ArrayPage() {
       `}</style>
 
       <ProgressBar/>
-      <StickyNav active={active} speaking={speaking} speed={speed} setSpeed={setSpeed} onRestart={handleRestart}/>
+      <RightSidebar
+        active={active}
+        speaking={speaking}
+        speed={speed}
+        setSpeed={setSpeed}
+        onRestart={handleRestart}
+        seenCount={seenSections.size}
+        open={navOpen}
+        setOpen={setNavOpen}
+      />
       <BackToTop/>
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
       <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} speed={speed}/>

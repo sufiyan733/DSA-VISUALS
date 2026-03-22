@@ -82,6 +82,18 @@ function useVisible(threshold = 0.07) {
   return [ref, vis];
 }
 
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // PROGRESS BAR
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -134,24 +146,289 @@ function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STICKY NAV
+// RIGHT SIDEBAR (replaces top sticky nav)
 // ═══════════════════════════════════════════════════════════════════════════════
-function StickyNav({ active, speaking, speed, setSpeed, onRestart }) {
+function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount, open, setOpen }) {
   const [show, setShow] = useState(false);
-  useEffect(() => { const h = () => setShow(window.scrollY > 500); window.addEventListener("scroll", h, { passive:true }); return () => window.removeEventListener("scroll", h); }, []);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 600px)');
+
+  useEffect(() => {
+    const h = () => setShow(window.scrollY > 500);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
+
+  if (!open) {
+    const btnSize = isMobile ? 36 : 40;
+    const btnRight = isMobile ? 12 : 16;
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          right: btnRight,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 950,
+          width: btnSize,
+          height: btnSize,
+          borderRadius: btnSize / 2,
+          background: "rgba(56,189,248,0.2)",
+          border: "1px solid rgba(56,189,248,0.4)",
+          backdropFilter: "blur(12px)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: isMobile ? 18 : 20,
+          color: "#38bdf8",
+          transition: "all 0.2s",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        }}
+      >
+        ◀
+      </button>
+    );
+  }
+
+  // Mobile values (compact)
+  const mobileBtnSize = 32;
+  const mobileGap = 3;
+  const mobilePadding = "8px 6px";
+  const mobileFontIcon = 18;
+  const mobileFontText = 9;
+  const mobileProgressPillPadding = "4px 8px";
+  const mobileProgressBarWidth = 24;
+  const mobileSpeakingPadding = "4px 8px";
+
+  const isMobileView = isMobile;
+  const btnSize = isMobileView ? mobileBtnSize : 36;
+  const gap = isMobileView ? mobileGap : 4;
+  const padding = isMobileView ? mobilePadding : "8px 6px";
+  const fontSizeIcon = isMobileView ? mobileFontIcon : 16;
+  const fontSizeText = isMobileView ? mobileFontText : 8;
+  const progressPillPadding = isMobileView ? mobileProgressPillPadding : "3px 6px";
+  const progressBarWidth = isMobileView ? mobileProgressBarWidth : 24;
+  const speakingPadding = isMobileView ? mobileSpeakingPadding : "3px 6px";
+
   return (
-    <nav style={{ position:"fixed",top:14,left:"50%",transform:"translateX(-50%)",zIndex:900,display:"flex",alignItems:"center",gap:2,padding:"5px 8px",background:"rgba(6,8,18,0.92)",backdropFilter:"blur(28px) saturate(180%)",borderRadius:22,border:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 12px 48px rgba(0,0,0,0.6)",opacity:show?1:0,pointerEvents:show?"auto":"none",transition:"opacity 0.3s ease",maxWidth:"calc(100vw - 24px)" }}>
-      <div className="nav-pills" style={{ display:"flex",gap:2,flexWrap:"wrap",justifyContent:"center" }}>
-        {NAV_SECTIONS.map(s => (
-          <button key={s.id} onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior:"smooth" })} title={s.label} style={{ width:34,height:34,borderRadius:12,border:"none",cursor:"pointer",background:active===s.id?`${s.col}22`:"transparent",outline:active===s.id?`1.5px solid ${s.col}55`:"1.5px solid transparent",fontSize:15,transition:"all 0.2s",display:"flex",alignItems:"center",justifyContent:"center" }}>{s.icon}</button>
-        ))}
+    <nav
+      style={{
+        position: "fixed",
+        right: isMobileView ? 12 : 16,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 900,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap,
+        padding,
+        background: "rgba(3,6,18,0.94)",
+        backdropFilter: "blur(28px) saturate(180%)",
+        borderRadius: isMobileView ? 24 : 24,
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? "auto" : "none",
+        transition: "opacity 0.3s ease",
+        width: "auto",
+        maxHeight: isMobileView ? "85vh" : "auto",
+        overflowY: isMobileView ? "auto" : "visible",
+        scrollbarWidth: "thin",
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={() => setOpen(false)}
+        style={{
+          width: btnSize,
+          height: btnSize,
+          borderRadius: 10,
+          border: "none",
+          background: "rgba(255,255,255,0.05)",
+          cursor: "pointer",
+          fontSize: isMobileView ? 14 : 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#94a3b8",
+          marginBottom: 2,
+        }}
+      >
+        ✕
+      </button>
+
+      {/* Section icons */}
+      {NAV_SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
+          title={s.label}
+          style={{
+            width: btnSize,
+            height: btnSize,
+            borderRadius: 8,
+            border: "none",
+            cursor: "pointer",
+            background: active === s.id ? `${s.col}22` : "transparent",
+            outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
+            fontSize: fontSizeIcon,
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            flexShrink: 0,
+          }}
+        >
+          {s.icon}
+        </button>
+      ))}
+
+      {/* Progress pill */}
+      <div
+        style={{
+          padding: progressPillPadding,
+          borderRadius: 16,
+          background: "rgba(56,189,248,0.08)",
+          border: "1px solid rgba(56,189,248,0.2)",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          width: "auto",
+        }}
+      >
+        <div
+          style={{
+            width: progressBarWidth,
+            height: isMobileView ? 3 : 4,
+            borderRadius: 99,
+            background: "rgba(255,255,255,0.06)",
+            overflow: "hidden",
+          }}
+        >
+          <div
+            style={{
+              height: "100%",
+              width: `${(seenCount / NAV_SECTIONS.length) * 100}%`,
+              background: "#38bdf8",
+              borderRadius: 99,
+              transition: "width 0.5s ease",
+            }}
+          />
+        </div>
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: isMobileView ? 8 : 7,
+            color: "#38bdf8",
+            fontWeight: 700,
+          }}
+        >
+          {seenCount}/{NAV_SECTIONS.length}
+        </span>
       </div>
-      <div style={{ width:1,height:20,background:"rgba(255,255,255,0.08)",margin:"0 4px" }}/>
-      <SpeedPanel speed={speed} setSpeed={setSpeed} speaking={!!speaking} onRestart={onRestart}/>
+
+      {/* Speed Panel */}
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setSpeedOpen((o) => !o)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: progressPillPadding,
+            borderRadius: 16,
+            cursor: "pointer",
+            background: speedOpen ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.05)",
+            border: `1.5px solid ${speedOpen ? "#38bdf8" : "rgba(255,255,255,0.1)"}`,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: fontSizeText,
+            fontWeight: 700,
+            color: speedOpen ? "#7dd3fc" : "#64748b",
+            transition: "all 0.2s",
+          }}
+        >
+          ⚡ {speed}×
+        </button>
+        {speedOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: "calc(100% + 8px)",
+              background: "rgba(5,8,20,0.97)",
+              backdropFilter: "blur(28px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              padding: "4px 4px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              zIndex: 1000,
+              minWidth: 80,
+              boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
+              animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 6,
+                color: "#2d3748",
+                letterSpacing: "0.1em",
+                padding: "1px 5px 3px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              SPEED
+            </div>
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  currentRate = s;
+                  setSpeed(s);
+                  setSpeedOpen(false);
+                  if (speaking) onRestart();
+                }}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: 5,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  background: speed === s ? "rgba(56,189,248,0.2)" : "transparent",
+                  border: `1px solid ${speed === s ? "rgba(56,189,248,0.45)" : "transparent"}`,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  color: speed === s ? "#7dd3fc" : "#475569",
+                  transition: "all 0.15s",
+                }}
+              >
+                {s === 1.25 ? `${s}× ★` : `${s}×`}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Speaking indicator */}
       {speaking && (
-        <div style={{ marginLeft:4,display:"flex",alignItems:"center",gap:5,padding:"4px 10px",borderRadius:14,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.3)" }}>
-          <SpeakingWave color="#38bdf8" size={14}/>
-          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#38bdf8",fontWeight:700 }}>ON</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: speakingPadding,
+            borderRadius: 12,
+            background: "rgba(56,189,248,0.12)",
+            border: "1px solid rgba(56,189,248,0.3)",
+          }}
+        >
+          <SpeakingWave color="#38bdf8" size={isMobileView ? 10 : 9} />
         </div>
       )}
     </nav>
@@ -479,7 +756,6 @@ function VisBFS() {
   const tmr = useRef();
   const nodes = [{id:0,x:180,y:50,col:"#60a5fa"},{id:1,x:80,y:135,col:"#60a5fa"},{id:2,x:280,y:135,col:"#60a5fa"},{id:3,x:40,y:230,col:"#60a5fa"},{id:4,x:145,y:230,col:"#60a5fa"},{id:5,x:235,y:230,col:"#60a5fa"},{id:6,x:320,y:230,col:"#60a5fa"}];
   const edges = [[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]];
-  // BFS from 0: levels: [0], [1,2], [3,4,5,6]
   const BFS_STEPS = [
     {visited:new Set([0]),queue:[0],current:0,msg:"Start: enqueue node 0"},
     {visited:new Set([0,1,2]),queue:[1,2],current:0,msg:"Process 0: enqueue neighbors 1, 2"},
@@ -521,7 +797,6 @@ function VisBFS() {
               {isCurrent && <circle cx={n.x} cy={n.y} r={34} fill="none" stroke="#f59e0b" strokeWidth="2" strokeOpacity="0.4" style={{animation:"nodeRip 0.8s ease-out forwards"}}/>}
               <circle cx={n.x} cy={n.y} r={20} fill={isCurrent?`${lc}38`:isQueued?`${lc}20`:isVisited?`${lc}14`:"rgba(255,255,255,0.04)"} stroke={isCurrent?"#f59e0b":isQueued?lc:isVisited?`${lc}70`:"rgba(255,255,255,0.12)"} strokeWidth={isCurrent?2.5:isQueued?2:1.5} filter={isCurrent?"url(#bfsGlw)":undefined} style={{transition:"all 0.4s"}}/>
               <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={isCurrent?"#f59e0b":isVisited?lc:"#475569"} fontSize="12" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.id}</text>
-              {/* Level label */}
               <text x={n.x} y={n.y+33} textAnchor="middle" fill={isVisited?lc:"#1a2030"} fontSize="8" fontFamily="'JetBrains Mono',monospace">L{nodeLevels[i]}</text>
             </g>
           );
@@ -741,7 +1016,6 @@ function VisBellmanFord() {
             </g>
           );
         })}
-        {/* Negative edge label */}
         <text x={260} y={192} fill="rgba(251,113,133,0.6)" fontSize="9" fontFamily="'JetBrains Mono',monospace">← NEGATIVE EDGE</text>
       </svg>
       {cur && <div style={{ padding:"7px 12px",borderRadius:10,background:"rgba(251,113,133,0.08)",border:"1px solid rgba(251,113,133,0.22)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#fb7185",marginBottom:6,animation:"fadeIn 0.3s ease" }}>
@@ -764,7 +1038,6 @@ function VisTopoSort() {
   const tmr = useRef();
 
   const nodes = [{id:0,x:55,y:130,lbl:"A"},{id:1,x:160,y:60,lbl:"B"},{id:2,x:160,y:200,lbl:"C"},{id:3,x:265,y:130,lbl:"D"},{id:4,x:360,y:60,lbl:"E"},{id:5,x:360,y:200,lbl:"F"}];
-  // DAG edges: A→B, A→C, B→D, C→D, D→E, D→F
   const edges = [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5]];
 
   const STEPS = [
@@ -986,7 +1259,6 @@ function GraphCanvas({ nodes, edges, highlight, current, visited, type }) {
   );
 
   const W=560, H=300;
-  // Auto-layout nodes in a circle
   const nodeList = [...nodes].sort((a,b)=>a-b);
   const n = nodeList.length;
   const cx=W/2, cy=H/2, r=Math.min(cx,cy)-52;
@@ -1198,7 +1470,7 @@ function ComplexityTable() {
                   <span style={{ width:7,height:7,borderRadius:"50%",background:r.c,flexShrink:0,boxShadow:hov===i?`0 0 8px ${r.c}`:"none",transition:"box-shadow 0.2s" }}/>
                   <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"#e2e8f0" }}>{r.nm}</span>
                 </div>
-              </td>
+               </td>
               <td style={{ padding:"10px 14px",fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:r.t.includes("V+E")||r.t.includes("log V")?"#4ade80":r.t.includes("V³")?"#ef4444":"#fbbf24",whiteSpace:"nowrap" }}>{r.t}</td>
               <td style={{ padding:"10px 14px",fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#64748b",whiteSpace:"nowrap" }}>{r.s}</td>
               <td style={{ padding:"10px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:11,color:"#475569" }}>{r.n}</td>
@@ -1299,6 +1571,32 @@ function ShortcutsModal({ open, onClose }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// CONFETTI (quiz perfect score)
+// ═══════════════════════════════════════════════════════════════════════════════
+function Confetti() {
+  const pieces = Array.from({ length: 32 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    delay: Math.random() * 0.8,
+    dur: 1.8 + Math.random() * 1.2,
+    color: ["#60a5fa","#f472b6","#4ade80","#fbbf24","#a78bfa","#fb923c"][i % 6],
+    size: 6 + Math.random() * 6,
+  }));
+  return (
+    <div style={{ position:"fixed",inset:0,pointerEvents:"none",zIndex:3000,overflow:"hidden" }}>
+      {pieces.map(p => (
+        <div key={p.id} style={{
+          position:"absolute",top:"-10%",left:`${p.x}%`,
+          width:p.size,height:p.size,borderRadius:p.id%3===0?"50%":2,
+          background:p.color,
+          animation:`confettiFall ${p.dur}s ease-in ${p.delay}s both`,
+        }}/>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function GraphPage() {
@@ -1310,6 +1608,7 @@ export default function GraphPage() {
   const [speed, setSpeed] = useState(1.25);
   const [seenSections, setSeenSections] = useState(new Set());
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(true);
   const currentNarr = useRef(null);
 
   useEffect(() => {
@@ -1460,7 +1759,16 @@ export default function GraphPage() {
       `}</style>
 
       <ProgressBar/>
-      <StickyNav active={active} speaking={speaking} speed={speed} setSpeed={setSpeed} onRestart={handleRestart}/>
+      <RightSidebar
+        active={active}
+        speaking={!!speaking}
+        speed={speed}
+        setSpeed={setSpeed}
+        onRestart={handleRestart}
+        seenCount={seenSections.size}
+        open={navOpen}
+        setOpen={setNavOpen}
+      />
       <BackToTop/>
       <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
       <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} speed={speed}/>
@@ -1540,30 +1848,30 @@ export default function GraphPage() {
             ))}
           </div>
           <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#2d3748",marginBottom:22 }}>{seenSections.size} / {NAV_SECTIONS.length} sections visited</div>
-         <div style={{ display:"flex", gap:9, justifyContent:"center", flexWrap:"wrap", marginBottom:20 }}>
-        {["💻 Code BFS","💻 Code Dijkstra","💻 Code Kruskal's","💻 Code Topological Sort"].map(t => (
-          <button
-            key={t}
-            onClick={() => router.push('/graph-vis')} // <-- navigation added
-            style={{
-              padding:"8px 16px",
-              borderRadius:22,
-              cursor:"pointer",
-              background:"rgba(56,189,248,0.1)",
-              border:"1px solid rgba(56,189,248,0.24)",
-              fontFamily:"'JetBrains Mono',monospace",
-              fontSize:10,
-              color:"#38bdf8",
-              letterSpacing:"0.04em",
-              transition:"all 0.22s"
-            }}
-            onMouseEnter={e=>{e.currentTarget.style.background="rgba(56,189,248,0.2)";}}
-            onMouseLeave={e=>{e.currentTarget.style.background="rgba(56,189,248,0.1)";}}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+          <div style={{ display:"flex", gap:9, justifyContent:"center", flexWrap:"wrap", marginBottom:20 }}>
+            {["💻 Code BFS","💻 Code Dijkstra","💻 Code Kruskal's","💻 Code Topological Sort"].map(t => (
+              <button
+                key={t}
+                onClick={() => router.push('/graph-vis')}
+                style={{
+                  padding:"8px 16px",
+                  borderRadius:22,
+                  cursor:"pointer",
+                  background:"rgba(56,189,248,0.1)",
+                  border:"1px solid rgba(56,189,248,0.24)",
+                  fontFamily:"'JetBrains Mono',monospace",
+                  fontSize:10,
+                  color:"#38bdf8",
+                  letterSpacing:"0.04em",
+                  transition:"all 0.22s"
+                }}
+                onMouseEnter={e=>{e.currentTarget.style.background="rgba(56,189,248,0.2)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="rgba(56,189,248,0.1)";}}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
           <button onClick={() => setShortcutsOpen(true)} style={{ background:"none",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,cursor:"pointer",padding:"6px 16px",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",transition:"all 0.2s" }}>⌨️ VIEW KEYBOARD SHORTCUTS</button>
         </div>
 

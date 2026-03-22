@@ -569,8 +569,19 @@ function useIsMobile() {
 }
 
 // ── Terminal ─────────────────────────────────────────────────────────────────
-function Terminal({lines,sessionId,validating}){
+function Terminal({lines,sessionId,validating,currentStepIndex}){
   const bodyRef=useRef(null);
+  const lineRefs = useRef({});
+
+  // Scroll to the line corresponding to currentStepIndex
+  useEffect(() => {
+    if (currentStepIndex === undefined || currentStepIndex === -1) return;
+    const targetLine = lineRefs.current[currentStepIndex];
+    if (targetLine && bodyRef.current) {
+      targetLine.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [currentStepIndex]);
+
   useEffect(()=>{if(bodyRef.current)bodyRef.current.scrollTop=bodyRef.current.scrollHeight;},[lines,validating]);
   return(
     <div style={{flex:1,display:"flex",flexDirection:"column",background:"#06080f",minHeight:0,fontFamily:"'JetBrains Mono',monospace",fontSize:"11px"}}>
@@ -581,7 +592,7 @@ function Terminal({lines,sessionId,validating}){
             <span style={{animation:"cur 1.1s step-end infinite",color:"#1a2a1a",marginLeft:4}}>_</span>
           </div>
         )}
-        {lines.map((line,i)=><TermLine key={i} line={line} isLast={i===lines.length-1&&!validating}/>)}
+        {lines.map((line,i)=><TermLine key={i} line={line} isLast={i===lines.length-1&&!validating} stepIndex={line.stepIndex} currentStepIndex={currentStepIndex} lineRef={el => lineRefs.current[line.stepIndex] = el}/>)}
         {validating&&(
           <div style={{padding:"3px 16px",display:"flex",alignItems:"center",gap:9}}>
             <span style={{display:"inline-block",width:10,height:10,borderRadius:"50%",
@@ -595,9 +606,11 @@ function Terminal({lines,sessionId,validating}){
   );
 }
 
-function TermLine({line,isLast}){
+function TermLine({line,isLast,stepIndex,currentStepIndex,lineRef}){
   const[vis,setVis]=useState(false);
   useEffect(()=>{const t=setTimeout(()=>setVis(true),15);return()=>clearTimeout(t);},[]);
+  const isActive = stepIndex !== undefined && stepIndex === currentStepIndex && currentStepIndex !== -1;
+
   if(line.type==="separator")return<div style={{margin:"5px 16px",borderTop:"1px solid rgba(255,255,255,0.05)",opacity:vis?1:0,transition:"opacity 0.12s"}}/>;
   if(line.type==="blank")return<div style={{height:6}}/>;
   if(line.type==="prompt")return(
@@ -616,7 +629,15 @@ function TermLine({line,isLast}){
   const c=cm[line.type]??"#3a5070";
   const pfx=pm[line.type]??"";
   return(
-    <div style={{padding:"1.5px 16px",display:"flex",alignItems:"flex-start",opacity:vis?1:0,transition:"opacity 0.09s"}}>
+    <div ref={lineRef} style={{
+      padding:"1.5px 16px",
+      display:"flex",
+      alignItems:"flex-start",
+      opacity:vis?1:0,
+      transition:"opacity 0.09s",
+      background: isActive ? "rgba(96,165,250,0.1)" : "transparent",
+      borderLeft: isActive ? "2px solid #60a5fa" : "2px solid transparent",
+    }}>
       <span style={{color:c,width:18,flexShrink:0,fontSize:9,paddingTop:2}}>{pfx}</span>
       <span style={{color:c,wordBreak:"break-word",lineHeight:1.65,flex:1,fontSize:10}}>
         {line.text}
@@ -804,52 +825,130 @@ function StackViz({step,animKey,idle,compact}){
   );
 }
 
-// ── Mobile Tab Bar ────────────────────────────────────────────────────────────
-function MobileTabBar({activeTab, setActiveTab, hasSteps, hasErrors, hasAiErrors, termLines}) {
-  const tabs = [
-    { id: "code", label: "Code", icon: "⌨" },
-    { id: "viz",  label: "Stack", icon: "📚" },
-    { id: "log",  label: "Terminal", icon: "⬛" },
+// ── Right Sticky Nav ──────────────────────────────────────────────────────────
+function StickyNav({ activeSection, onNav, hasSteps, hasErrors, termLines }) {
+  const hasTermErr = termLines.some(l=>l.type==="error"||l.type==="stderr");
+  const hasTermOk  = termLines.some(l=>l.type==="success");
+
+  const items = [
+    {
+      id:"code", icon:"⌨", label:"Code",
+      dot: null,
+    },
+    {
+      id:"terminal", icon:"⬛", label:"Term",
+      dot: hasTermErr ? "#f87171" : hasTermOk ? "#4ade80" : null,
+    },
+    {
+      id:"viz", icon:"📚", label:"Stack",
+      dot: hasSteps ? "#60a5fa" : hasErrors ? "#f87171" : null,
+    },
   ];
-  const hasTermErrors = termLines.some(l=>l.type==="error"||l.type==="stderr");
-  const hasTermOk = termLines.some(l=>l.type==="success");
 
   return (
     <div style={{
+      position:"fixed",
+      right:0,
+      top:"50%",
+      transform:"translateY(-50%)",
+      zIndex:9000,
       display:"flex",
-      background:"rgba(3,5,16,0.98)",
-      borderTop:"1px solid rgba(96,165,250,0.18)",
-      backdropFilter:"blur(24px)",
-      boxShadow:"0 -4px 24px rgba(0,0,0,0.6), 0 -1px 0 rgba(96,165,250,0.08)",
-      paddingBottom:"env(safe-area-inset-bottom, 8px)",
-      flexShrink:0,
+      flexDirection:"column",
+      gap:0,
+      background:"rgba(5,8,26,0.94)",
+      border:"1px solid rgba(96,165,250,0.18)",
+      borderRight:"none",
+      borderRadius:"12px 0 0 12px",
+      overflow:"hidden",
+      boxShadow:"-4px 0 32px rgba(0,0,0,0.7), -1px 0 0 rgba(96,165,250,0.08)",
+      backdropFilter:"blur(20px)",
     }}>
-      {tabs.map(t=>{
-        const isActive = activeTab === t.id;
-        let badge = null;
-        if(t.id==="log" && hasTermErrors) badge = <span style={{position:"absolute",top:6,right:"calc(50% - 16px)",width:6,height:6,borderRadius:"50%",background:"#f87171",boxShadow:"0 0 6px #f87171"}}/>;
-        if(t.id==="log" && !hasTermErrors && hasTermOk) badge = <span style={{position:"absolute",top:6,right:"calc(50% - 16px)",width:6,height:6,borderRadius:"50%",background:"#4ade80",boxShadow:"0 0 6px #4ade80"}}/>;
-        if(t.id==="viz" && hasSteps) badge = <span style={{position:"absolute",top:6,right:"calc(50% - 16px)",width:6,height:6,borderRadius:"50%",background:"#60a5fa",boxShadow:"0 0 6px #60a5fa"}}/>;
+      {/* top accent line */}
+      <div style={{
+        position:"absolute",top:0,left:0,right:0,height:2,
+        background:"linear-gradient(90deg,transparent,#60a5fa,#a78bfa,transparent)",
+        opacity:0.6,
+      }}/>
+
+      {items.map((item, i) => {
+        const isActive = activeSection === item.id;
         return (
-          <button key={t.id} onClick={()=>setActiveTab(t.id)} style={{
-            flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
-            gap:4,padding:"11px 4px 8px",border:"none",background:"transparent",cursor:"pointer",
-            position:"relative",
-            borderTop: isActive ? "2px solid #60a5fa" : "2px solid transparent",
-            transition:"all 0.15s",
-            WebkitTapHighlightColor:"transparent",
-          }}>
-            {badge}
-            <span style={{fontSize:18,opacity:isActive?1:0.35,transition:"opacity 0.15s",lineHeight:1}}>{t.icon}</span>
+          <button
+            key={item.id}
+            onClick={() => onNav(item.id)}
+            style={{
+              position:"relative",
+              display:"flex",
+              flexDirection:"column",
+              alignItems:"center",
+              justifyContent:"center",
+              gap:4,
+              width:48,
+              padding:"12px 4px",
+              border:"none",
+              background: isActive
+                ? "linear-gradient(180deg,rgba(96,165,250,0.18),rgba(167,139,250,0.12))"
+                : "transparent",
+              cursor:"pointer",
+              borderBottom: i < items.length-1 ? "1px solid rgba(255,255,255,0.06)" : "none",
+              WebkitTapHighlightColor:"transparent",
+              transition:"background 0.18s",
+              borderLeft: isActive ? "2px solid #60a5fa" : "2px solid transparent",
+            }}
+          >
+            {/* status dot */}
+            {item.dot && (
+              <span style={{
+                position:"absolute",
+                top:7,
+                right:9,
+                width:5,
+                height:5,
+                borderRadius:"50%",
+                background:item.dot,
+                boxShadow:`0 0 6px ${item.dot}`,
+              }}/>
+            )}
+
+            {/* active glow bg */}
+            {isActive && (
+              <span style={{
+                position:"absolute",
+                inset:0,
+                background:"radial-gradient(ellipse at center,rgba(96,165,250,0.08),transparent 70%)",
+                pointerEvents:"none",
+              }}/>
+            )}
+
             <span style={{
-              fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,fontWeight:700,
-              letterSpacing:"0.06em",textTransform:"uppercase",
-              color:isActive?"#60a5fa":"rgba(255,255,255,0.25)",
+              fontSize:16,
+              opacity: isActive ? 1 : 0.4,
+              transition:"opacity 0.15s, transform 0.15s",
+              transform: isActive ? "scale(1.1)" : "scale(1)",
+              lineHeight:1,
+              position:"relative",
+            }}>{item.icon}</span>
+
+            <span style={{
+              fontFamily:"'JetBrains Mono',monospace",
+              fontSize:7,
+              fontWeight:700,
+              letterSpacing:"0.05em",
+              textTransform:"uppercase",
+              color: isActive ? "#60a5fa" : "rgba(255,255,255,0.22)",
               transition:"color 0.15s",
-            }}>{t.label}</span>
+              position:"relative",
+            }}>{item.label}</span>
           </button>
         );
       })}
+
+      {/* bottom accent line */}
+      <div style={{
+        position:"absolute",bottom:0,left:0,right:0,height:2,
+        background:"linear-gradient(90deg,transparent,#f472b6,#60a5fa,transparent)",
+        opacity:0.4,
+      }}/>
     </div>
   );
 }
@@ -871,11 +970,18 @@ export default function StackDSPage(){
   const[sessionId]                =useState(()=>Math.random().toString(36).slice(2,8).toUpperCase());
   const[toast,      setToast]     =useState(null);
   const[termOpen,   setTermOpen]  =useState(true);
-  const[mobileTab,  setMobileTab] =useState("code");
+  // Mobile: track which section is currently visible for sticky nav highlight
+  const[activeSection, setActiveSection] = useState("code");
 
   const isMobile = useIsMobile();
 
   const timerRef=useRef(null),taRef=useRef(null),listRef=useRef(null);
+  // Refs for scroll sections (mobile)
+  const sectionCodeRef     = useRef(null);
+  const sectionTermRef     = useRef(null);
+  const sectionVizRef      = useRef(null);
+  const scrollContainerRef = useRef(null);
+
   const bump=()=>setAnimKey(k=>k+1);
 
   const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(null),2200);};
@@ -919,7 +1025,7 @@ export default function StackDSPage(){
     if(stps.length>0){
       ls.push({type:"prompt",text:`run --lang=${lang} --ds=stack`});
       ls.push({type:"blank"});
-      stps.forEach(s=>{
+      stps.forEach((s, stepIdx)=>{
         const ie=s.type==="pop_error"||s.type==="peek_error";
         let out="";
         switch(s.type){
@@ -930,7 +1036,7 @@ export default function StackDSPage(){
           case"peek_error":out=`peek()  →  Error: Stack is empty`;break;
           case"isEmpty":   out=`isEmpty()  →  ${s.result}  ·  ${s.stack.length} item${s.stack.length!==1?"s":""}`;break;
         }
-        ls.push({type:ie?"error":s.type,text:out,lineNum:s.lineNum+1});
+        ls.push({type:ie?"error":s.type,text:out,lineNum:s.lineNum+1,stepIndex:stepIdx});
       });
       ls.push({type:"blank"});
       ls.push({type:"success",text:`${stps.length} op${stps.length!==1?"s":""} completed  ·  exit code 0`});
@@ -940,17 +1046,22 @@ export default function StackDSPage(){
 
   const handleRun=async()=>{
     doReset();setValidating(true);
-    if(isMobile) setMobileTab("viz");
     const v=await validateWithVisuoSlayer(code,lang);
     setValidating(false);
     if(!v.valid){
       setAiErrors(v.errors??[]);
       setTermLines(buildTerm([],[],v.errors??[],v.reason??""));
-      if(isMobile) setMobileTab("log");
+      // scroll to terminal on mobile
+      if(isMobile) scrollToSection("terminal");
       return;
     }
     const{steps:s,errors}=runCode(code,lang);
-    if(errors.length){setError(errors.join("\n"));setTermLines(buildTerm([],errors,[],"")); if(isMobile) setMobileTab("log"); return;}
+    if(errors.length){
+      setError(errors.join("\n"));
+      setTermLines(buildTerm([],errors,[],"")); 
+      if(isMobile) scrollToSection("terminal");
+      return;
+    }
     setSteps(s);setIdx(0);bump();setPlaying(true);setTermLines(buildTerm(s,[],[],"")); 
   };
 
@@ -976,6 +1087,38 @@ export default function StackDSPage(){
 
   useEffect(()=>{listRef.current?.querySelector(".sl-active")?.scrollIntoView({block:"nearest",behavior:"smooth"});},[idx]);
 
+  // Track which section is in view (mobile scroll observer)
+  useEffect(() => {
+    if (!isMobile) return;
+    const refs = [
+      { id:"code",     ref: sectionCodeRef },
+      { id:"terminal", ref: sectionTermRef },
+      { id:"viz",      ref: sectionVizRef  },
+    ];
+    const obs = new IntersectionObserver(
+      (entries) => {
+        // pick the one with the highest intersection ratio
+        let best = null, bestRatio = 0;
+        entries.forEach(e => {
+          if (e.isIntersecting && e.intersectionRatio > bestRatio) {
+            bestRatio = e.intersectionRatio;
+            best = e.target.dataset.section;
+          }
+        });
+        if (best) setActiveSection(best);
+      },
+      { root: scrollContainerRef.current, threshold: [0.3, 0.6] }
+    );
+    refs.forEach(r => { if (r.ref.current) { r.ref.current.dataset.section = r.id; obs.observe(r.ref.current); }});
+    return () => obs.disconnect();
+  }, [isMobile]);
+
+  const scrollToSection = useCallback((id) => {
+    const map = { code: sectionCodeRef, terminal: sectionTermRef, viz: sectionVizRef };
+    map[id]?.current?.scrollIntoView({ behavior:"smooth", block:"start" });
+    setActiveSection(id);
+  }, []);
+
   const onKeyDown=(e)=>{
     if(e.key!=="Tab")return;e.preventDefault();
     const s=e.target.selectionStart,en=e.target.selectionEnd;
@@ -998,7 +1141,7 @@ export default function StackDSPage(){
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-          html,body{height:100%;overflow:hidden;-webkit-text-size-adjust:100%;}
+          html,body{height:100%;-webkit-text-size-adjust:100%;}
           body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
 
           :root{
@@ -1031,18 +1174,19 @@ export default function StackDSPage(){
           @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(18px,-12px) scale(1.06)}66%{transform:translate(-10px,16px) scale(0.95)}}
           @keyframes blob2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-20px,10px) scale(1.08)}70%{transform:translate(14px,-18px) scale(0.93)}}
           @keyframes gridScroll{0%{background-position:0 0}100%{background-position:32px 32px}}
-          @keyframes slideInUp{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
           @keyframes scanline{0%{top:-10%}100%{top:110%}}
 
-          /* Mobile page */
-          .mob-pg{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden;
+          /* Mobile page — scrollable */
+          .mob-pg{
+            height:100vh;height:100dvh;display:flex;flex-direction:column;
             background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(59,130,246,0.12) 0%,transparent 60%),#050818;
-            padding-top:env(safe-area-inset-top,0);}
+            padding-top:env(safe-area-inset-top,0);
+          }
 
           /* Mobile header */
           .mob-hd{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 16px;
             background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);
-            border-bottom:1px solid rgba(96,165,250,0.12);}
+            border-bottom:1px solid rgba(96,165,250,0.12);z-index:100;position:sticky;top:0;}
           .mob-logo{width:30px;height:30px;border-radius:8px;flex-shrink:0;
             background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);
             display:flex;align-items:center;justify-content:center;font-size:14px;
@@ -1054,9 +1198,18 @@ export default function StackDSPage(){
             animation:shimmer 4s linear infinite;}
           .mob-sub{font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;}
 
-          /* Content area */
-          .mob-content{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;}
-          .mob-pane{flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;animation:slideInUp 0.22s ease;}
+          /* Scroll container */
+          .mob-scroll{flex:1;overflow-y:auto;overflow-x:hidden;
+            -webkit-overflow-scrolling:touch;
+            scrollbar-width:thin;scrollbar-color:rgba(96,165,250,0.15) transparent;
+            /* right padding so content doesn't sit under sticky nav */
+            padding-right:52px;
+            padding-bottom:env(safe-area-inset-bottom,16px);}
+          .mob-scroll::-webkit-scrollbar{width:3px;}
+          .mob-scroll::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.18);border-radius:4px;}
+
+          /* Section wrappers */
+          .mob-sec{display:flex;flex-direction:column;}
 
           /* Panel chrome */
           .mob-ph{padding:8px 14px;border-bottom:1px solid var(--border-subtle);
@@ -1064,6 +1217,17 @@ export default function StackDSPage(){
           .dot{width:8px;height:8px;border-radius:50%;}
           .ptl{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text-muted);
             text-transform:uppercase;letter-spacing:1.5px;margin-left:6px;font-weight:600;}
+
+          /* Section divider label */
+          .mob-sec-label{
+            display:flex;align-items:center;gap:8px;
+            padding:10px 14px 6px;
+            font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;
+            letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);
+          }
+          .mob-sec-label::after{
+            content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(96,165,250,0.2),transparent);
+          }
 
           /* Lang chips — horizontal scroll */
           .mob-lb{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;
@@ -1077,11 +1241,21 @@ export default function StackDSPage(){
             color:var(--text-muted);transition:all 0.15s;flex-shrink:0;}
           .mob-lt.la{color:#e8f4ff;background:rgba(255,255,255,0.06);}
 
-          /* Run bar — always pinned at bottom of code pane */
-          .mob-rr{padding:10px 12px 14px;border-top:1px solid rgba(96,165,250,0.18);
+          /* Code editor area — fixed height with internal scroll */
+          .mob-editor-wrap{
+            background:rgba(5,8,22,0.95);
+            border:1px solid var(--border-subtle);
+            border-radius:0;
+            display:flex;
+            flex-direction:column;
+            height:340px;
+          }
+
+          /* Run bar */
+          .mob-rr{padding:10px 12px;border-top:1px solid rgba(96,165,250,0.18);
             display:flex;align-items:center;gap:8px;flex-shrink:0;
-            background:rgba(4,8,22,0.96);backdrop-filter:blur(16px);
-            box-shadow:0 -8px 32px rgba(0,0,0,0.5),0 -1px 0 rgba(96,165,250,0.08);}
+            background:rgba(4,8,22,0.96);
+            box-shadow:0 -4px 16px rgba(0,0,0,0.4);}
           .mob-btn-run{flex:1;padding:12px 16px;border-radius:12px;
             background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);
             border:1px solid rgba(96,165,250,0.4);color:#fff;
@@ -1105,6 +1279,15 @@ export default function StackDSPage(){
           .mob-alb-code{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);
             overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 
+          /* Terminal section */
+          .mob-term-wrap{
+            background:rgba(5,8,22,0.95);
+            border:1px solid var(--border-subtle);
+            display:flex;
+            flex-direction:column;
+            height:220px;
+          }
+
           /* Viz panel */
           .sv{display:flex;flex-direction:column;flex:1;min-height:0;position:relative;}
           .sv.sv-err{animation:svSh 0.4s ease;}
@@ -1116,7 +1299,7 @@ export default function StackDSPage(){
           .sv-ml{font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--text-muted);letter-spacing:0.15em;text-transform:uppercase;font-weight:600;}
           .sv-mv{font-family:'JetBrains Mono',monospace;font-weight:700;line-height:1.1;transition:color 0.3s;}
           .sv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-            padding:12px 12px 0;position:relative;overflow:hidden;}
+            padding:12px 12px 0;position:relative;overflow:hidden;min-height:200px;}
           .sv-col::before{content:'';position:absolute;inset:0;pointer-events:none;
             background-image:linear-gradient(rgba(96,165,250,0.04) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,0.04) 1px,transparent 1px);
             background-size:32px 32px;animation:gridScroll 10s linear infinite;}
@@ -1154,8 +1337,17 @@ export default function StackDSPage(){
           .sv-plat-shine{position:absolute;top:0;left:-100%;width:55%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);animation:pShine 3.5s ease-in-out infinite;}
           .sv-base{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--text-muted);letter-spacing:0.12em;margin-top:4px;margin-bottom:6px;}
 
+          /* Viz section wrapper */
+          .mob-viz-wrap{
+            background:rgba(5,8,22,0.95);
+            border:1px solid var(--border-subtle);
+            display:flex;
+            flex-direction:column;
+            min-height:360px;
+          }
+
           /* Op info */
-          .mob-oi{padding:8px 14px;border-top:1px solid var(--border-subtle);background:rgba(4,8,24,0.6);min-height:50px;flex-shrink:0;}
+          .mob-oi{padding:8px 14px;border-top:1px solid var(--border-subtle);background:rgba(4,8,24,0.6);flex-shrink:0;}
           .mob-oi-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:16px;margin-bottom:4px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;animation:stepPop 0.22s ease;border:1px solid;letter-spacing:0.04em;}
           .mob-oi-msg{font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.6;animation:fadeUp 0.2s ease;color:var(--text-secondary);word-break:break-word;}
 
@@ -1195,8 +1387,8 @@ export default function StackDSPage(){
             color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-weight:600;
             border-top:1px solid var(--border-subtle);flex-shrink:0;
             display:flex;align-items:center;justify-content:space-between;}
-          .mob-sl{overflow-y:auto;padding:3px 8px 6px;display:flex;flex-direction:column;gap:1.5px;
-            max-height:80px;flex-shrink:0;scrollbar-width:thin;scrollbar-color:rgba(96,165,250,0.2) transparent;}
+          .mob-sl{overflow-y:auto;padding:3px 8px 8px;display:flex;flex-direction:column;gap:1.5px;
+            max-height:120px;flex-shrink:0;scrollbar-width:thin;scrollbar-color:rgba(96,165,250,0.2) transparent;}
           .mob-si{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:5px;cursor:pointer;
             font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);transition:all 0.12s;
             border:1px solid transparent;-webkit-tap-highlight-color:transparent;}
@@ -1207,7 +1399,7 @@ export default function StackDSPage(){
           .mob-si-ln{margin-left:auto;font-size:7px;color:var(--text-muted);opacity:0.7;}
 
           /* Toast */
-          .toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:9px 18px;border-radius:10px;
+          .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:9px 18px;border-radius:10px;
             font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;white-space:nowrap;
             background:rgba(10,20,50,0.97);border:1px solid var(--border-medium);
             color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.5),0 0 16px var(--green-glow);
@@ -1220,7 +1412,7 @@ export default function StackDSPage(){
         `}</style>
 
         <div className="mob-pg">
-          {/* Mobile Header */}
+          {/* Sticky Header */}
           <header className="mob-hd">
             <div className="mob-logo">📚</div>
             <div style={{flex:1,minWidth:0}}>
@@ -1233,12 +1425,17 @@ export default function StackDSPage(){
             </div>
           </header>
 
-          {/* Content */}
-          <div className="mob-content">
-            {/* CODE TAB */}
-            {mobileTab === "code" && (
-              <div className="mob-pane" style={{display:"flex",flexDirection:"column"}}>
-                {/* Panel header */}
+          {/* Scrollable content */}
+          <div className="mob-scroll" ref={scrollContainerRef}>
+
+            {/* ── SECTION 1: CODE ── */}
+            <div ref={sectionCodeRef} className="mob-sec">
+              <div className="mob-sec-label">
+                <span>⌨</span><span>01 · Code Editor</span>
+              </div>
+
+              <div className="mob-editor-wrap">
+                {/* Panel chrome */}
                 <div className="mob-ph">
                   <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f57"}}/>
                   <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e"}}/>
@@ -1247,7 +1444,7 @@ export default function StackDSPage(){
                   <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:lm.accent,background:`${lm.accent}10`,border:`1px solid ${lm.accent}25`,padding:"2px 8px",borderRadius:16,fontWeight:700}}>{lm.name}</span>
                 </div>
 
-                {/* Lang tabs — horizontal scroll */}
+                {/* Lang tabs */}
                 <div className="mob-lb">
                   {Object.entries(LANGS).map(([k,m])=>(
                     <button key={k} className={`mob-lt${lang===k?" la":""}`}
@@ -1257,12 +1454,11 @@ export default function StackDSPage(){
                   ))}
                 </div>
 
-                {/* Editor — takes all remaining space, scrolls independently */}
-                <div style={{flex:1,minHeight:0,display:"flex",flexDirection:"column",position:"relative"}}>
+                {/* Editor takes remaining height */}
+                <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0,position:"relative"}}>
                   <CodeEditor code={code} setCode={setCode} step={step}
                     errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
 
-                  {/* Active line bar — shown when stepping */}
                   {step&&os&&(
                     <div className="mob-alb" style={{borderColor:os.bd,background:os.bg}}>
                       <span style={{color:os.c,fontSize:10}}>{os.icon}</span>
@@ -1270,31 +1466,46 @@ export default function StackDSPage(){
                       <code className="mob-alb-code">{step.codeLine}</code>
                     </div>
                   )}
-
-                  {/* Fade hint above run bar so last line of code is visually clear */}
-                  <div style={{
-                    position:"absolute",bottom:0,left:0,right:0,height:28,
-                    background:"linear-gradient(to bottom,transparent,rgba(4,8,22,0.85))",
-                    pointerEvents:"none",zIndex:3,
-                  }}/>
-                </div>
-
-                {/* Run bar — always pinned, never scrolls away */}
-                <div className="mob-rr">
-                  <button className={`mob-btn-run${playing||validating?" running":""}`}
-                    onClick={handleRun} disabled={playing||validating}>
-                    {validating?"⟳ Reviewing…":playing?"▶ Running…":"▶  Run & Visualize"}
-                  </button>
-                  {(steps.length>0||error||hasAiErrors)&&(
-                    <button className="mob-btn-rst" onClick={doReset}>↺ Reset</button>
-                  )}
                 </div>
               </div>
-            )}
 
-            {/* VIZ TAB */}
-            {mobileTab === "viz" && (
-              <div className="mob-pane" style={{display:"flex",flexDirection:"column",minHeight:0}}>
+              {/* Run bar right below editor */}
+              <div className="mob-rr">
+                <button className={`mob-btn-run${playing||validating?" running":""}`}
+                  onClick={handleRun} disabled={playing||validating}>
+                  {validating?"⟳ Reviewing…":playing?"▶ Running…":"▶  Run & Visualize"}
+                </button>
+                {(steps.length>0||error||hasAiErrors)&&(
+                  <button className="mob-btn-rst" onClick={doReset}>↺ Reset</button>
+                )}
+              </div>
+            </div>
+
+            {/* ── SECTION 2: TERMINAL ── */}
+            <div ref={sectionTermRef} className="mob-sec" style={{marginTop:2}}>
+              <div className="mob-sec-label">
+                <span>⬛</span><span>02 · Terminal</span>
+              </div>
+
+              <div className="mob-term-wrap">
+                <div className="mob-ph">
+                  <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f57"}}/>
+                  <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e"}}/>
+                  <span className="dot" style={{background:"#28c840",boxShadow:"0 0 5px #28c840"}}/>
+                  <span className="ptl">visualoslayer — bash</span>
+                  <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--text-muted)"}}>pid:{sessionId}</span>
+                </div>
+                <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx}/>
+              </div>
+            </div>
+
+            {/* ── SECTION 3: VISUALIZATION ── */}
+            <div ref={sectionVizRef} className="mob-sec" style={{marginTop:2}}>
+              <div className="mob-sec-label">
+                <span>📚</span><span>03 · Stack Visualization</span>
+              </div>
+
+              <div className="mob-viz-wrap">
                 <div className="mob-ph">
                   <span className="dot" style={{background:"#60a5fa",boxShadow:"0 0 5px #60a5fa"}}/>
                   <span className="dot" style={{background:"#f472b6",boxShadow:"0 0 5px #f472b6"}}/>
@@ -1309,116 +1520,105 @@ export default function StackDSPage(){
                   )}
                 </div>
 
-                <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden"}}>
-                  <StackViz step={step} animKey={animKey} idle={idle} compact={true}/>
+                <StackViz step={step} animKey={animKey} idle={idle} compact={true}/>
 
-                  <div className="mob-oi">
-                    {step&&os?(
-                      <>
-                        <div className="mob-oi-badge" style={{color:os.c,background:os.bg,borderColor:os.bd}}>
-                          <span>{os.icon}</span><span>{os.label}</span>
-                          {step.type==="push"&&<span style={{opacity:0.55}}>({step.value})</span>}
-                          {(step.type==="pop"||step.type==="peek")&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
-                          {step.type==="isEmpty"&&<span style={{opacity:0.55}}>→ {String(step.result)}</span>}
-                        </div>
-                        <div className="mob-oi-msg">{step.message}</div>
-                      </>
-                    ):(
-                      <div style={{display:"flex",alignItems:"center",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"var(--text-muted)",padding:"4px 0"}}>
-                        <span>📟</span>
-                        <span>{idle?"Write a Stack, hit Run to visualize":hasAiErrors?"Errors found — check Terminal":error?"Fix errors and run again":validating?"Reviewing code…":"Waiting…"}</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {steps.length>0&&(
-                    <div className="mob-ctrl">
-                      <button className="mob-cb" onClick={()=>goTo(0)} disabled={idx<=0}>⏮</button>
-                      <button className="mob-cb" onClick={()=>goTo(idx-1)} disabled={idx<=0}>◀</button>
-                      <button className="mob-cp"
-                        onClick={()=>{
-                          if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}
-                          else{clearInterval(timerRef.current);setPlaying(p=>!p);}
-                        }}>
-                        {playing?"⏸":done?"↺":"▶"}
-                      </button>
-                      <button className="mob-cb" onClick={()=>goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
-                      <button className="mob-cb" onClick={()=>goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
-                      <div className="mob-csep"/>
-                      <div className="mob-spd">
-                        {[[2,"½×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl])=>(
-                          <button key={s} className={`mob-sb${speed===s?" sa":""}`} onClick={()=>setSpeed(s)}>{lbl}</button>
-                        ))}
-                      </div>
-                      <div className="mob-csep"/>
-                      <button className="mob-cb" onClick={copyStackState} style={{fontSize:14}}>📋</button>
-                    </div>
-                  )}
-
-                  {steps.length>0&&(
-                    <div className="mob-pr">
-                      <div className="mob-pt2"><div className="mob-pf" style={{width:`${prog}%`}}/></div>
-                      <span className="mob-ptx">{prog}%</span>
-                    </div>
-                  )}
-
-                  {steps.length>0&&(
+                <div className="mob-oi">
+                  {step&&os?(
                     <>
-                      <div className="mob-slh">
-                        <span>OPERATION LOG</span>
-                        <span style={{color:"var(--cyan)",fontSize:7}}>{steps.length} ops</span>
+                      <div className="mob-oi-badge" style={{color:os.c,background:os.bg,borderColor:os.bd}}>
+                        <span>{os.icon}</span><span>{os.label}</span>
+                        {step.type==="push"&&<span style={{opacity:0.55}}>({step.value})</span>}
+                        {(step.type==="pop"||step.type==="peek")&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
+                        {step.type==="isEmpty"&&<span style={{opacity:0.55}}>→ {String(step.result)}</span>}
                       </div>
-                      <div className="mob-sl" ref={listRef}>
-                        {steps.map((s,i)=>{
-                          const sm=OP[s.type]??OP.push;
-                          const past=i<idx,active=i===idx;
-                          return(
-                            <div key={i} className={`mob-si${active?" sl-active":""}`} onClick={()=>goTo(i)}>
-                              <span className="mob-si-dot" style={{
-                                background:past?"var(--green)":active?sm.c:"var(--text-muted)",
-                                boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none",
-                              }}/>
-                              <span style={{color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)"}}>
-                                {sm.label}
-                                {s.type==="push"&&<span className="mob-si-v">({s.value})</span>}
-                                {s.type==="pop"&&s.value!=null&&<span className="mob-si-v"> → {s.value}</span>}
-                                {s.type==="peek"&&s.value!=null&&<span className="mob-si-v"> = {s.value}</span>}
-                                {s.type==="isEmpty"&&<span className="mob-si-v"> = {String(s.result)}</span>}
-                                {(s.type==="pop_error"||s.type==="peek_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
-                              </span>
-                              <span className="mob-si-ln">L{s.lineNum+1}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <div className="mob-oi-msg">{step.message}</div>
                     </>
+                  ):(
+                    <div style={{display:"flex",alignItems:"center",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"var(--text-muted)",padding:"4px 0"}}>
+                      <span>📟</span>
+                      <span>{idle?"Write a Stack, hit Run to visualize":hasAiErrors?"Errors found — check Terminal":error?"Fix errors and run again":validating?"Reviewing code…":"Waiting…"}</span>
+                    </div>
                   )}
                 </div>
-              </div>
-            )}
 
-            {/* TERMINAL TAB */}
-            {mobileTab === "log" && (
-              <div className="mob-pane" style={{display:"flex",flexDirection:"column",minHeight:0}}>
-                <div className="mob-ph">
-                  <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f57"}}/>
-                  <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e"}}/>
-                  <span className="dot" style={{background:"#28c840",boxShadow:"0 0 5px #28c840"}}/>
-                  <span className="ptl">visualoslayer — bash</span>
-                  <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--text-muted)"}}>pid:{sessionId}</span>
-                </div>
-                <Terminal lines={termLines} sessionId={sessionId} validating={validating}/>
+                {steps.length>0&&(
+                  <div className="mob-ctrl">
+                    <button className="mob-cb" onClick={()=>goTo(0)} disabled={idx<=0}>⏮</button>
+                    <button className="mob-cb" onClick={()=>goTo(idx-1)} disabled={idx<=0}>◀</button>
+                    <button className="mob-cp"
+                      onClick={()=>{
+                        if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}
+                        else{clearInterval(timerRef.current);setPlaying(p=>!p);}
+                      }}>
+                      {playing?"⏸":done?"↺":"▶"}
+                    </button>
+                    <button className="mob-cb" onClick={()=>goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
+                    <button className="mob-cb" onClick={()=>goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
+                    <div className="mob-csep"/>
+                    <div className="mob-spd">
+                      {[[2,"½×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl])=>(
+                        <button key={s} className={`mob-sb${speed===s?" sa":""}`} onClick={()=>setSpeed(s)}>{lbl}</button>
+                      ))}
+                    </div>
+                    <div className="mob-csep"/>
+                    <button className="mob-cb" onClick={copyStackState} style={{fontSize:14}}>📋</button>
+                  </div>
+                )}
+
+                {steps.length>0&&(
+                  <div className="mob-pr">
+                    <div className="mob-pt2"><div className="mob-pf" style={{width:`${prog}%`}}/></div>
+                    <span className="mob-ptx">{prog}%</span>
+                  </div>
+                )}
+
+                {steps.length>0&&(
+                  <>
+                    <div className="mob-slh">
+                      <span>OPERATION LOG</span>
+                      <span style={{color:"var(--cyan)",fontSize:7}}>{steps.length} ops</span>
+                    </div>
+                    <div className="mob-sl" ref={listRef}>
+                      {steps.map((s,i)=>{
+                        const sm=OP[s.type]??OP.push;
+                        const past=i<idx,active=i===idx;
+                        return(
+                          <div key={i} className={`mob-si${active?" sl-active":""}`} onClick={()=>goTo(i)}>
+                            <span className="mob-si-dot" style={{
+                              background:past?"var(--green)":active?sm.c:"var(--text-muted)",
+                              boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none",
+                            }}/>
+                            <span style={{color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)"}}>
+                              {sm.label}
+                              {s.type==="push"&&<span className="mob-si-v">({s.value})</span>}
+                              {s.type==="pop"&&s.value!=null&&<span className="mob-si-v"> → {s.value}</span>}
+                              {s.type==="peek"&&s.value!=null&&<span className="mob-si-v"> = {s.value}</span>}
+                              {s.type==="isEmpty"&&<span className="mob-si-v"> = {String(s.result)}</span>}
+                              {(s.type==="pop_error"||s.type==="peek_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
+                            </span>
+                            <span className="mob-si-ln">L{s.lineNum+1}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {/* Bottom padding so last section scrolls into view nicely */}
+                <div style={{height:16}}/>
               </div>
-            )}
+            </div>
+
+            {/* Final bottom spacer */}
+            <div style={{height:24}}/>
           </div>
 
-          {/* Bottom Tab Bar */}
-          <MobileTabBar
-            activeTab={mobileTab}
-            setActiveTab={setMobileTab}
+          {/* Right Sticky Nav */}
+          <StickyNav
+            activeSection={activeSection}
+            onNav={scrollToSection}
             hasSteps={steps.length>0}
             hasErrors={!!error||hasAiErrors}
-            hasAiErrors={hasAiErrors}
             termLines={termLines}
           />
         </div>
@@ -1496,7 +1696,6 @@ export default function StackDSPage(){
         .hd-pid{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);padding:3px 9px;border-radius:20px;border:1px solid var(--border-subtle);background:var(--surface-2)}
         .hd-ds-badge{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--cyan);padding:3px 9px;border-radius:20px;border:1px solid rgba(96,165,250,0.25);background:rgba(96,165,250,0.08);letter-spacing:0.08em}
 
-        /* Responsive layout: side-by-side on ≥768, may be tighter on tablet */
         .main{flex:1;display:grid;gap:10px;padding:10px 24px;min-height:0;overflow:hidden;}
         @media(min-width:768px) and (max-width:1100px){
           .main{grid-template-columns:1fr 1fr;padding:8px 14px;gap:8px;}
@@ -1733,7 +1932,7 @@ export default function StackDSPage(){
                   <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--text-muted)",marginLeft:8}}>pid:{sessionId}</span>
                   <button className="term-toggle" onClick={()=>setTermOpen(false)} title="Collapse">▾</button>
                 </div>
-                <Terminal lines={termLines} sessionId={sessionId} validating={validating}/>
+                <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx}/>
               </div>
             </div>
 

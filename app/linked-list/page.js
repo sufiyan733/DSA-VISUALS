@@ -1,10 +1,11 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VOICE ENGINE — Premium male voice, fixed 1.25x
+// VOICE ENGINE — Premium male voice with variable speed
 // ═══════════════════════════════════════════════════════════════════════════════
-const FIXED_RATE = 1.25;
+let currentRate = 1.25;
 
 function getMaleVoice() {
   if (typeof window === "undefined") return null;
@@ -26,12 +27,12 @@ function getMaleVoice() {
   return all[0] ?? null;
 }
 
-function voiceSpeak(text, onEnd) {
+function voiceSpeak(text, onEnd, rate) {
   if (typeof window === "undefined" || !window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const go = () => {
     const u = new SpeechSynthesisUtterance(text);
-    u.rate = FIXED_RATE; u.pitch = 0.92; u.volume = 1;
+    u.rate = rate ?? currentRate; u.pitch = 0.92; u.volume = 1;
     const v = getMaleVoice(); if (v) u.voice = v;
     u.onend = onEnd; u.onerror = () => onEnd?.();
     window.speechSynthesis.speak(u);
@@ -74,6 +75,8 @@ const NAV_SECTIONS = [
   { id: "quiz",       icon: "🎯", label: "Quiz",       col: "#ec4899" },
 ];
 
+const SPEED_OPTIONS = [0.75, 1.0, 1.25, 1.5, 2.0];
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // HOOKS
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -86,6 +89,18 @@ function useVisible(threshold = 0.07) {
     return () => io.disconnect();
   }, []);
   return [ref, vis];
+}
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -124,7 +139,7 @@ function SpeakingWave({ color = "#38bdf8", size = 16 }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MINI PLAYER
 // ═══════════════════════════════════════════════════════════════════════════════
-function MiniPlayer({ speaking, speakingLabel, onStop }) {
+function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
   if (!speaking) return null;
   return (
     <div style={{
@@ -140,7 +155,7 @@ function MiniPlayer({ speaking, speakingLabel, onStop }) {
       <SpeakingWave color="#38bdf8" size={16} />
       <div>
         <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, fontWeight: 600, color: "#e2e8f0", lineHeight: 1 }}>{speakingLabel}</div>
-        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#38bdf8", marginTop: 2 }}>1.25× · premium male voice</div>
+        <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#38bdf8", marginTop: 2 }}>{speed}× · premium male voice</div>
       </div>
       <button onClick={onStop} style={{ background: "rgba(239,68,68,0.15)", border: "1px solid rgba(239,68,68,0.35)", borderRadius: 20, cursor: "pointer", padding: "4px 12px", fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 700, color: "#f87171" }}>⏹ STOP</button>
     </div>
@@ -187,59 +202,367 @@ function CompletedBadge({ seen }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// STICKY NAV
+// SPEED PANEL (embedded in RightSidebar)
 // ═══════════════════════════════════════════════════════════════════════════════
-function StickyNav({ active, speaking, seenCount }) {
+function SpeedPanel({ speed, setSpeed, speaking, onRestart }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        title="Playback Speed"
+        style={{
+          display: "flex", alignItems: "center", gap: 5,
+          padding: "5px 11px", borderRadius: 20, cursor: "pointer",
+          background: open ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.05)",
+          border: `1.5px solid ${open ? "#38bdf8" : "rgba(255,255,255,0.1)"}`,
+          fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 700,
+          color: open ? "#7dd3fc" : "#64748b", transition: "all 0.2s",
+        }}>
+        ⚡ {speed}×
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", top: "calc(100% + 8px)", right: 0,
+          background: "rgba(8,10,22,0.97)", backdropFilter: "blur(28px)",
+          border: "1px solid rgba(255,255,255,0.1)", borderRadius: 14,
+          padding: "8px 6px", display: "flex", flexDirection: "column", gap: 3,
+          zIndex: 1000, minWidth: 100,
+          boxShadow: "0 16px 48px rgba(0,0,0,0.7)",
+          animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
+        }}>
+          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#2d3748", letterSpacing: "0.1em", padding: "2px 8px 6px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>SPEED</div>
+          {SPEED_OPTIONS.map(s => (
+            <button key={s} onClick={() => {
+              currentRate = s;
+              setSpeed(s);
+              setOpen(false);
+              if (speaking) onRestart();
+            }} style={{
+              padding: "6px 12px", borderRadius: 8, cursor: "pointer", textAlign: "left",
+              background: speed === s ? "rgba(56,189,248,0.2)" : "transparent",
+              border: `1px solid ${speed === s ? "rgba(56,189,248,0.45)" : "transparent"}`,
+              fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700,
+              color: speed === s ? "#7dd3fc" : "#475569", transition: "all 0.15s",
+            }}>
+              {s === 1.25 ? `${s}× ★` : `${s}×`}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RIGHT SIDEBAR (replaces top sticky nav)
+// ═══════════════════════════════════════════════════════════════════════════════
+function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount, open, setOpen }) {
   const [show, setShow] = useState(false);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 600px)');
+  const router = useRouter();
+
   useEffect(() => {
     const h = () => setShow(window.scrollY > 500);
     window.addEventListener("scroll", h, { passive: true });
     return () => window.removeEventListener("scroll", h);
   }, []);
 
+  const goToCode = () => { router.push("/ll"); };
+
+  if (!open) {
+    const btnSize = isMobile ? 36 : 40;
+    const btnRight = isMobile ? 12 : 16;
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        style={{
+          position: "fixed",
+          right: btnRight,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 950,
+          width: btnSize,
+          height: btnSize,
+          borderRadius: btnSize / 2,
+          background: "rgba(56,189,248,0.2)",
+          border: "1px solid rgba(56,189,248,0.4)",
+          backdropFilter: "blur(12px)",
+          cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: isMobile ? 18 : 20,
+          color: "#38bdf8",
+          transition: "all 0.2s",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+        }}
+      >
+        ◀
+      </button>
+    );
+  }
+
+  // Mobile values (compact)
+  const mobileBtnSize = 32;
+  const mobileGap = 3;
+  const mobilePadding = "8px 6px";
+  const mobileFontIcon = 18;
+  const mobileFontText = 9;
+  const mobileCodePadding = "4px 8px";
+  const mobileProgressPillPadding = "4px 8px";
+  const mobileProgressBarWidth = 24;
+  const mobileSpeakingPadding = "4px 8px";
+
+  const isMobileView = isMobile;
+  const btnSize = isMobileView ? mobileBtnSize : 36;
+  const gap = isMobileView ? mobileGap : 4;
+  const padding = isMobileView ? mobilePadding : "8px 6px";
+  const fontSizeIcon = isMobileView ? mobileFontIcon : 16;
+  const fontSizeText = isMobileView ? mobileFontText : 8;
+  const codePadding = isMobileView ? mobileCodePadding : "4px 8px";
+  const progressPillPadding = isMobileView ? mobileProgressPillPadding : "3px 6px";
+  const progressBarWidth = isMobileView ? mobileProgressBarWidth : 24;
+  const speakingPadding = isMobileView ? mobileSpeakingPadding : "3px 6px";
+
   return (
-    <nav style={{
-      position: "fixed", top: 14, left: "50%", transform: "translateX(-50%)",
-      zIndex: 900, display: "flex", alignItems: "center", gap: 2, padding: "5px 8px",
-      background: "rgba(3,7,18,0.94)", backdropFilter: "blur(28px) saturate(180%)",
-      borderRadius: 22, border: "1px solid rgba(255,255,255,0.07)",
-      boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
-      opacity: show ? 1 : 0, pointerEvents: show ? "auto" : "none",
-      transition: "opacity 0.3s ease", maxWidth: "calc(100vw - 24px)",
-    }}>
-      <div className="nav-pills" style={{ display: "flex", gap: 2, flexWrap: "wrap", justifyContent: "center" }}>
-        {NAV_SECTIONS.map(s => (
-          <button key={s.id}
-            onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
-            title={s.label}
+    <nav
+      style={{
+        position: "fixed",
+        right: isMobileView ? 12 : 16,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 900,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap,
+        padding,
+        background: "rgba(3,6,18,0.94)",
+        backdropFilter: "blur(28px) saturate(180%)",
+        borderRadius: isMobileView ? 24 : 24,
+        border: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
+        opacity: show ? 1 : 0,
+        pointerEvents: show ? "auto" : "none",
+        transition: "opacity 0.3s ease",
+        width: "auto",
+        maxHeight: isMobileView ? "85vh" : "auto",
+        overflowY: isMobileView ? "auto" : "visible",
+        scrollbarWidth: "thin",
+      }}
+    >
+      {/* Close button */}
+      <button
+        onClick={() => setOpen(false)}
+        style={{
+          width: btnSize,
+          height: btnSize,
+          borderRadius: 10,
+          border: "none",
+          background: "rgba(255,255,255,0.05)",
+          cursor: "pointer",
+          fontSize: isMobileView ? 14 : 14,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#94a3b8",
+          marginBottom: 2,
+        }}
+      >
+        ✕
+      </button>
+
+      {/* Section icons */}
+      {NAV_SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
+          title={s.label}
+          style={{
+            width: btnSize,
+            height: btnSize,
+            borderRadius: 8,
+            border: "none",
+            cursor: "pointer",
+            background: active === s.id ? `${s.col}22` : "transparent",
+            outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
+            fontSize: fontSizeIcon,
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            flexShrink: 0,
+          }}
+        >
+          {s.icon}
+        </button>
+      ))}
+
+      {/* Progress pill */}
+      <div
+        style={{
+          padding: progressPillPadding,
+          borderRadius: 16,
+          background: "rgba(56,189,248,0.08)",
+          border: "1px solid rgba(56,189,248,0.2)",
+          display: "flex",
+          alignItems: "center",
+          gap: 4,
+          width: "auto",
+        }}
+      >
+        <div
+          style={{
+            width: progressBarWidth,
+            height: isMobileView ? 3 : 4,
+            borderRadius: 99,
+            background: "rgba(255,255,255,0.06)",
+            overflow: "hidden",
+          }}
+        >
+          <div
             style={{
-              width: 34, height: 34, borderRadius: 12, border: "none", cursor: "pointer",
-              background: active === s.id ? `${s.col}22` : "transparent",
-              outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
-              fontSize: 15, transition: "all 0.2s", display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-            {s.icon}
-          </button>
-        ))}
-      </div>
-      <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.08)", margin: "0 4px" }} />
-      <div style={{ padding: "3px 9px", borderRadius: 12, background: "rgba(56,189,248,0.08)", border: "1px solid rgba(56,189,248,0.2)", display: "flex", alignItems: "center", gap: 5 }}>
-        <div style={{ width: 28, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
-          <div style={{ height: "100%", width: `${(seenCount / NAV_SECTIONS.length) * 100}%`, background: "#38bdf8", borderRadius: 99, transition: "width 0.5s ease" }} />
+              height: "100%",
+              width: `${(seenCount / NAV_SECTIONS.length) * 100}%`,
+              background: "#38bdf8",
+              borderRadius: 99,
+              transition: "width 0.5s ease",
+            }}
+          />
         </div>
-        <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#38bdf8", fontWeight: 700 }}>{seenCount}/{NAV_SECTIONS.length}</span>
+        <span
+          style={{
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: isMobileView ? 8 : 7,
+            color: "#38bdf8",
+            fontWeight: 700,
+          }}
+        >
+          {seenCount}/{NAV_SECTIONS.length}
+        </span>
       </div>
-      <div style={{ width: 1, height: 20, background: "rgba(255,255,255,0.08)", margin: "0 4px" }} />
-      <button onClick={() => window.location.href = "/ll"} style={{
-        padding: "4px 12px", borderRadius: 20, cursor: "pointer",
-        background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.35)",
-        fontFamily: "'JetBrains Mono',monospace", fontSize: 9, fontWeight: 700,
-        color: "#38bdf8", transition: "all 0.2s",
-      }}>💻 Code</button>
+
+      {/* Code button – links to /ll */}
+      <button
+        onClick={goToCode}
+        style={{
+          padding: codePadding,
+          borderRadius: 16,
+          cursor: "pointer",
+          background: "rgba(139,92,246,0.12)",
+          border: "1px solid rgba(139,92,246,0.35)",
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: fontSizeText,
+          fontWeight: 700,
+          color: "#a78bfa",
+          transition: "all 0.2s",
+          whiteSpace: "nowrap",
+        }}
+      >
+        💻 {isMobileView ? "Code" : "Code"}
+      </button>
+
+      {/* Speed Panel */}
+      <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setSpeedOpen((o) => !o)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: codePadding,
+            borderRadius: 16,
+            cursor: "pointer",
+            background: speedOpen ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.05)",
+            border: `1.5px solid ${speedOpen ? "#38bdf8" : "rgba(255,255,255,0.1)"}`,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: fontSizeText,
+            fontWeight: 700,
+            color: speedOpen ? "#7dd3fc" : "#64748b",
+            transition: "all 0.2s",
+          }}
+        >
+          ⚡ {speed}×
+        </button>
+        {speedOpen && (
+          <div
+            style={{
+              position: "absolute",
+              top: 0,
+              right: "calc(100% + 8px)",
+              background: "rgba(5,8,20,0.97)",
+              backdropFilter: "blur(28px)",
+              border: "1px solid rgba(255,255,255,0.1)",
+              borderRadius: 12,
+              padding: "4px 4px",
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              zIndex: 1000,
+              minWidth: 80,
+              boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
+              animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: 6,
+                color: "#2d3748",
+                letterSpacing: "0.1em",
+                padding: "1px 5px 3px",
+                borderBottom: "1px solid rgba(255,255,255,0.06)",
+              }}
+            >
+              SPEED
+            </div>
+            {SPEED_OPTIONS.map((s) => (
+              <button
+                key={s}
+                onClick={() => {
+                  currentRate = s;
+                  setSpeed(s);
+                  setSpeedOpen(false);
+                  if (speaking) onRestart();
+                }}
+                style={{
+                  padding: "3px 8px",
+                  borderRadius: 5,
+                  cursor: "pointer",
+                  textAlign: "left",
+                  background: speed === s ? "rgba(56,189,248,0.2)" : "transparent",
+                  border: `1px solid ${speed === s ? "rgba(56,189,248,0.45)" : "transparent"}`,
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: 8,
+                  fontWeight: 700,
+                  color: speed === s ? "#7dd3fc" : "#475569",
+                  transition: "all 0.15s",
+                }}
+              >
+                {s === 1.25 ? `${s}× ★` : `${s}×`}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Speaking indicator */}
       {speaking && (
-        <div style={{ marginLeft: 4, display: "flex", alignItems: "center", gap: 5, padding: "4px 10px", borderRadius: 14, background: "rgba(56,189,248,0.12)", border: "1px solid rgba(56,189,248,0.3)" }}>
-          <SpeakingWave color="#38bdf8" size={14} />
-          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#38bdf8", fontWeight: 700 }}>ON</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 3,
+            padding: speakingPadding,
+            borderRadius: 12,
+            background: "rgba(56,189,248,0.12)",
+            border: "1px solid rgba(56,189,248,0.3)",
+          }}
+        >
+          <SpeakingWave color="#38bdf8" size={isMobileView ? 10 : 9} />
         </div>
       )}
     </nav>
@@ -307,7 +630,7 @@ function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice,
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HERO — Animated chain of nodes
+// HERO — Animated chain of nodes (mobile-responsive)
 // ═══════════════════════════════════════════════════════════════════════════════
 const NODE_COLORS = ["#38bdf8", "#a78bfa", "#34d399", "#fb923c", "#f472b6", "#fbbf24"];
 const NODE_VALS = [42, 17, 85, 33, 61, 9, 77, 28];
@@ -326,6 +649,7 @@ function Hero({ onStart, onVoice }) {
   const vIdx = useRef(4);
   const pauseRef = useRef(false);
   const nodesRef = useRef(nodes);
+  const isMobile = useMediaQuery('(max-width: 600px)');
 
   useEffect(() => { nodesRef.current = nodes; }, [nodes]);
   useEffect(() => { pauseRef.current = paused; }, [paused]);
@@ -365,13 +689,20 @@ function Hero({ onStart, onVoice }) {
     return () => clearInterval(id);
   }, []);
 
+  // Responsive sizes
+  const nodeDataWidth = isMobile ? 42 : 54;
+  const nodePtrWidth = isMobile ? 28 : 38;
+  const nodeHeight = isMobile ? 42 : 54;
+  const arrowWidth = isMobile ? 12 : 18;
+  const headOffset = isMobile ? 4 : 6;
+
   return (
     <div style={{
       minHeight: "100vh", display: "flex", flexDirection: "column",
       alignItems: "center", justifyContent: "center",
       padding: "80px 24px 48px", textAlign: "center", position: "relative", overflow: "hidden",
     }}>
-      {/* BG */}
+      {/* BG (unchanged) */}
       <div style={{ position: "absolute", inset: 0, pointerEvents: "none", backgroundImage: "radial-gradient(circle,rgba(56,189,248,0.04) 1px,transparent 1px)", backgroundSize: "40px 40px" }} />
       <div style={{ position: "absolute", top: "8%", left: "5%", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle,rgba(56,189,248,0.11) 0%,transparent 70%)", filter: "blur(90px)", pointerEvents: "none", animation: "orb1 26s ease-in-out infinite" }} />
       <div style={{ position: "absolute", bottom: "10%", right: "4%", width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle,rgba(167,139,250,0.09) 0%,transparent 70%)", filter: "blur(72px)", pointerEvents: "none", animation: "orb2 32s ease-in-out infinite" }} />
@@ -389,77 +720,86 @@ function Hero({ onStart, onVoice }) {
         )}
       </div>
 
-      {/* Chain visualization */}
-      <div style={{ marginBottom: 40, position: "relative", display: "flex", alignItems: "center", justifyContent: "center", flexWrap: "wrap", gap: 0 }}>
-        {/* HEAD label */}
+      {/* Chain visualization with horizontal scroll on mobile */}
+      <div style={{
+        marginBottom: 40, position: "relative", width: "100%",
+        overflowX: "auto", overflowY: "visible", paddingBottom: 8,
+      }}>
         <div style={{
-          display: "flex", flexDirection: "column", alignItems: "center", marginRight: 6,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          minWidth: "max-content", gap: 0, margin: "0 auto",
         }}>
-          <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#38bdf8", fontWeight: 700, marginBottom: 4, letterSpacing: "0.08em" }}>HEAD</div>
-          <div style={{ width: 2, height: 20, background: "linear-gradient(#38bdf8,transparent)", marginBottom: 2 }} />
-          <div style={{ fontSize: 14, color: "#38bdf8" }}>↓</div>
-        </div>
-
-        {nodes.map((node, i) => (
-          <div key={node.id} style={{ display: "flex", alignItems: "center" }}>
-            {/* Node box */}
-            <div style={{
-              display: "flex", borderRadius: 14, overflow: "hidden",
-              border: `1.5px solid ${highlightIdx === i ? node.c : `${node.c}50`}`,
-              boxShadow: highlightIdx === i ? `0 0 28px ${node.c}60, 0 0 0 3px ${node.c}20` : `0 4px 16px rgba(0,0,0,0.4)`,
-              transition: "all 0.35s cubic-bezier(0.34,1.56,0.64,1)",
-              animation: i === nodes.length - 1 ? "nodeIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both" : "none",
-              transform: highlightIdx === i ? "scale(1.08)" : "scale(1)",
-            }}>
-              {/* Data section */}
-              <div style={{
-                width: 54, height: 54, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                background: highlightIdx === i ? `${node.c}25` : `${node.c}12`,
-                transition: "background 0.3s", gap: 2,
-              }}>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 15, fontWeight: 700, color: node.c }}>{node.v}</span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 7, color: `${node.c}70`, letterSpacing: "0.06em" }}>DATA</span>
-              </div>
-              {/* Pointer section */}
-              <div style={{
-                width: 38, height: 54, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                background: "rgba(255,255,255,0.025)", borderLeft: `1px solid ${node.c}30`, gap: 2,
-              }}>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, color: i < nodes.length - 1 ? "#60a5fa" : "#ef4444" }}>
-                  {i < nodes.length - 1 ? "→" : "∅"}
-                </span>
-                <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 7, color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em" }}>NEXT</span>
-              </div>
-            </div>
-
-            {/* Arrow between nodes */}
-            {i < nodes.length - 1 && (
-              <div style={{ display: "flex", alignItems: "center", margin: "0 2px" }}>
-                <div style={{ width: 18, height: 2, background: `linear-gradient(90deg,${node.c}80,${nodes[i + 1].c}80)` }} />
-                <div style={{ fontSize: 12, color: nodes[i + 1].c, marginLeft: -2 }}>›</div>
-              </div>
-            )}
+          {/* HEAD label */}
+          <div style={{
+            display: "flex", flexDirection: "column", alignItems: "center",
+            marginRight: headOffset,
+          }}>
+            <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: isMobile ? 8 : 9, color: "#38bdf8", fontWeight: 700, marginBottom: 4, letterSpacing: "0.08em" }}>HEAD</div>
+            <div style={{ width: 2, height: isMobile ? 16 : 20, background: "linear-gradient(#38bdf8,transparent)", marginBottom: 2 }} />
+            <div style={{ fontSize: isMobile ? 12 : 14, color: "#38bdf8" }}>↓</div>
           </div>
-        ))}
 
-        {/* NULL terminator */}
-        <div style={{ display: "flex", alignItems: "center", marginLeft: 6 }}>
-          <div style={{ width: 14, height: 2, background: "rgba(239,68,68,0.4)" }} />
-          <div style={{ padding: "6px 12px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", fontFamily: "'JetBrains Mono',monospace", fontSize: 10, fontWeight: 700, color: "#ef4444" }}>NULL</div>
+          {nodes.map((node, i) => (
+            <div key={node.id} style={{ display: "flex", alignItems: "center" }}>
+              {/* Node box */}
+              <div style={{
+                display: "flex", borderRadius: isMobile ? 10 : 14, overflow: "hidden",
+                border: `1.5px solid ${highlightIdx === i ? node.c : `${node.c}50`}`,
+                boxShadow: highlightIdx === i ? `0 0 28px ${node.c}60, 0 0 0 3px ${node.c}20` : `0 4px 16px rgba(0,0,0,0.4)`,
+                transition: "all 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+                animation: i === nodes.length - 1 ? "nodeIn 0.5s cubic-bezier(0.34,1.56,0.64,1) both" : "none",
+                transform: highlightIdx === i ? "scale(1.08)" : "scale(1)",
+              }}>
+                {/* Data section */}
+                <div style={{
+                  width: nodeDataWidth, height: nodeHeight, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  background: highlightIdx === i ? `${node.c}25` : `${node.c}12`,
+                  transition: "background 0.3s", gap: 2,
+                }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: isMobile ? 12 : 15, fontWeight: 700, color: node.c }}>{node.v}</span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: isMobile ? 6 : 7, color: `${node.c}70`, letterSpacing: "0.06em" }}>DATA</span>
+                </div>
+                {/* Pointer section */}
+                <div style={{
+                  width: nodePtrWidth, height: nodeHeight, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  background: "rgba(255,255,255,0.025)", borderLeft: `1px solid ${node.c}30`, gap: 2,
+                }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: isMobile ? 11 : 13, color: i < nodes.length - 1 ? "#60a5fa" : "#ef4444" }}>
+                    {i < nodes.length - 1 ? "→" : "∅"}
+                  </span>
+                  <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: isMobile ? 6 : 7, color: "rgba(255,255,255,0.2)", letterSpacing: "0.06em" }}>NEXT</span>
+                </div>
+              </div>
+
+              {/* Arrow between nodes */}
+              {i < nodes.length - 1 && (
+                <div style={{ display: "flex", alignItems: "center", margin: "0 2px" }}>
+                  <div style={{ width: arrowWidth, height: 2, background: `linear-gradient(90deg,${node.c}80,${nodes[i + 1].c}80)` }} />
+                  <div style={{ fontSize: isMobile ? 10 : 12, color: nodes[i + 1].c, marginLeft: -2 }}>›</div>
+                </div>
+              )}
+            </div>
+          ))}
+
+          {/* NULL terminator */}
+          <div style={{ display: "flex", alignItems: "center", marginLeft: 6 }}>
+            <div style={{ width: 14, height: 2, background: "rgba(239,68,68,0.4)" }} />
+            <div style={{ padding: isMobile ? "4px 8px" : "6px 12px", borderRadius: 10, background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)", fontFamily: "'JetBrains Mono',monospace", fontSize: isMobile ? 8 : 10, fontWeight: 700, color: "#ef4444" }}>NULL</div>
+          </div>
         </div>
-
-        {/* Pause */}
-        <button onClick={() => setPaused(p => !p)} style={{
-          position: "absolute", bottom: -36, right: 0,
-          padding: "3px 10px", borderRadius: 20, cursor: "pointer",
-          background: paused ? "rgba(251,191,36,0.15)" : "rgba(255,255,255,0.04)",
-          border: `1px solid ${paused ? "rgba(251,191,36,0.4)" : "rgba(255,255,255,0.1)"}`,
-          fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700,
-          color: paused ? "#fbbf24" : "#334155", transition: "all 0.2s",
-        }}>{paused ? "▶ RESUME" : "⏸ PAUSE"}</button>
       </div>
 
-      {/* Text */}
+      {/* Pause button (position adjusted for mobile) */}
+      <button onClick={() => setPaused(p => !p)} style={{
+        position: "absolute", bottom: isMobile ? -20 : -36, right: 0,
+        padding: "3px 10px", borderRadius: 20, cursor: "pointer",
+        background: paused ? "rgba(251,191,36,0.15)" : "rgba(255,255,255,0.04)",
+        border: `1px solid ${paused ? "rgba(251,191,36,0.4)" : "rgba(255,255,255,0.1)"}`,
+        fontFamily: "'JetBrains Mono',monospace", fontSize: 8, fontWeight: 700,
+        color: paused ? "#fbbf24" : "#334155", transition: "all 0.2s",
+      }}>{paused ? "▶ RESUME" : "⏸ PAUSE"}</button>
+
+      {/* Text (unchanged) */}
       <div style={{ maxWidth: 640, position: "relative" }}>
         <div style={{
           display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 20,
@@ -476,7 +816,7 @@ function Hero({ onStart, onVoice }) {
         }}>Linked List<br />Data Structures</h1>
 
         <p style={{ margin: "0 auto 32px", fontFamily: "'DM Sans',sans-serif", fontSize: "clamp(14px,2.2vw,17px)", color: "#64748b", lineHeight: 1.72, maxWidth: 520 }}>
-          Nodes. Pointers. Chains. Every concept animated, explained, and narrated at <strong style={{ color: "#7dd3fc" }}>1.25× with a premium male voice</strong>. From null to advanced two-pointer technique.
+          Nodes. Pointers. Chains. Every concept animated, explained, and narrated at your chosen speed with a <strong style={{ color: "#7dd3fc" }}>premium male voice</strong>. From null to advanced two-pointer technique.
         </p>
 
         <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
@@ -517,7 +857,7 @@ function Hero({ onStart, onVoice }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Intro — Interactive LL builder
+// VISUAL: Intro — Interactive LL builder (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisIntro() {
   const [nodes, setNodes] = useState([
@@ -570,7 +910,7 @@ function VisIntro() {
     <div>
       <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8.5, color: "#2d3748", letterSpacing: "0.08em", marginBottom: 10 }}>LIVE LINKED LIST — build it yourself</div>
 
-      {/* Chain display */}
+      {/* Chain display with horizontal scroll */}
       <div style={{ minHeight: 80, marginBottom: 14, overflowX: "auto", paddingBottom: 8 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 0, minWidth: "max-content", padding: "4px 0" }}>
           <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#38bdf8", fontWeight: 700, marginRight: 8, whiteSpace: "nowrap" }}>HEAD →</div>
@@ -600,7 +940,7 @@ function VisIntro() {
         </div>
       </div>
 
-      {/* Controls */}
+      {/* Controls (unchanged) */}
       <div style={{ display: "flex", gap: 6, marginBottom: 10, flexWrap: "wrap" }}>
         <div style={{ display: "flex", borderRadius: 9, overflow: "hidden", border: "1px solid rgba(255,255,255,0.1)" }}>
           <input value={pushVal} onChange={e => setPushVal(e.target.value)} onKeyDown={e => e.key === "Enter" && insertHead()} placeholder="val" type="number"
@@ -623,7 +963,7 @@ function VisIntro() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Nodes anatomy
+// VISUAL: Nodes anatomy (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisNodes() {
   const [mode, setMode] = useState("singly");
@@ -645,7 +985,6 @@ function VisNodes() {
 
       {mode === "singly" ? (
         <div>
-          {/* Node diagram */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
             <div style={{ position: "relative" }}>
               <div style={{ display: "flex", borderRadius: 16, overflow: "hidden", border: "2px solid #a78bfa", boxShadow: "0 0 40px rgba(167,139,250,0.3)", width: 220 }}>
@@ -685,7 +1024,6 @@ function VisNodes() {
             </div>
           </div>
 
-          {/* Python code */}
           <div style={{ padding: "10px 14px", borderRadius: 12, background: "rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.06)" }}>
             <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#2d3748", marginBottom: 5 }}>PYTHON</div>
             <pre style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, color: "#94a3b8", margin: 0, lineHeight: 1.75 }}>{`class Node:
@@ -696,7 +1034,6 @@ function VisNodes() {
         </div>
       ) : (
         <div>
-          {/* Doubly node diagram */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
             <div style={{ display: "flex", borderRadius: 16, overflow: "hidden", border: "2px solid #34d399", boxShadow: "0 0 40px rgba(52,211,153,0.25)", width: 260 }}>
               <div onMouseEnter={() => setHovered("prev")} onMouseLeave={() => setHovered(null)} style={{ width: 60, padding: "18px 10px", background: hovered === "prev" ? "rgba(251,191,36,0.2)" : "rgba(251,191,36,0.08)", cursor: "pointer", transition: "background 0.2s", display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
@@ -730,7 +1067,7 @@ function VisNodes() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Types
+// VISUAL: Types (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisTypes() {
   const [sel, setSel] = useState("singly");
@@ -813,7 +1150,7 @@ function VisTypes() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Operations — step-by-step animated
+// VISUAL: Operations — step-by-step animated (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisOps() {
   const [op, setOp] = useState(null);
@@ -959,7 +1296,7 @@ function VisOps() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Traversal — animated pointer walk
+// VISUAL: Traversal — animated pointer walk (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisTraversal() {
   const NODES = [
@@ -1000,47 +1337,49 @@ function VisTraversal() {
     <div>
       <div style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8.5, color: "#2d3748", marginBottom: 10, letterSpacing: "0.08em" }}>LINEAR TRAVERSAL — walking node by node</div>
 
-      {/* Nodes */}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 0, marginBottom: 20, overflowX: "auto", padding: "12px 4px" }}>
-        {NODES.map((node, i) => {
-          const isCurr = i === curr;
-          const isPassed = i < curr;
-          const isFound2 = found && i === curr;
-          return (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start" }}>
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
-                {/* Current pointer label */}
-                <div style={{ height: 18, display: "flex", alignItems: "center" }}>
-                  {isCurr && (
-                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: isFound2 ? "#4ade80" : node.c, fontWeight: 700, animation: "fUp 0.2s ease" }}>curr</span>
-                  )}
-                </div>
-                {isCurr && <div style={{ width: 2, height: 8, background: isFound2 ? "#4ade80" : node.c }} />}
-                {isCurr && <div style={{ fontSize: 10, color: isFound2 ? "#4ade80" : node.c, marginTop: -4 }}>▼</div>}
-                {!isCurr && <div style={{ height: 22 }} />}
+      {/* Nodes with horizontal scroll */}
+      <div style={{ overflowX: "auto", paddingBottom: 8 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", gap: 0, marginBottom: 20, minWidth: "max-content", padding: "12px 4px" }}>
+          {NODES.map((node, i) => {
+            const isCurr = i === curr;
+            const isPassed = i < curr;
+            const isFound2 = found && i === curr;
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "flex-start" }}>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+                  {/* Current pointer label */}
+                  <div style={{ height: 18, display: "flex", alignItems: "center" }}>
+                    {isCurr && (
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: isFound2 ? "#4ade80" : node.c, fontWeight: 700, animation: "fUp 0.2s ease" }}>curr</span>
+                    )}
+                  </div>
+                  {isCurr && <div style={{ width: 2, height: 8, background: isFound2 ? "#4ade80" : node.c }} />}
+                  {isCurr && <div style={{ fontSize: 10, color: isFound2 ? "#4ade80" : node.c, marginTop: -4 }}>▼</div>}
+                  {!isCurr && <div style={{ height: 22 }} />}
 
-                <div style={{
-                  display: "flex", borderRadius: 10, overflow: "hidden",
-                  border: `1.5px solid ${isCurr ? (isFound2 ? "#4ade80" : node.c) : isPassed ? `${node.c}30` : `${node.c}50`}`,
-                  boxShadow: isCurr ? `0 0 20px ${isFound2 ? "#4ade80" : node.c}50` : "none",
-                  transition: "all 0.3s",
-                  transform: isCurr ? "scale(1.1)" : "scale(1)",
-                }}>
-                  <div style={{ width: 42, height: 42, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: isCurr ? (isFound2 ? "rgba(74,222,128,0.25)" : `${node.c}25`) : isPassed ? "rgba(255,255,255,0.02)" : `${node.c}10`, transition: "all 0.3s" }}>
-                    <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, color: isPassed ? "#2d3748" : isCurr ? (isFound2 ? "#4ade80" : node.c) : node.c }}>{node.v}</span>
-                  </div>
-                  <div style={{ width: 24, height: 42, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.02)", borderLeft: `1px solid ${node.c}20`, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: i < NODES.length - 1 ? "#60a5fa" : "#ef4444" }}>
-                    {i < NODES.length - 1 ? "→" : "∅"}
+                  <div style={{
+                    display: "flex", borderRadius: 10, overflow: "hidden",
+                    border: `1.5px solid ${isCurr ? (isFound2 ? "#4ade80" : node.c) : isPassed ? `${node.c}30` : `${node.c}50`}`,
+                    boxShadow: isCurr ? `0 0 20px ${isFound2 ? "#4ade80" : node.c}50` : "none",
+                    transition: "all 0.3s",
+                    transform: isCurr ? "scale(1.1)" : "scale(1)",
+                  }}>
+                    <div style={{ width: 42, height: 42, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: isCurr ? (isFound2 ? "rgba(74,222,128,0.25)" : `${node.c}25`) : isPassed ? "rgba(255,255,255,0.02)" : `${node.c}10`, transition: "all 0.3s" }}>
+                      <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, color: isPassed ? "#2d3748" : isCurr ? (isFound2 ? "#4ade80" : node.c) : node.c }}>{node.v}</span>
+                    </div>
+                    <div style={{ width: 24, height: 42, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.02)", borderLeft: `1px solid ${node.c}20`, fontFamily: "'JetBrains Mono',monospace", fontSize: 10, color: i < NODES.length - 1 ? "#60a5fa" : "#ef4444" }}>
+                      {i < NODES.length - 1 ? "→" : "∅"}
+                    </div>
                   </div>
                 </div>
+                {i < NODES.length - 1 && <div style={{ width: 6, height: 2, background: "rgba(255,255,255,0.08)", marginTop: 58 }} />}
               </div>
-              {i < NODES.length - 1 && <div style={{ width: 6, height: 2, background: "rgba(255,255,255,0.08)", marginTop: 58 }} />}
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* Controls */}
+      {/* Controls (unchanged) */}
       <div style={{ display: "flex", gap: 7, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
         <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#2d3748" }}>SEARCH:</span>
         {NODES.map((n, i) => (
@@ -1070,7 +1409,7 @@ function VisTraversal() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Advanced — Two Pointer & Reverse
+// VISUAL: Advanced — Two Pointer & Reverse (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisAdvanced() {
   const [mode, setMode] = useState("twoptr");
@@ -1146,21 +1485,23 @@ function VisAdvanced() {
           <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#94a3b8", marginBottom: 12, lineHeight: 1.6 }}>
             Fast pointer moves <strong style={{ color: "#fbbf24" }}>2 steps</strong>, slow moves <strong style={{ color: "#34d399" }}>1 step</strong>. When fast hits end, slow is at the <strong style={{ color: "#f472b6" }}>middle</strong>.
           </div>
-          <div style={{ display: "flex", alignItems: "flex-start", gap: 0, marginBottom: 14, overflowX: "auto", padding: "28px 4px 4px" }}>
-            {NODES_VALS.map((v, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start" }}>
-                <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                  {/* Pointer labels */}
-                  <div style={{ height: 22, display: "flex", gap: 3, alignItems: "center" }}>
-                    {i === slow && slow !== -1 && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: done ? "#f472b6" : "#34d399", fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: done ? "rgba(244,114,182,0.15)" : "rgba(52,211,153,0.15)" }}>S</span>}
-                    {i === fast && fast !== -1 && fast !== slow && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#fbbf24", fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "rgba(251,191,36,0.15)" }}>F</span>}
-                    {i === fast && fast === slow && slow !== -1 && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#a78bfa", fontWeight: 700 }}>S/F</span>}
+          <div style={{ overflowX: "auto", paddingBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 0, marginBottom: 14, minWidth: "max-content", padding: "28px 4px 4px" }}>
+              {NODES_VALS.map((v, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "flex-start" }}>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                    {/* Pointer labels */}
+                    <div style={{ height: 22, display: "flex", gap: 3, alignItems: "center" }}>
+                      {i === slow && slow !== -1 && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: done ? "#f472b6" : "#34d399", fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: done ? "rgba(244,114,182,0.15)" : "rgba(52,211,153,0.15)" }}>S</span>}
+                      {i === fast && fast !== -1 && fast !== slow && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#fbbf24", fontWeight: 700, padding: "1px 5px", borderRadius: 4, background: "rgba(251,191,36,0.15)" }}>F</span>}
+                      {i === fast && fast === slow && slow !== -1 && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 8, color: "#a78bfa", fontWeight: 700 }}>S/F</span>}
+                    </div>
+                    <div style={{ width: 42, height: 42, borderRadius: 10, border: `1.5px solid ${i === slow && done ? "#f472b6" : i === fast && fast !== -1 ? "#fbbf24" : i === slow && slow !== -1 ? "#34d399" : "rgba(255,255,255,0.12)"}`, display: "flex", alignItems: "center", justifyContent: "center", background: i === slow && done ? "rgba(244,114,182,0.2)" : i === fast && fast !== -1 && fast !== slow ? "rgba(251,191,36,0.15)" : i === slow && slow !== -1 ? "rgba(52,211,153,0.15)" : "rgba(255,255,255,0.03)", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, color: i === slow && done ? "#f472b6" : "rgba(255,255,255,0.7)", transition: "all 0.3s", boxShadow: i === slow && done ? "0 0 20px rgba(244,114,182,0.4)" : "none" }}>{v}</div>
                   </div>
-                  <div style={{ width: 42, height: 42, borderRadius: 10, border: `1.5px solid ${i === slow && done ? "#f472b6" : i === fast && fast !== -1 ? "#fbbf24" : i === slow && slow !== -1 ? "#34d399" : "rgba(255,255,255,0.12)"}`, display: "flex", alignItems: "center", justifyContent: "center", background: i === slow && done ? "rgba(244,114,182,0.2)" : i === fast && fast !== -1 && fast !== slow ? "rgba(251,191,36,0.15)" : i === slow && slow !== -1 ? "rgba(52,211,153,0.15)" : "rgba(255,255,255,0.03)", fontFamily: "'JetBrains Mono',monospace", fontSize: 13, fontWeight: 700, color: i === slow && done ? "#f472b6" : "rgba(255,255,255,0.7)", transition: "all 0.3s", boxShadow: i === slow && done ? "0 0 20px rgba(244,114,182,0.4)" : "none" }}>{v}</div>
+                  {i < NODES_VALS.length - 1 && <div style={{ width: 14, height: 2, background: "rgba(255,255,255,0.08)", marginTop: 53 }} />}
                 </div>
-                {i < NODES_VALS.length - 1 && <div style={{ width: 14, height: 2, background: "rgba(255,255,255,0.08)", marginTop: 53 }} />}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
           <div style={{ display: "flex", gap: 7, marginBottom: 8 }}>
             <button onClick={resetTP} style={{ padding: "5px 12px", borderRadius: 20, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#475569" }}>↺</button>
@@ -1176,31 +1517,33 @@ function VisAdvanced() {
             Three pointers: <strong style={{ color: "#f87171" }}>prev</strong>, <strong style={{ color: "#fbbf24" }}>curr</strong>, <strong style={{ color: "#34d399" }}>next</strong>. Flip each arrow. O(n) time, O(1) space.
           </div>
           {/* Rev nodes */}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 12, flexWrap: "wrap" }}>
-            {revNodes.map((v, i) => {
-              const rs = REV_STEPS[revStep];
-              const isFlipped = rs.arrows.some(a => a.from === i);
-              const isCurr = i === rs.curr;
-              const isPrev = i === rs.prev;
-              return (
-                <div key={i} style={{ display: "flex", alignItems: "center" }}>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-                    <div style={{ height: 14, display: "flex", gap: 2 }}>
-                      {isCurr && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 7, color: "#fbbf24", fontWeight: 700 }}>curr</span>}
-                      {isPrev && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 7, color: "#f87171", fontWeight: 700 }}>prev</span>}
+          <div style={{ overflowX: "auto", paddingBottom: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 4, marginBottom: 12, minWidth: "max-content" }}>
+              {revNodes.map((v, i) => {
+                const rs = REV_STEPS[revStep];
+                const isFlipped = rs.arrows.some(a => a.from === i);
+                const isCurr = i === rs.curr;
+                const isPrev = i === rs.prev;
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center" }}>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+                      <div style={{ height: 14, display: "flex", gap: 2 }}>
+                        {isCurr && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 7, color: "#fbbf24", fontWeight: 700 }}>curr</span>}
+                        {isPrev && <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 7, color: "#f87171", fontWeight: 700 }}>prev</span>}
+                      </div>
+                      <div style={{ width: 38, height: 38, borderRadius: 9, border: `1.5px solid ${isCurr ? "#fbbf24" : isPrev ? "#f87171" : isFlipped ? "#34d399" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", background: isCurr ? "rgba(251,191,36,0.2)" : isPrev ? "rgba(248,113,133,0.15)" : isFlipped ? "rgba(52,211,153,0.1)" : "rgba(255,255,255,0.03)", fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, color: isCurr ? "#fbbf24" : isPrev ? "#f87171" : isFlipped ? "#34d399" : "#94a3b8", transition: "all 0.35s" }}>{v}</div>
                     </div>
-                    <div style={{ width: 38, height: 38, borderRadius: 9, border: `1.5px solid ${isCurr ? "#fbbf24" : isPrev ? "#f87171" : isFlipped ? "#34d399" : "rgba(255,255,255,0.1)"}`, display: "flex", alignItems: "center", justifyContent: "center", background: isCurr ? "rgba(251,191,36,0.2)" : isPrev ? "rgba(248,113,133,0.15)" : isFlipped ? "rgba(52,211,153,0.1)" : "rgba(255,255,255,0.03)", fontFamily: "'JetBrains Mono',monospace", fontSize: 12, fontWeight: 700, color: isCurr ? "#fbbf24" : isPrev ? "#f87171" : isFlipped ? "#34d399" : "#94a3b8", transition: "all 0.35s" }}>{v}</div>
+                    {i < revNodes.length - 1 && (
+                      <div style={{ width: 20, height: 2, background: isFlipped ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.1)", position: "relative" }}>
+                        {isFlipped && <span style={{ position: "absolute", left: -4, top: -7, fontSize: 10, color: "#34d399" }}>←</span>}
+                        {!isFlipped && <span style={{ position: "absolute", right: -4, top: -7, fontSize: 10, color: "rgba(255,255,255,0.2)" }}>→</span>}
+                      </div>
+                    )}
                   </div>
-                  {i < revNodes.length - 1 && (
-                    <div style={{ width: 20, height: 2, background: isFlipped ? "rgba(52,211,153,0.4)" : "rgba(255,255,255,0.1)", position: "relative" }}>
-                      {isFlipped && <span style={{ position: "absolute", left: -4, top: -7, fontSize: 10, color: "#34d399" }}>←</span>}
-                      {!isFlipped && <span style={{ position: "absolute", right: -4, top: -7, fontSize: 10, color: "rgba(255,255,255,0.2)" }}>→</span>}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-            <div style={{ marginLeft: 4, fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#ef4444", padding: "3px 8px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>NULL</div>
+                );
+              })}
+              <div style={{ marginLeft: 4, fontFamily: "'JetBrains Mono',monospace", fontSize: 9, color: "#ef4444", padding: "3px 8px", borderRadius: 8, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>NULL</div>
+            </div>
           </div>
           <div style={{ padding: "8px 12px", borderRadius: 10, background: "rgba(251,191,36,0.08)", border: "1px solid rgba(251,191,36,0.2)", marginBottom: 10 }}>
             <div style={{ fontFamily: "'DM Sans',sans-serif", fontSize: 12, color: "#fbbf24", lineHeight: 1.6 }}>{REV_STEPS[revStep].desc}</div>
@@ -1218,7 +1561,7 @@ function VisAdvanced() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// VISUAL: Memory model comparison
+// VISUAL: Memory model comparison (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function VisMemory() {
   const [mode, setMode] = useState("array");
@@ -1292,7 +1635,7 @@ function VisMemory() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// COMPLEXITY TABLE
+// COMPLEXITY TABLE (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function ComplexityTable() {
   const [hov, setHov] = useState(null);
@@ -1342,7 +1685,7 @@ function ComplexityTable() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// CONFETTI
+// CONFETTI (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function Confetti() {
   const pieces = Array.from({ length: 36 }, (_, i) => ({
@@ -1365,7 +1708,7 @@ function Confetti() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// QUIZ
+// QUIZ (unchanged)
 // ═══════════════════════════════════════════════════════════════════════════════
 function Quiz({ onDone }) {
   const QS = [
@@ -1441,8 +1784,10 @@ export default function LinkedListPage() {
   const [active, setActive] = useState("intro");
   const [qScore, setQScore] = useState(null);
   const [qTotal, setQTotal] = useState(null);
+  const [speed, setSpeed] = useState(1.25);
   const [seenSections, setSeenSections] = useState(new Set());
   const [showConfetti, setShowConfetti] = useState(false);
+  const [navOpen, setNavOpen] = useState(true);
   const currentNarr = useRef(null);
 
   useEffect(() => {
@@ -1451,7 +1796,6 @@ export default function LinkedListPage() {
     lk.href = "https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;700&display=swap";
     document.head.appendChild(lk);
 
-    // Clash Display via CDN
     const lk2 = document.createElement("link");
     lk2.rel = "stylesheet";
     lk2.href = "https://api.fontshare.com/v2/css?f[]=clash-display@400,500,600,700&display=swap";
@@ -1502,9 +1846,17 @@ export default function LinkedListPage() {
     else {
       currentNarr.current = { id, text };
       setSpeaking(id);
-      voiceSpeak(text, () => { setSpeaking(null); currentNarr.current = null; });
+      voiceSpeak(text, () => { setSpeaking(null); currentNarr.current = null; }, currentRate);
     }
   }, [speaking]);
+
+  const handleRestart = useCallback(() => {
+    if (currentNarr.current) {
+      const { id, text } = currentNarr.current;
+      voiceStop();
+      setTimeout(() => voiceSpeak(text, () => { setSpeaking(null); currentNarr.current = null; }, currentRate), 80);
+    }
+  }, []);
 
   const handleStop = useCallback(() => { voiceStop(); setSpeaking(null); currentNarr.current = null; }, []);
 
@@ -1609,18 +1961,27 @@ export default function LinkedListPage() {
         @keyframes slideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
         @keyframes wave{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
         @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}80%{opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+        @keyframes panelPop{from{opacity:0;transform:translateY(-8px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
 
         @media(max-width:760px){
           .sg{grid-template-columns:1fr !important}
-          .nav-pills button{width:30px !important;height:30px !important;font-size:13px !important}
         }
       `}</style>
 
       {showConfetti && <Confetti />}
       <ProgressBar />
-      <StickyNav active={active} speaking={!!speaking} seenCount={seenSections.size} />
+      <RightSidebar
+        active={active}
+        speaking={!!speaking}
+        speed={speed}
+        setSpeed={setSpeed}
+        onRestart={handleRestart}
+        seenCount={seenSections.size}
+        open={navOpen}
+        setOpen={setNavOpen}
+      />
       <BackToTop />
-      <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} />
+      <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} speed={speed} />
 
       <Hero onStart={goIntro} onVoice={() => handleVoice("__hero__", NARR.intro)} />
 
