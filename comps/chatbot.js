@@ -170,6 +170,214 @@ const SPEED_OPTIONS = [
   { label: "2×",    rate: 2.0  },
 ];
 
+const EXPLAIN_TRIGGERS = [
+  "explain", "what is", "how does", "teach", "understand", "why", "difference between",
+];
+const CODE_ONLY_TRIGGERS = [
+  "code only", "only code", "just code", "give code", "show code", "provide code", "code for",
+  "binary search code", "dfs code", "bfs code", "implementation",
+];
+
+const TOPIC_EXAMPLES = {
+  "binary search": {
+    python: `def binary_search(arr, target):
+    left, right = 0, len(arr) - 1
+    while left <= right:
+        mid = (left + right) // 2
+        if arr[mid] == target:
+            return mid
+        if arr[mid] < target:
+            left = mid + 1
+        else:
+            right = mid - 1
+    return -1`,
+    javascript: `function binarySearch(arr, target) {
+  let left = 0, right = arr.length - 1;
+  while (left <= right) {
+    const mid = (left + right) >> 1;
+    if (arr[mid] === target) return mid;
+    if (arr[mid] < target) left = mid + 1;
+    else right = mid - 1;
+  }
+  return -1;
+}`,
+  },
+  bfs: {
+    python: `from collections import deque
+
+def bfs(graph, src):
+    q = deque([src])
+    seen = {src}
+    order = []
+    while q:
+        node = q.popleft()
+        order.append(node)
+        for nei in graph[node]:
+            if nei not in seen:
+                seen.add(nei)
+                q.append(nei)
+    return order`,
+    javascript: `function bfs(graph, src) {
+  const q = [src];
+  const seen = new Set([src]);
+  const order = [];
+  while (q.length) {
+    const node = q.shift();
+    order.push(node);
+    for (const nei of graph[node]) {
+      if (!seen.has(nei)) {
+        seen.add(nei);
+        q.push(nei);
+      }
+    }
+  }
+  return order;
+}`,
+  },
+  dfs: {
+    python: `def dfs(graph, src, seen=None, order=None):
+    if seen is None:
+        seen, order = set(), []
+    seen.add(src)
+    order.append(src)
+    for nei in graph[src]:
+        if nei not in seen:
+            dfs(graph, nei, seen, order)
+    return order`,
+    javascript: `function dfs(graph, src, seen = new Set(), order = []) {
+  seen.add(src);
+  order.push(src);
+  for (const nei of graph[src]) {
+    if (!seen.has(nei)) dfs(graph, nei, seen, order);
+  }
+  return order;
+}`,
+  },
+  stack: {
+    python: `class Stack:
+    def __init__(self):
+        self.items = []
+    def push(self, x):
+        self.items.append(x)
+    def pop(self):
+        return self.items.pop() if self.items else None
+    def peek(self):
+        return self.items[-1] if self.items else None`,
+    javascript: `class Stack {
+  constructor() { this.items = []; }
+  push(x) { this.items.push(x); }
+  pop() { return this.items.length ? this.items.pop() : undefined; }
+  peek() { return this.items.length ? this.items[this.items.length - 1] : undefined; }
+}`,
+  },
+};
+
+function normalizeLangName(lang) {
+  const v = (lang || "").toLowerCase();
+  if (v.includes("python")) return "python";
+  if (v.includes("javascript") || v.includes("js")) return "javascript";
+  return "python";
+}
+
+function isExplainIntent(text) {
+  const t = (text || "").toLowerCase();
+  return EXPLAIN_TRIGGERS.some((s) => t.includes(s));
+}
+
+function isCodeOnlyIntent(text) {
+  const t = (text || "").toLowerCase().trim();
+  if (!t) return false;
+  if (CODE_ONLY_TRIGGERS.some((s) => t.includes(s))) return true;
+  if (/\b(write|give|show|provide)\b[\s\S]{0,30}\b(code|implementation)\b/.test(t)) return true;
+  if (/^\s*(code|implementation)\b/.test(t)) return true;
+  if (/\bwithout explanation\b/.test(t)) return true;
+  return false;
+}
+
+function detectTopic(text) {
+  const t = (text || "").toLowerCase();
+  const keys = Object.keys(TOPIC_EXAMPLES);
+  return keys.find((k) => t.includes(k)) || null;
+}
+
+function hasCodeBlock(text) {
+  return /```[\s\S]*?```/.test(text || "");
+}
+
+function hasSection(text, section) {
+  const rx = new RegExp(`\\*\\*\\s*${section}\\s*\\*\\*`, "i");
+  return rx.test(text || "");
+}
+
+function ensureSection(reply, section, content) {
+  if (hasSection(reply, section)) return reply;
+  return `${reply.trim()}\n\n**${section}**\n${content}`;
+}
+
+function fallbackExample(topic, lang) {
+  const l = normalizeLangName(lang);
+  const block = TOPIC_EXAMPLES[topic]?.[l];
+  if (!block) return null;
+  return `\n\n**Example code (${l})**\n\`\`\`${l}\n${block}\n\`\`\``;
+}
+
+function genericExample(lang) {
+  const l = normalizeLangName(lang);
+  if (l === "javascript") {
+    return `\n\n**Example code (javascript)**\n\`\`\`javascript
+function solve(input) {
+  // 1) Validate edge cases
+  if (!input || input.length === 0) return [];
+  // 2) Core logic
+  const out = [];
+  for (const x of input) out.push(x);
+  return out;
+}
+\`\`\``;
+  }
+  return `\n\n**Example code (python)**\n\`\`\`python
+def solve(arr):
+    # 1) Validate edge cases
+    if not arr:
+        return []
+    # 2) Core logic
+    out = []
+    for x in arr:
+        out.append(x)
+    return out
+\`\`\``;
+}
+
+function normalizeTutorResponse(reply, userText, lang) {
+  let out = (reply || "").trim();
+  if (!out) return "I could not generate a response. Try asking again with a specific DSA topic.";
+  const codeOnly = isCodeOnlyIntent(userText);
+  const topic = detectTopic(userText);
+  if (codeOnly) {
+    const codeBlocks = out.match(/```[\s\S]*?```/g);
+    if (codeBlocks?.length) return codeBlocks[0].trim();
+    const extra = topic ? fallbackExample(topic, lang) : genericExample(lang);
+    const m = extra.match(/```[\s\S]*?```/);
+    return m ? m[0].trim() : extra.trim();
+  }
+  if (isExplainIntent(userText)) {
+    out = ensureSection(out, "Concept", "- Core idea in one sentence.");
+    out = ensureSection(out, "Intuition", "- Think of the data flow and invariant at each step.");
+    out = ensureSection(out, "Complexity", "- Time and space complexity with one-line reasoning.");
+    out = ensureSection(out, "Edge cases", "- Empty input\n- Single element\n- Duplicates / ties\n- Invalid constraints");
+    if (!hasCodeBlock(out)) {
+      const extra = topic ? fallbackExample(topic, lang) : null;
+      out += (extra || genericExample(lang));
+    } else if (topic && !hasSection(out, "Example code")) {
+      out = ensureSection(out, "Example code", "- Included in the code block above.");
+    }
+    if (!hasSection(out, "Practice checklist")) {
+      out += `\n\n**Practice checklist**\n- Dry run on small inputs\n- Test edge cases\n- Verify time and space complexity\n- Re-implement without looking`;
+    }
+  }
+  return out;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // KNOWLEDGE CARD — replaces flowchart + reactions
 // A structured breakdown rendered from AI response metadata
@@ -632,6 +840,17 @@ function RichText({ content, cardData }) {
   // Strip markdown headings
   const cleaned = content.replace(/^(#{1,6})\s+/gm, "");
   const parts = cleaned.split(/(```(?:\w+)?\n?[\s\S]*?```)/g);
+  const sectionStyle = (key) => {
+    const map = {
+      concept:   { bd:"rgba(124,111,255,0.32)", bg:"rgba(124,111,255,0.09)", icon:"◎" },
+      intuition: { bd:"rgba(56,189,248,0.32)",  bg:"rgba(56,189,248,0.09)", icon:"💡" },
+      complexity:{ bd:"rgba(251,191,36,0.34)",  bg:"rgba(251,191,36,0.09)", icon:"⏱" },
+      edge:      { bd:"rgba(244,114,182,0.34)", bg:"rgba(244,114,182,0.09)", icon:"⚠" },
+      code:      { bd:"rgba(52,211,153,0.34)",  bg:"rgba(52,211,153,0.09)", icon:"</>" },
+      default:   { bd:"rgba(124,111,255,0.25)", bg:"rgba(124,111,255,0.05)", icon:"◈" },
+    };
+    return map[key] || map.default;
+  };
 
   return (
     <div style={{ margin:0, lineHeight:"1.74", wordBreak:"break-word" }}>
@@ -643,12 +862,48 @@ function RichText({ content, cardData }) {
           return <CodeBlock key={i} code={inner} lang={lang}/>;
         }
         const lines = part.split("\n");
+        let currentSection = null;
         return (
           <span key={i}>
             {lines.map((line, li) => {
               const isLast = li === lines.length-1;
               const bMatch = line.match(/^(\s*[-•*]\s+)(.*)/);
               const nMatch = line.match(/^(\s*\d+\.\s+)(.*)/);
+              const secMatch = line.match(/^\s*\*\*(Concept|Intuition|Complexity|Edge cases?|Example code(?:\s*\([^)]+\))?)\*\*:?\s*$/i);
+              if (secMatch) {
+                const rawSec = secMatch[1].toLowerCase();
+                const secKey = rawSec.startsWith("edge")
+                  ? "edge"
+                  : rawSec.startsWith("example code")
+                    ? "code"
+                    : rawSec;
+                currentSection = secKey;
+                const s = sectionStyle(secKey);
+                return (
+                  <div
+                    key={li}
+                    style={{
+                      margin:"12px 0 7px",
+                      padding:"7px 10px",
+                      borderRadius:"10px",
+                      border:`1px solid ${s.bd}`,
+                      background:s.bg,
+                      display:"inline-flex",
+                      alignItems:"center",
+                      gap:"7px",
+                      fontFamily:MONO,
+                      fontSize:"10px",
+                      color:TEXT_PRI,
+                      letterSpacing:"0.05em",
+                      textTransform:"uppercase",
+                      animation:"bot-tip-in 0.2s ease-out",
+                    }}
+                  >
+                    <span style={{ color:ACCENT3 }}>{s.icon}</span>
+                    {secMatch[1]}
+                  </div>
+                );
+              }
               const raw = bMatch ? bMatch[2] : nMatch ? nMatch[2] : line;
 
               // Inline token parsing: `code`, **bold**, ==highlight==
@@ -670,9 +925,10 @@ const inline = tokens.map((tok, ti) => {
 });
               let rendered;
               if (bMatch) {
+                const s = sectionStyle(currentSection || "default");
                 rendered = (
-                  <div key={li} style={{ display:"flex", gap:"8px", margin:"3px 0", paddingLeft:"4px" }}>
-                    <span style={{ color:ACCENT, fontWeight:700, flexShrink:0, marginTop:"1px", fontSize:"10px" }}>▸</span>
+                  <div key={li} style={{ display:"flex", gap:"8px", margin:"3px 0", paddingLeft:"4px", animation:"bot-suggestion-slide 0.18s ease-out" }}>
+                    <span style={{ color:s.bd.includes("244,114,182") ? "#f472b6" : ACCENT, fontWeight:700, flexShrink:0, marginTop:"1px", fontSize:"10px" }}>▸</span>
                     <span>{inline}</span>
                   </div>
                 );
@@ -1066,6 +1322,7 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
   const [showSpeeds, setShowSpeeds] = useState(false);
   const [streamDone, setStreamDone] = useState(!isStreaming);
   const speedRef = useRef(null);
+  const isCodeOnlyReply = !isUser && /^```[\s\S]*```$/.test((msg.content || "").trim());
 
   useEffect(()=>{ if (!isStreaming) setStreamDone(true); },[isStreaming]);
   useEffect(()=>{
@@ -1211,17 +1468,21 @@ function MessageBubble({ msg, idx, speakingIdx, onSpeak, onStopSpeak, voiceSpeed
           borderRadius: isUser ? "16px 4px 16px 16px" : "4px 16px 16px 16px",
           background: isUser
             ? "linear-gradient(135deg,rgba(124,111,255,0.22) 0%,rgba(56,189,248,0.1) 100%)"
-            : SURFACE,
-          border:`1px solid ${isUser ? "rgba(124,111,255,0.3)" : BORDER}`,
+            : isCodeOnlyReply
+              ? "linear-gradient(135deg,rgba(16,185,129,0.08),rgba(56,189,248,0.06))"
+              : SURFACE,
+          border:`1px solid ${isUser ? "rgba(124,111,255,0.3)" : isCodeOnlyReply ? "rgba(16,185,129,0.38)" : BORDER}`,
           boxShadow: isUser
             ? "0 4px 20px rgba(124,111,255,0.15)"
-            : "0 2px 12px rgba(0,0,0,0.3)",
+            : isCodeOnlyReply
+              ? "0 4px 20px rgba(16,185,129,0.18)"
+              : "0 2px 12px rgba(0,0,0,0.3)",
           position:"relative",
         }}>
           {!isUser && (
             <div style={{
               position:"absolute", top:0, left:"14px", right:"14px", height:"1px",
-              background:`linear-gradient(90deg,transparent,${ACCENT}40,transparent)`,
+              background:`linear-gradient(90deg,transparent,${isCodeOnlyReply ? "#10b98199" : ACCENT+"40"},transparent)`,
             }}/>
           )}
 
@@ -1580,6 +1841,14 @@ export default function ChatBot() {
   const sendMessage = useCallback(async(text)=>{
     const userText=(text??input).trim();
     if (!userText) return;
+    if (userText.length > 3200) {
+      setMessages(prev=>[...prev,{role:"assistant",content:"Input is too long. Please keep your question under 3200 characters and split it into parts.",time:getTime(),streamKey:Date.now()}]);
+      return;
+    }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setMessages(prev=>[...prev,{role:"assistant",content:"You appear to be offline. Please reconnect and try again.",time:getTime(),streamKey:Date.now()}]);
+      return;
+    }
     if (abortRef.current){abortRef.current.abort();abortRef.current=null;}
     stopSpeak(); soundEngine.playSend();
     setInput(""); setCharCount(0); setLoading(true); setStreamingIdx(null);
@@ -1590,16 +1859,23 @@ export default function ChatBot() {
 
     try {
       const lang=userLanguage||"Python";
-      const systemPrompt = `You are a concise, expert DSA tutor.
+      const codeOnlyMode = isCodeOnlyIntent(userText);
+      const systemPrompt = `You are VisuoSlayer AI, a world-class DSA teaching assistant.
 
 STRICT RULES:
 1. NEVER open with greetings, affirmations or filler.
-2. BEGIN immediately with technical content.
-3. Use **bold** for key terms, \`inline code\` for variables/complexities, fenced code blocks for algorithms.
-4. Use bullet points (-) for lists.
-5. Always include a working ${lang} code example.
-6. Structure: Concept → intuition → complexity → code.
-7. NEVER use ### or ## or # headings. Write section labels as plain **bold** text instead.
+2. BEGIN immediately with technical teaching content.
+3. CURRENT MODE: ${codeOnlyMode ? "CODE_ONLY" : "TEACH_OR_MIXED"}.
+   - If CODE_ONLY: respond with ONLY one fenced ${lang} code block and nothing else.
+   - No prose, no bullets, no headings, no notes in CODE_ONLY mode.
+3. Use this section order when user asks to explain a topic:
+   **Concept** → **Intuition** → **Complexity** → **Example code (${lang})** → **Edge cases**.
+4. Use bullet points (-) for lists and short, scan-friendly lines.
+5. Always include at least one correct working ${lang} code example for explanation queries.
+6. Mention edge cases explicitly.
+7. NEVER use markdown headings (#, ##, ###). Use only bold section labels.
+8. If user asks comparison, produce a compact side-by-side style bullet comparison.
+10. If user asks for interview prep, include quick pitfalls + follow-up questions.
 
 After your explanation, output a JSON knowledge card inside <CARD></CARD> tags. Use this exact format:
 <CARD>
@@ -1629,7 +1905,9 @@ After your explanation, output a JSON knowledge card inside <CARD></CARD> tags. 
 
 Supported timeComplexity values: O(1), O(log n), O(n), O(n log n), O(n²), O(2ⁿ)`;
 
-      const historyForApi=[...messages,userMsg].map(m=>({role:m.role,content:m.content}));
+      const historyForApi=[...messages,userMsg]
+        .slice(-16)
+        .map(m=>({role:m.role,content:m.content}));
       const res=await fetch("/api/chat",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({messages:[{role:"system",content:systemPrompt},...historyForApi]}),
@@ -1644,9 +1922,17 @@ Supported timeComplexity values: O(1), O(log n), O(n), O(n log n), O(n²), O(2�
       let cardData=null;
       const cardMatch=reply.match(/<CARD>([\s\S]*?)<\/CARD>/);
       if (cardMatch) {
-        try { cardData=JSON.parse(cardMatch[1].trim()); } catch {}
+        try {
+          cardData=JSON.parse(cardMatch[1].trim());
+        } catch {
+          try {
+            const repaired=cardMatch[1].trim().replace(/,\s*([}\]])/g, "$1");
+            cardData=JSON.parse(repaired);
+          } catch {}
+        }
         reply=reply.replace(/<CARD>[\s\S]*?<\/CARD>/g,"").trim();
       }
+      reply = normalizeTutorResponse(reply, userText, lang);
 
       setMessages(prev=>{
         const next=[...prev,{role:"assistant",content:reply,time:getTime(),streamKey,card:cardData}];
@@ -1668,6 +1954,8 @@ Supported timeComplexity values: O(1), O(log n), O(n), O(n log n), O(n²), O(2�
 
   if (!mounted) return null;
   const hasMessages=messages.length>0;
+  const codeOnlyMode = isCodeOnlyIntent(input);
+  const explainMode = !codeOnlyMode && isExplainIntent(input);
   const chatPaddingH=isMobile?"12px":"clamp(14px,4vw,72px)";
 
   return (
@@ -1707,6 +1995,7 @@ Supported timeComplexity values: O(1), O(log n), O(n), O(n log n), O(n²), O(2�
         @keyframes bot-tip-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
         @keyframes bot-mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)}50%{box-shadow:0 0 0 7px rgba(239,68,68,0)}}
         @keyframes bot-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+        @keyframes bot-mode-pill{0%,100%{transform:translateY(0)}50%{transform:translateY(-1px)}}
 
         .bot-msg-in{animation:bot-msg-in 0.3s cubic-bezier(0.22,1,0.36,1) both;}
         .bot-scroll{scrollbar-width:thin;scrollbar-color:rgba(124,111,255,0.18) transparent;overscroll-behavior:contain;}
@@ -1719,6 +2008,7 @@ Supported timeComplexity values: O(1), O(log n), O(n), O(n log n), O(n²), O(2�
         .bot-send{transition:all 0.16s cubic-bezier(0.22,1,0.36,1);-webkit-tap-highlight-color:transparent;}
         .bot-send:hover:not(:disabled){transform:scale(1.08) rotate(6deg);}
         .bot-send:active:not(:disabled){transform:scale(0.92);}
+        .bot-mode-pill{animation:bot-mode-pill 1.8s ease-in-out infinite;}
 
         @media(min-width:601px){
           .bot-msgs-inner{max-width:860px;margin:0 auto;width:100%;}
@@ -1850,6 +2140,23 @@ Supported timeComplexity values: O(1), O(log n), O(n), O(n log n), O(n²), O(2�
               <div style={{ position:"absolute",top:0,left:0,right:0,height:"2px",background:`linear-gradient(90deg,${ACCENT},${ACCENT3},${ACCENT})`,backgroundSize:"200% 100%",animation:"bot-logo-shimmer 1.4s linear infinite",borderRadius:"0 0 2px 2px" }}/>
             )}
             <div className="bot-input-inner">
+              <div style={{display:"flex",alignItems:"center",gap:"6px",marginBottom:"6px",minHeight:"18px"}}>
+                {codeOnlyMode && (
+                  <span className="bot-mode-pill" style={{fontFamily:MONO,fontSize:"8px",letterSpacing:"0.08em",padding:"2px 8px",borderRadius:"999px",border:"1px solid rgba(16,185,129,0.4)",background:"rgba(16,185,129,0.12)",color:"#6ee7b7"}}>
+                    MODE: CODE ONLY
+                  </span>
+                )}
+                {explainMode && (
+                  <span className="bot-mode-pill" style={{fontFamily:MONO,fontSize:"8px",letterSpacing:"0.08em",padding:"2px 8px",borderRadius:"999px",border:"1px solid rgba(56,189,248,0.4)",background:"rgba(56,189,248,0.12)",color:"#7dd3fc"}}>
+                    MODE: TEACH
+                  </span>
+                )}
+                {!codeOnlyMode && !explainMode && input.trim() && (
+                  <span style={{fontFamily:MONO,fontSize:"8px",letterSpacing:"0.08em",padding:"2px 8px",borderRadius:"999px",border:"1px solid rgba(124,111,255,0.32)",background:"rgba(124,111,255,0.1)",color:"#c4b5fd"}}>
+                    MODE: SMART
+                  </span>
+                )}
+              </div>
               <div style={{ display:"flex",alignItems:"flex-end",gap:"7px",background:inputFoc?"rgba(124,111,255,0.06)":"rgba(255,255,255,0.022)",border:`1px solid ${inputFoc?"rgba(124,111,255,0.45)":BORDER2}`,borderRadius:"13px",padding:"9px 9px 9px 12px",transition:"all 0.22s cubic-bezier(0.22,1,0.36,1)",boxShadow:inputFoc?"0 0 0 3px rgba(124,111,255,0.09)":"none" }}>
                 <textarea ref={el=>{inputRef.current=el;textareaRef.current=el;}} value={input} onChange={handleInput} onKeyDown={handleKey} onFocus={()=>setInputFoc(true)} onBlur={()=>setInputFoc(false)} placeholder="Ask any DSA question…" rows={1} style={{ flex:1,background:"none",border:"none",outline:"none",fontFamily:SANS,fontSize:"13px",color:TEXT_PRI,fontWeight:400,resize:"none",lineHeight:"1.55",maxHeight:"96px",overflow:"auto",minHeight:"22px",caretColor:ACCENT3,padding:0 }}/>
                 {charCount>0&&<span style={{ fontFamily:MONO,fontSize:"8px",color:charCount>400?"#f472b6":TEXT_DIM,alignSelf:"center",flexShrink:0,transition:"color 0.2s" }}>{charCount}</span>}

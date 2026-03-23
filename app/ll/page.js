@@ -1748,9 +1748,15 @@ export default function LinkedListPage() {
   const [validating, setValidating] = useState(false);
   const [aiErrors,   setAiErrors]   = useState([]);
   const [termLines,  setTermLines]  = useState([]);
-  const [sessionId]                 = useState(() => Math.random().toString(36).slice(2,8).toUpperCase());
+  const [sessionId,  setSessionId]  = useState("");
+  const [mounted,    setMounted]    = useState(false);
   const [toast,      setToast]      = useState(null);
   const [termOpen,   setTermOpen]   = useState(true);
+
+  useEffect(() => {
+    setMounted(true);
+    setSessionId(Math.random().toString(36).slice(2,8).toUpperCase());
+  }, []);
   const [activeSection, setActiveSection] = useState("code");
 
   const isMobile = useIsMobile();
@@ -2171,7 +2177,7 @@ export default function LinkedListPage() {
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>
               <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:lm.accent, background:`${lm.accent}14`, border:`1px solid ${lm.accent}30`, padding:"1px 7px", borderRadius:16, fontWeight:800 }}>{lm.ext}</span>
-              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:6.5, color:"var(--text-muted)", padding:"1px 5px", borderRadius:12, border:"1px solid var(--border-subtle)", background:"var(--surface-2)" }}>{sessionId}</span>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:6.5, color:"var(--text-muted)", padding:"1px 5px", borderRadius:12, border:"1px solid var(--border-subtle)", background:"var(--surface-2)" }}>{mounted ? sessionId : "------"}</span>
             </div>
           </header>
 
@@ -2216,7 +2222,7 @@ export default function LinkedListPage() {
                 <div className="mob-ph">
                   <span className="dot" style={{ background:"#ff5f57" }} /><span className="dot" style={{ background:"#ffbd2e" }} /><span className="dot" style={{ background:"#28c840" }} />
                   <span className="ptl">visualoslayer — bash</span>
-                  <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:7, color:"var(--text-muted)" }}>pid:{sessionId}</span>
+                  <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:7, color:"var(--text-muted)" }}>pid:{mounted ? sessionId : "------"}</span>
                 </div>
                 <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx} />
               </div>
@@ -2443,7 +2449,7 @@ export default function LinkedListPage() {
           <div className="hd-r">
             <div className="hd-ds-badge">SINGLY LINKED LIST</div>
             <div className="hd-pill" style={{ color:lm.accent, background:`${lm.accent}14`, border:`1px solid ${lm.accent}30` }}>{lm.name}</div>
-            <div className="hd-pid">pid:{sessionId}</div>
+            <div className="hd-pid">pid:{mounted ? sessionId : "------"}</div>
           </div>
         </header>
 
@@ -2484,7 +2490,7 @@ export default function LinkedListPage() {
                   <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }} />
                   <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }} />
                   <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px", userSelect:"none" }}>visualoslayer — bash</span>
-                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)", marginLeft:8 }}>pid:{sessionId}</span>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)", marginLeft:8 }}>pid:{mounted ? sessionId : "------"}</span>
                   <button className="term-toggle" onClick={() => setTermOpen(false)}>▾</button>
                 </div>
                 <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx} />

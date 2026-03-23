@@ -27,6 +27,9 @@ const OP = {
   size:         { label:"SIZE",       icon:"#", c:"#a78bfa", bg:"rgba(167,139,250,0.1)", bd:"rgba(167,139,250,0.35)" },
 };
 
+// ──────────────────────────────────────────────────────────────────────────────
+// LANGUAGE SUPPORT (ordered: C, C++, Java, Go, Python, JavaScript)
+// ──────────────────────────────────────────────────────────────────────────────
 const LANGS = {
   c:          { name:"C",          ext:"C",   accent:"#a8daff" },
   cpp:        { name:"C++",        ext:"C++", accent:"#00b4d8" },
@@ -38,6 +41,9 @@ const LANGS = {
 
 const LINE_H = 21;
 
+// ══════════════════════════════════════════════════════════════════════════════
+// QUEUE CODE TEMPLATES (complete working implementations)
+// ══════════════════════════════════════════════════════════════════════════════
 const TPL = {
 c: `// Queue implementation — C (circular buffer)
 #include <stdio.h>
@@ -186,7 +192,7 @@ public class Main {
     }
 }`,
 
-go: `// Queue implementation — Go (slice-based)
+go: `// Queue implementation — Go (slice‑based)
 package main
 
 import "fmt"
@@ -320,11 +326,13 @@ function parseCQueue(code) {
   const queue = [];
   const lines = code.split("\n");
 
+  // Find main() body
   const mainMatch = code.match(/int\s+main\s*\([^)]*\)\s*\{([\s\S]*)/);
   if (!mainMatch) {
     return { steps: [], errors: ["No main() function found. Add a main() that calls enqueue/dequeue/front/isEmpty/size."] };
   }
 
+  let mainBody = "";
   let depth = 0;
   let started = false;
   const mainStart = code.indexOf(mainMatch[0]);
@@ -332,13 +340,14 @@ function parseCQueue(code) {
   for (let ci = bodyStart; ci < code.length; ci++) {
     if (code[ci] === "{") { depth++; started = true; }
     else if (code[ci] === "}") { depth--; }
+    mainBody += code[ci];
     if (started && depth === 0) break;
   }
 
-  const mainBody = code.slice(bodyStart);
   const mainLines = mainBody.split("\n");
   const mainBodyStartLine = code.slice(0, bodyStart).split("\n").length - 1;
 
+  // Patterns
   const enqueueRe = /\b(enqueue|Enqueue|add|push)\s*\(\s*&?\w+\s*,\s*(-?[\d.]+)\s*\)/;
   const dequeueRe = /\b(dequeue|Dequeue|pop|remove)\s*\(\s*&?\w+\s*\)/;
   const frontRe   = /\b(front|Front|peek|top|first|head)\s*\(\s*&?\w+\s*\)/;
@@ -352,61 +361,103 @@ function parseCQueue(code) {
     const originalLineNum = mainBodyStartLine + li;
     const codeLine = lines[originalLineNum] ?? mainLines[li];
 
+    // Enqueue
     const enqMatch = line.match(enqueueRe);
     if (enqMatch) {
       const v = parseFloat(enqMatch[2]);
       queue.push(v);
-      steps.push({ type:"enqueue", value:v, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"enqueue",value:v,queue:[...queue]}) });
+      steps.push({
+        type: "enqueue", value: v, queue: [...queue],
+        lineNum: originalLineNum, codeLine: codeLine,
+        message: buildMessage({ type: "enqueue", value: v, queue: [...queue] })
+      });
       continue;
     }
+
+    // Dequeue
     if (dequeueRe.test(line)) {
       if (queue.length === 0) {
-        steps.push({ type:"dequeue_error", value:null, queue:[], lineNum:originalLineNum, codeLine, message:buildMessage({type:"dequeue_error"}) });
+        steps.push({
+          type: "dequeue_error", value: null, queue: [],
+          lineNum: originalLineNum, codeLine: codeLine,
+          message: buildMessage({ type: "dequeue_error" })
+        });
       } else {
         const v = queue.shift();
-        steps.push({ type:"dequeue", value:v, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"dequeue",value:v,queue:[...queue]}) });
+        steps.push({
+          type: "dequeue", value: v, queue: [...queue],
+          lineNum: originalLineNum, codeLine: codeLine,
+          message: buildMessage({ type: "dequeue", value: v, queue: [...queue] })
+        });
       }
       continue;
     }
+
+    // Front
     if (frontRe.test(line)) {
       if (queue.length === 0) {
-        steps.push({ type:"front_error", value:null, queue:[], lineNum:originalLineNum, codeLine, message:buildMessage({type:"front_error"}) });
+        steps.push({
+          type: "front_error", value: null, queue: [],
+          lineNum: originalLineNum, codeLine: codeLine,
+          message: buildMessage({ type: "front_error" })
+        });
       } else {
         const v = queue[0];
-        steps.push({ type:"front", value:v, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"front",value:v,queue:[...queue]}) });
+        steps.push({
+          type: "front", value: v, queue: [...queue],
+          lineNum: originalLineNum, codeLine: codeLine,
+          message: buildMessage({ type: "front", value: v, queue: [...queue] })
+        });
       }
       continue;
     }
+
+    // isEmpty
     if (isEmptyRe.test(line)) {
       const e = queue.length === 0;
-      steps.push({ type:"isEmpty", result:e, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"isEmpty",result:e,queue:[...queue]}) });
+      steps.push({
+        type: "isEmpty", result: e, queue: [...queue],
+        lineNum: originalLineNum, codeLine: codeLine,
+        message: buildMessage({ type: "isEmpty", result: e, queue: [...queue] })
+      });
       continue;
     }
+
+    // size
     if (sizeRe.test(line)) {
-      steps.push({ type:"size", result:queue.length, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"size",result:queue.length,queue:[...queue]}) });
+      steps.push({
+        type: "size", result: queue.length, queue: [...queue],
+        lineNum: originalLineNum, codeLine: codeLine,
+        message: buildMessage({ type: "size", result: queue.length, queue: [...queue] })
+      });
       continue;
     }
   }
 
   if (!steps.length) {
-    return { steps:[], errors:["No queue operations detected in main().\nCall enqueue(&q,N), dequeue(&q), front(&q), isEmpty(&q), or size(&q)."] };
+    return { steps: [], errors: ["No queue operations detected in main().\nCall enqueue(&q,N), dequeue(&q), front(&q), isEmpty(&q), or size(&q)."] };
   }
-  return { steps, errors:[] };
+  return { steps, errors: [] };
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// JAVASCRIPT REAL EXECUTION ENGINE
+// JAVASCRIPT REAL EXECUTION ENGINE (Queue version)
 // ══════════════════════════════════════════════════════════════════════════════
 function runJavaScript(code) {
   const classMatch = /\bclass\s+(\w+)/.exec(code);
   if (!classMatch) {
-    return { steps:[], errors:["No class definition found.\nWrite a Queue class with enqueue / dequeue / front / isEmpty methods, then use it below."] };
+    return { steps: [], errors: ["No class definition found.\nWrite a Queue class with enqueue / dequeue / front / isEmpty methods, then use it below."] };
   }
   const className = classMatch[1];
+
+  // Find data field (usually this.items)
   const fieldMatch = /this\.(\w+)\s*=\s*(?:\[\s*\]|new\s+Array\s*\(\s*\))/.exec(code);
   const field = fieldMatch?.[1] ?? "items";
+
   const classBlock = extractClassBlock(code, className);
-  if (!classBlock) return { steps:[], errors:[`Could not parse class '${className}'.`] };
+  if (!classBlock) {
+    return { steps: [], errors: [`Could not parse class '${className}'.`] };
+  }
   const execCode = code.slice(0, classBlock.start) + "\n" + code.slice(classBlock.end);
 
   const instrumented = `
@@ -414,32 +465,62 @@ function runJavaScript(code) {
 const __Q = [];
 class ${className} {
   constructor() { this.${field} = []; }
-  enqueue(v) { this.${field}.push(v); __Q.push({ type:"enqueue", value:v, queue:[...this.${field}] }); }
+
+  enqueue(v) {
+    this.${field}.push(v);
+    __Q.push({ type:"enqueue", value:v, queue:[...this.${field}] });
+  }
+
   dequeue() {
-    if (this.${field}.length === 0) { __Q.push({ type:"dequeue_error", value:null, queue:[] }); return undefined; }
-    const v = this.${field}.shift(); __Q.push({ type:"dequeue", value:v, queue:[...this.${field}] }); return v;
+    if (this.${field}.length === 0) {
+      __Q.push({ type:"dequeue_error", value:null, queue:[] });
+      return undefined;
+    }
+    const v = this.${field}.shift();
+    __Q.push({ type:"dequeue", value:v, queue:[...this.${field}] });
+    return v;
   }
+
   front() {
-    if (this.${field}.length === 0) { __Q.push({ type:"front_error", value:null, queue:[] }); return undefined; }
-    const v = this.${field}[0]; __Q.push({ type:"front", value:v, queue:[...this.${field}] }); return v;
+    if (this.${field}.length === 0) {
+      __Q.push({ type:"front_error", value:null, queue:[] });
+      return undefined;
+    }
+    const v = this.${field}[0];
+    __Q.push({ type:"front", value:v, queue:[...this.${field}] });
+    return v;
   }
-  peek() { return this.front(); }
-  top()  { return this.front(); }
-  isEmpty() { const e = this.${field}.length === 0; __Q.push({ type:"isEmpty", result:e, queue:[...this.${field}] }); return e; }
+
+  peek()   { return this.front(); } // alias
+  top()    { return this.front(); } // alias
+
+  isEmpty() {
+    const e = this.${field}.length === 0;
+    __Q.push({ type:"isEmpty", result:e, queue:[...this.${field}] });
+    return e;
+  }
+
   get size()   { return this.${field}.length; }
   get length() { return this.${field}.length; }
   toString()   { return "[Queue: " + this.${field}.join(", ") + "]"; }
 }
+
 ${execCode}
-return __Q;`.trim();
+return __Q;
+`.trim();
 
   let rawSteps;
   try {
+    const stubConsole = { log: () => {}, warn: () => {}, error: () => {}, info: () => {} };
     const fn = new Function("console", instrumented);
-    rawSteps = fn({ log:()=>{}, warn:()=>{}, error:()=>{}, info:()=>{} });
-  } catch (e) { return { steps:[], errors:[e.message] }; }
+    rawSteps = fn(stubConsole);
+  } catch (e) {
+    return { steps: [], errors: [e.message] };
+  }
 
-  if (!rawSteps?.length) return { steps:[], errors:["No queue operations were executed.\nCall enqueue(), dequeue(), front(), or isEmpty() on your queue instance after the class definition."] };
+  if (!rawSteps?.length) {
+    return { steps: [], errors: ["No queue operations were executed.\nCall enqueue(), dequeue(), front(), or isEmpty() on your queue instance after the class definition."] };
+  }
 
   const lines = code.split("\n");
   const callLineNums = [];
@@ -451,23 +532,37 @@ return __Q;`.trim();
   for (let i = classEndLine; i < lines.length; i++) {
     const t = lines[i].trim();
     if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) continue;
-    if (/\.(enqueue|dequeue|front|peek|top|isEmpty|is_empty|empty|size)\s*\(/.test(t)) callLineNums.push(i);
+    if (/\.(enqueue|dequeue|front|peek|top|isEmpty|is_empty|empty|size)\s*\(/.test(t)) {
+      callLineNums.push(i);
+    }
   }
+
   const steps = rawSteps.map((s, idx) => ({
-    ...s, lineNum:callLineNums[idx]??classEndLine, codeLine:lines[callLineNums[idx]??classEndLine]?.trim()??"", message:buildMessage(s),
+    ...s,
+    lineNum:  callLineNums[idx] ?? classEndLine,
+    codeLine: lines[callLineNums[idx] ?? classEndLine]?.trim() ?? "",
+    message:  buildMessage(s),
   }));
-  return { steps, errors:[] };
+
+  return { steps, errors: [] };
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// BRACE-COUNTING UTILITIES (reused)
+// ══════════════════════════════════════════════════════════════════════════════
 function countBraces(line) {
-  let opens = 0, closes = 0, inStr = false, strChar = "";
+  let opens = 0, closes = 0;
+  let inStr = false, strChar = "";
   const commentIdx = line.indexOf("//");
   const cleaned = commentIdx >= 0 ? line.slice(0, commentIdx) : line;
   for (let i = 0; i < cleaned.length; i++) {
     const ch = cleaned[i];
-    if (!inStr && (ch==='"'||ch==="'"||ch==="`")) { inStr=true; strChar=ch; continue; }
-    if (inStr && ch===strChar && cleaned[i-1]!=="\\") { inStr=false; continue; }
-    if (!inStr) { if(ch==="{") opens++; else if(ch==="}") closes++; }
+    if (!inStr && (ch === '"' || ch === "'" || ch === "`")) { inStr = true; strChar = ch; continue; }
+    if (inStr && ch === strChar && cleaned[i - 1] !== "\\") { inStr = false; continue; }
+    if (!inStr) {
+      if (ch === "{") opens++;
+      else if (ch === "}") closes++;
+    }
   }
   return { opens, closes };
 }
@@ -477,10 +572,17 @@ function extractClassBlock(code, className) {
   const match = re.exec(code);
   if (!match) return null;
   let depth = 1, i = match.index + match[0].length;
-  while (i < code.length && depth > 0) { if(code[i]==="{") depth++; else if(code[i]==="}") depth--; i++; }
-  return { text:code.slice(match.index,i), start:match.index, end:i };
+  while (i < code.length && depth > 0) {
+    if (code[i] === "{") depth++;
+    else if (code[i] === "}") depth--;
+    i++;
+  }
+  return { text: code.slice(match.index, i), start: match.index, end: i };
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// SCOPE-AWARE PARSER (Queue version)
+// ══════════════════════════════════════════════════════════════════════════════
 function parseScoped(code, lang) {
   if (lang === "python") return parsePython(code);
   return parseBraced(code, lang);
@@ -489,50 +591,88 @@ function parseScoped(code, lang) {
 function parsePython(code) {
   const lines = code.split("\n");
   const execLines = [];
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i], trimmed = line.trim();
+    const line = lines[i];
+    const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
+
     const indent = line.match(/^(\s*)/)?.[1]?.length ?? 0;
-    if (indent===0 && !trimmed.startsWith("class ") && !trimmed.startsWith("def ") && !trimmed.startsWith("import ") && !trimmed.startsWith("from ") && !trimmed.startsWith("if __name__")) {
-      execLines.push({ lineIdx:i, line:trimmed });
+    if (indent === 0 &&
+        !trimmed.startsWith("class ") &&
+        !trimmed.startsWith("def ") &&
+        !trimmed.startsWith("import ") &&
+        !trimmed.startsWith("from ") &&
+        !trimmed.startsWith("if __name__")) {
+      execLines.push({ lineIdx: i, line: trimmed });
     }
-    if (i>0 && lines[i-1].trim().includes("__main__") && indent===4) execLines.push({ lineIdx:i, line:trimmed });
+    if (i > 0 && lines[i-1].trim().includes("__main__") && indent === 4) {
+      execLines.push({ lineIdx: i, line: trimmed });
+    }
   }
+
   return simulateOps(execLines, code.split("\n"), lang);
 }
 
 function parseBraced(code, lang) {
   const lines = code.split("\n");
   const execLines = [];
-  let depth=0, inClass=false, classDepth=-1, inMain=false, mainDepth=-1, mlComment=false;
-  const needsMain = ["java","cpp","csharp","go","rust"];
+
+  let depth = 0;
+  let inClass = false, classDepth = -1;
+  let inMain = false, mainDepth = -1;
+  let mlComment = false;
+
+  const needsMain = ["java", "cpp", "csharp", "go", "rust"];
+
   for (let i = 0; i < lines.length; i++) {
-    const line = lines[i], trimmed = line.trim();
-    if (mlComment) { if(trimmed.includes("*/")) mlComment=false; continue; }
-    if (trimmed.startsWith("/*")) { mlComment=true; continue; }
-    if (trimmed.startsWith("//")||trimmed.startsWith("*")||trimmed.startsWith("#")||!trimmed) continue;
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    if (mlComment) {
+      if (trimmed.includes("*/")) mlComment = false;
+      continue;
+    }
+    if (trimmed.startsWith("/*")) { mlComment = true; continue; }
+    if (trimmed.startsWith("//") || trimmed.startsWith("*") || trimmed.startsWith("#")) continue;
+    if (!trimmed) continue;
+
     const { opens, closes } = countBraces(line);
     const depthBefore = depth;
     depth += opens - closes;
-    if (/\bclass\s+\w+/.test(trimmed)) { inClass=true; classDepth=depthBefore; }
-    if (needsMain.includes(lang)) {
-      if (/\bmain\s*\(/.test(trimmed)||/\bfunc\s+main\s*\(/.test(trimmed)) { inMain=true; mainDepth=depthBefore; }
+
+    if (/\bclass\s+\w+/.test(trimmed)) {
+      inClass = true;
+      classDepth = depthBefore;
     }
-    if (inClass&&depth<=classDepth) { inClass=false; classDepth=-1; }
-    if (inMain&&depth<=mainDepth)   { inMain=false;  mainDepth=-1;  }
+    if (needsMain.includes(lang)) {
+      if (/\bmain\s*\(/.test(trimmed) || /\bfunc\s+main\s*\(/.test(trimmed)) {
+        inMain = true;
+        mainDepth = depthBefore;
+      }
+    }
+    if (inClass && depth <= classDepth) { inClass = false; classDepth = -1; }
+    if (inMain  && depth <= mainDepth)  { inMain  = false; mainDepth  = -1; }
+
     const isExec = needsMain.includes(lang)
-      ? (inMain&&depth===mainDepth+1&&!inClass)
-      : (lang==="javascript"||lang==="typescript") ? (depth===0&&!inClass) : true;
-    if (isExec) execLines.push({ lineIdx:i, line:trimmed });
+      ? (inMain && depth === mainDepth + 1 && !inClass)
+      : (lang === "javascript" || lang === "typescript")
+        ? (depth === 0 && !inClass)
+        : true;
+
+    if (isExec) execLines.push({ lineIdx: i, line: trimmed });
   }
+
   return simulateOps(execLines, lines, lang);
 }
 
 function simulateOps(execLines, allLines, lang) {
-  const steps=[], errors=[], queue=[];
+  const steps = [], errors = [], queue = [];
+
+  // Regex patterns (case‑insensitive, with optional integer)
   const ENQUEUE_RE = [
     /\.(?:enqueue|Enqueue|add|append|push_back)\s*\(\s*(-?[\d.]+)\s*\)/,
-    /\bappend\s*\(\s*\w+\s*,\s*(-?[\d.]+)\s*\)/,
+    /\bappend\s*\(\s*\w+\s*,\s*(-?[\d.]+)\s*\)/, // Go append(q.items, N)
   ];
   const DEQUEUE_RE = /\.(?:dequeue|Dequeue|pop_front|remove_first|poll|shift)\s*\(\s*\)/;
   const FRONT_RE   = /\.(?:front|Front|peek|Peek|first|First|head|Head)\s*\(\s*\)/;
@@ -541,34 +681,59 @@ function simulateOps(execLines, allLines, lang) {
 
   for (const { lineIdx, line } of execLines) {
     const origLine = allLines[lineIdx]?.trim() ?? line;
+
+    // Enqueue
     let enqVal = null;
-    for (const re of ENQUEUE_RE) { const m=line.match(re); if(m){enqVal=parseFloat(m[1]);break;} }
-    if (enqVal!==null&&!isNaN(enqVal)) {
+    for (const re of ENQUEUE_RE) {
+      const m = line.match(re);
+      if (m) { enqVal = parseFloat(m[1]); break; }
+    }
+    if (enqVal !== null && !isNaN(enqVal)) {
       queue.push(enqVal);
       steps.push({ type:"enqueue", value:enqVal, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"enqueue",value:enqVal,queue:[...queue]}) });
       continue;
     }
+
+    // Dequeue
     if (DEQUEUE_RE.test(line)) {
-      if (queue.length===0) steps.push({ type:"dequeue_error", value:null, queue:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"dequeue_error"}) });
-      else { const v=queue.shift(); steps.push({ type:"dequeue", value:v, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"dequeue",value:v,queue:[...queue]}) }); }
+      if (queue.length === 0) {
+        steps.push({ type:"dequeue_error", value:null, queue:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"dequeue_error"}) });
+      } else {
+        const v = queue.shift();
+        steps.push({ type:"dequeue", value:v, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"dequeue",value:v,queue:[...queue]}) });
+      }
       continue;
     }
+
+    // Front
     if (FRONT_RE.test(line)) {
-      if (queue.length===0) steps.push({ type:"front_error", value:null, queue:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"front_error"}) });
-      else { const v=queue[0]; steps.push({ type:"front", value:v, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"front",value:v,queue:[...queue]}) }); }
+      if (queue.length === 0) {
+        steps.push({ type:"front_error", value:null, queue:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"front_error"}) });
+      } else {
+        const v = queue[0];
+        steps.push({ type:"front", value:v, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"front",value:v,queue:[...queue]}) });
+      }
       continue;
     }
+
+    // IsEmpty
     if (EMPTY_RE.test(line)) {
-      const e=queue.length===0;
+      const e = queue.length === 0;
       steps.push({ type:"isEmpty", result:e, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"isEmpty",result:e,queue:[...queue]}) });
       continue;
     }
+
+    // Size
     if (SIZE_RE.test(line)) {
       steps.push({ type:"size", result:queue.length, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"size",result:queue.length,queue:[...queue]}) });
       continue;
     }
   }
-  if (steps.length===0) errors.push("No queue operations detected in the execution body.\nMake sure you call enqueue(N), dequeue(), front(), isEmpty() or size() on your queue instance.\nValues must be numeric literals, e.g. enqueue(42).");
+
+  if (steps.length === 0) {
+    errors.push("No queue operations detected in the execution body.\nMake sure you call enqueue(N), dequeue(), front(), isEmpty() or size() on your queue instance.\nValues must be numeric literals, e.g. enqueue(42).");
+  }
+
   return { steps, errors };
 }
 
@@ -585,121 +750,199 @@ function buildMessage(s) {
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// AI VALIDATION (Queue version)
+// ══════════════════════════════════════════════════════════════════════════════
 async function validateWithAI(code, lang) {
-  if (code.trim().length < 10) return { valid:false, reason:"Code is empty.", errors:[{line:1,message:"Write a Queue implementation first."}], apiError:null };
+  if (code.trim().length < 10) {
+    return { valid: false, reason: "Code is empty.", errors: [{ line: 1, message: "Write a Queue implementation first." }], apiError: null };
+  }
+
   const prompt = `You are a strict code reviewer for a Queue data-structure visualizer.
+
 The user has written a Queue implementation in ${lang}. Your job:
 1. Check if it is a CORRECT and COMPLETE Queue implementation with at least enqueue and dequeue.
 2. Look for logic bugs: wrong FIFO order, dequeue not removing from front, front returning wrong element, isEmpty wrong condition, etc.
 3. Look for syntax errors that would prevent execution.
+
 Return ONLY valid JSON — no markdown, no explanation outside the JSON:
-{"valid":true|false,"reason":"one sentence summary","errors":[{"line":<1-based line number>,"message":"<what is wrong on this line>"}]}
-If valid is true, errors array must be empty [].
-Here is the code:\n\`\`\`${lang}\n${code}\n\`\`\``;
-  try {
-    const res = await fetch("/api/chat", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({messages:[{role:"user",content:prompt}]}) });
-    const data = await res.json();
-    if (data.error) return { valid:true, reason:`AI unavailable: ${data.error}`, errors:[], apiError:data.error };
-    const raw = data.content ?? "";
-    const cleaned = raw.replace(/```json|```/gi,"").trim();
-    const parsed = JSON.parse(cleaned);
-    return { valid:!!parsed.valid, reason:parsed.reason??"", errors:Array.isArray(parsed.errors)?parsed.errors:[], apiError:null };
-  } catch (e) { return { valid:true, reason:"", errors:[], apiError:e.message }; }
+{
+  "valid": true | false,
+  "reason": "one sentence summary",
+  "errors": [
+    { "line": <1-based line number>, "message": "<what is wrong on this line>" }
+  ]
 }
 
+If valid is true, errors array must be empty [].
+If valid is false, include at least one error with the exact line number (1-based) and a clear message.
+
+Here is the code:
+\`\`\`${lang}
+${code}
+\`\`\``;
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      return { valid: true, reason: `AI unavailable: ${data.error}`, errors: [], apiError: data.error };
+    }
+
+    const raw = data.content ?? "";
+    const cleaned = raw.replace(/```json|```/gi, "").trim();
+    const parsed = JSON.parse(cleaned);
+
+    return {
+      valid:    !!parsed.valid,
+      reason:   parsed.reason   ?? "",
+      errors:   Array.isArray(parsed.errors) ? parsed.errors : [],
+      apiError: null,
+    };
+  } catch (e) {
+    return { valid: true, reason: "", errors: [], apiError: e.message };
+  }
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// MASTER ENTRY POINT
+// ══════════════════════════════════════════════════════════════════════════════
 function runCode(code, lang) {
   const trimmed = code.trim();
-  if (!trimmed) return { steps:[], errors:["Please write some code first."] };
-  if (lang==="c") return parseCQueue(code);
-  if (lang==="javascript") return runJavaScript(code);
+  if (!trimmed) return { steps: [], errors: ["Please write some code first."] };
+
+  if (lang === "c") return parseCQueue(code);
+  if (lang === "javascript") return runJavaScript(code);
   return parseScoped(code, lang);
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// QUEUE VISUALIZATION COMPONENT
+// QUEUE VISUALIZATION COMPONENT (horizontal, mobile-optimized)
 // ══════════════════════════════════════════════════════════════════════════════
 function QueueViz({ step, animKey, idle, compact }) {
   const [flyItem, setFlyItem] = useState(null);
+
   useEffect(() => {
-    if (step?.type==="dequeue" && step.value!==null && step.value!==undefined) {
-      setFlyItem({ v:step.value, key:animKey });
+    if (step?.type === "dequeue" && step.value !== null && step.value !== undefined) {
+      setFlyItem({ v: step.value, key: animKey });
       const t = setTimeout(() => setFlyItem(null), 800);
       return () => clearTimeout(t);
     }
-    if (step?.type!=="dequeue") setFlyItem(null);
+    if (step?.type !== "dequeue") setFlyItem(null);
   }, [animKey, step?.type]);
 
   const queue   = step?.queue ?? [];
   const isEnq   = step?.type === "enqueue";
   const isFront = step?.type === "front";
+  const isEmpty = step?.type === "isEmpty";
   const isErr   = step?.type === "dequeue_error" || step?.type === "front_error";
   const frontVal = queue.length ? queue[0] : null;
 
+  // Metrics strip (same as stack but with Front/Back)
   const metrics = [
-    { lbl:"SIZE",   val:queue.length,                              c:"#60a5fa" },
-    { lbl:"FRONT",  val:frontVal ?? "—",                          c:"#fbbf24" },
-    { lbl:"BACK",   val:queue.length ? queue[queue.length-1] : "—", c:"#4ade80" },
-    { lbl:"POLICY", val:"FIFO",                                    c:"#a78bfa" },
+    { lbl:"SIZE",   val: queue.length,                         c:"#60a5fa" },
+    { lbl:"FRONT",  val: frontVal ?? "—",                     c:"#fbbf24" },
+    { lbl:"BACK",   val: queue.length ? queue[queue.length-1] : "—", c:"#4ade80" },
+    { lbl:"POLICY", val: "FIFO",                               c:"#a78bfa" },
   ];
 
-  const blockHeight   = compact ? 44 : 58;
+  // Responsive block sizes
+  const blockHeight = compact ? 44 : 58;
   const blockMinWidth = compact ? 70 : 90;
-  const fontSizeVal   = compact ? 16 : 18;
-  const fontSizeIdx   = compact ? 7  : 8.5;
-  const fontSizeTag   = compact ? 6.5: 8;
+  const fontSizeVal = compact ? 16 : 18;
+  const fontSizeIdx = compact ? 7 : 8.5;
+  const fontSizeTag = compact ? 6.5 : 8;
 
   return (
-    <div className={`qv${isErr?" qv-err":""}`} key={isErr?`e${animKey}`:"qv"}>
+    <div className={`qv${isErr ? " qv-err" : ""}`} key={isErr ? `e${animKey}` : "qv"}>
+
+      {/* Metrics bar */}
       <div className="qv-metrics">
-        {metrics.map((m) => (
+        {metrics.map((m, mi) => (
           <div className="qv-m" key={m.lbl}>
             <span className="qv-ml">{m.lbl}</span>
-            <span className="qv-mv" style={{ color:m.c, fontSize:compact?"12px":"15px" }}>{String(m.val)}</span>
+            <span className="qv-mv" style={{ color:m.c, fontSize: compact ? "12px" : "15px" }}>
+              {String(m.val)}
+            </span>
           </div>
         ))}
       </div>
+
+      {/* Horizontal queue row */}
       <div className="qv-row">
         <div className="qv-front-tag">FRONT →</div>
         <div className="qv-items">
-          {queue.length===0 && !flyItem ? (
-            <div className={`qv-empty${isErr?" qv-empty-err":""}`}>
-              <div className="qv-ei">{idle?"📚":isErr?"⚠":"∅"}</div>
-              <div className="qv-et">{idle?"Run code to start":isErr?"Queue underflow!":"Queue is empty"}</div>
+          {queue.length === 0 && !flyItem ? (
+            <div className={`qv-empty${isErr ? " qv-empty-err" : ""}`}>
+              <div className="qv-ei">{idle ? "📚" : isErr ? "⚠" : "∅"}</div>
+              <div className="qv-et">{idle ? "Run code to start" : isErr ? "Queue underflow!" : "Queue is empty"}</div>
             </div>
           ) : queue.map((v, idx) => {
-            const isFirst=idx===0, isLast=idx===queue.length-1;
-            const isNew=isLast&&isEnq, pk=isFirst&&isFront;
-            const c=col(v);
+            const isFirst = idx === 0;
+            const isLast  = idx === queue.length - 1;
+            const isNew   = isLast && isEnq;
+            const pk      = isFirst && isFront;
+            const c       = col(v);
             return (
-              <div key={`${v}-${idx}-${isNew?animKey:"s"}`}
-                className={["qv-block",isNew?"qv-enq":"",pk?"qv-front":"",isFirst?"qv-first":"",isLast?"qv-last":""].filter(Boolean).join(" ")}
-                style={{ height:`${blockHeight}px`, minWidth:`${blockMinWidth}px`, background:`linear-gradient(135deg,${c.g1},${c.g2})`, boxShadow:isFirst?`0 0 36px ${c.glow}, 0 6px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.22)`:`0 4px 14px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.12)`, borderColor:isFirst?c.border:"rgba(255,255,255,0.08)" }}
+              <div
+                key={`${v}-${idx}-${isNew ? animKey : "s"}`}
+                className={[
+                  "qv-block",
+                  isNew ? "qv-enq" : "",
+                  pk ? "qv-front" : "",
+                  isFirst ? "qv-first" : "",
+                  isLast ? "qv-last" : ""
+                ].filter(Boolean).join(" ")}
+                style={{
+                  height: `${blockHeight}px`,
+                  minWidth: `${blockMinWidth}px`,
+                  background: `linear-gradient(135deg,${c.g1},${c.g2})`,
+                  boxShadow: isFirst
+                    ? `0 0 36px ${c.glow}, 0 6px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.22)`
+                    : `0 4px 14px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.12)`,
+                  borderColor: isFirst ? c.border : "rgba(255,255,255,0.08)",
+                }}
               >
-                {pk&&<div className="qv-pk-ring"  key={`r1-${animKey}`} style={{borderColor:c.border}}/>}
-                {pk&&<div className="qv-pk-ring2" key={`r2-${animKey}`} style={{borderColor:c.border}}/>}
-                <span className="qv-bidx" style={{fontSize:fontSizeIdx}}>[{idx}]</span>
-                <span className="qv-bval" style={{fontSize:fontSizeVal}}>{v}</span>
-                {isFirst&&<span className="qv-btag" style={{fontSize:fontSizeTag}}>← FRONT</span>}
-                {isLast&&!isFirst&&<span className="qv-btag back" style={{fontSize:fontSizeTag}}>BACK →</span>}
+                {pk && <div className="qv-pk-ring"  key={`r1-${animKey}`} style={{ borderColor: c.border }} />}
+                {pk && <div className="qv-pk-ring2" key={`r2-${animKey}`} style={{ borderColor: c.border }} />}
+                <span className="qv-bidx" style={{ fontSize: fontSizeIdx }}>[{idx}]</span>
+                <span className="qv-bval" style={{ fontSize: fontSizeVal }}>{v}</span>
+                {isFirst && <span className="qv-btag" style={{ fontSize: fontSizeTag }}>← FRONT</span>}
+                {isLast && !isFirst && <span className="qv-btag back" style={{ fontSize: fontSizeTag }}>BACK →</span>}
               </div>
             );
           })}
-          {flyItem&&(
+          {flyItem && (
             <div key={flyItem.key} className="qv-fly"
-              style={{ height:`${blockHeight}px`, minWidth:`${blockMinWidth}px`, background:`linear-gradient(135deg,${col(flyItem.v).g1},${col(flyItem.v).g2})`, boxShadow:`0 0 40px ${col(flyItem.v).glow}` }}>
-              <span className="qv-fly-v" style={{fontSize:fontSizeVal}}>{flyItem.v}</span>
+              style={{
+                height: `${blockHeight}px`,
+                minWidth: `${blockMinWidth}px`,
+                background: `linear-gradient(135deg,${col(flyItem.v).g1},${col(flyItem.v).g2})`,
+                boxShadow: `0 0 40px ${col(flyItem.v).glow}`,
+              }}>
+              <span className="qv-fly-v" style={{ fontSize: fontSizeVal }}>{flyItem.v}</span>
               <span className="qv-fly-tag">← DEQUEUE</span>
             </div>
           )}
         </div>
         <div className="qv-back-tag">← BACK</div>
       </div>
-      <div className="qv-plat"><div className="qv-plat-shine"/></div>
+
+      {/* Platform */}
+      <div className="qv-plat"><div className="qv-plat-shine" /></div>
       <p className="qv-base">▲ FIFO QUEUE</p>
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// useIsMobile (unchanged)
+// ══════════════════════════════════════════════════════════════════════════════
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -711,29 +954,35 @@ function useIsMobile() {
   return isMobile;
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Terminal (unchanged)
+// ══════════════════════════════════════════════════════════════════════════════
 function Terminal({ lines, sessionId, validating, currentStepIndex }) {
   const bodyRef = useRef(null);
   const lineRefs = useRef({});
   useEffect(() => {
-    if (currentStepIndex===undefined||currentStepIndex===-1) return;
-    lineRefs.current[currentStepIndex]?.scrollIntoView({ block:"nearest", behavior:"smooth" });
+    if (currentStepIndex === undefined || currentStepIndex === -1) return;
+    lineRefs.current[currentStepIndex]?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [currentStepIndex]);
-  useEffect(() => { if(bodyRef.current) bodyRef.current.scrollTop=bodyRef.current.scrollHeight; }, [lines,validating]);
+  useEffect(() => {
+    if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight;
+  }, [lines, validating]);
+
   return (
     <div style={{ flex:1, display:"flex", flexDirection:"column", background:"#06080f", minHeight:0, fontFamily:"'JetBrains Mono',monospace", fontSize:"11px" }}>
       <div ref={bodyRef} style={{ flex:1, overflowY:"auto", padding:"10px 0 10px", scrollbarWidth:"thin", scrollbarColor:"rgba(96,165,250,0.2) transparent" }}>
-        {lines.length===0&&!validating&&(
+        {lines.length === 0 && !validating && (
           <div style={{ padding:"3px 16px", display:"flex", alignItems:"center", gap:6 }}>
             <span style={{ color:"#4ade80", userSelect:"none" }}>$</span>
             <span style={{ animation:"cur 1.1s step-end infinite", color:"#1a2a1a", marginLeft:4 }}>_</span>
           </div>
         )}
         {lines.map((line, i) => (
-          <TermLine key={i} line={line} isLast={i===lines.length-1&&!validating} stepIndex={line.stepIndex} currentStepIndex={currentStepIndex} lineRef={el=>lineRefs.current[line.stepIndex]=el}/>
+          <TermLine key={i} line={line} isLast={i === lines.length - 1 && !validating} stepIndex={line.stepIndex} currentStepIndex={currentStepIndex} lineRef={el => lineRefs.current[line.stepIndex] = el} />
         ))}
-        {validating&&(
+        {validating && (
           <div style={{ padding:"3px 16px", display:"flex", alignItems:"center", gap:9 }}>
-            <span style={{ display:"inline-block", width:10, height:10, borderRadius:"50%", border:"1.5px solid rgba(96,165,250,0.18)", borderTopColor:"#60a5fa", animation:"spin 0.7s linear infinite", flexShrink:0 }}/>
+            <span style={{ display:"inline-block", width:10, height:10, borderRadius:"50%", border:"1.5px solid rgba(96,165,250,0.18)", borderTopColor:"#60a5fa", animation:"spin 0.7s linear infinite", flexShrink:0 }} />
             <span style={{ color:"#3a5070", fontSize:10 }}>VisuoSlayer reviewing…</span>
           </div>
         )}
@@ -744,11 +993,11 @@ function Terminal({ lines, sessionId, validating, currentStepIndex }) {
 
 function TermLine({ line, isLast, stepIndex, currentStepIndex, lineRef }) {
   const [vis, setVis] = useState(false);
-  useEffect(() => { const t=setTimeout(()=>setVis(true),15); return ()=>clearTimeout(t); }, []);
-  const isActive = stepIndex!==undefined&&stepIndex===currentStepIndex&&currentStepIndex!==-1;
-  if (line.type==="separator") return <div style={{ margin:"5px 16px", borderTop:"1px solid rgba(255,255,255,0.05)", opacity:vis?1:0, transition:"opacity 0.12s" }}/>;
-  if (line.type==="blank")     return <div style={{ height:6 }}/>;
-  if (line.type==="prompt")    return (
+  useEffect(() => { const t = setTimeout(() => setVis(true), 15); return () => clearTimeout(t); }, []);
+  const isActive = stepIndex !== undefined && stepIndex === currentStepIndex && currentStepIndex !== -1;
+  if (line.type === "separator") return <div style={{ margin:"5px 16px", borderTop:"1px solid rgba(255,255,255,0.05)", opacity:vis?1:0, transition:"opacity 0.12s" }} />;
+  if (line.type === "blank") return <div style={{ height:6 }} />;
+  if (line.type === "prompt") return (
     <div style={{ padding:"2px 16px", display:"flex", alignItems:"center", gap:7, opacity:vis?1:0, transition:"opacity 0.1s" }}>
       <span style={{ color:"#4ade80", userSelect:"none", flexShrink:0 }}>$</span>
       <span style={{ color:"#3a6090", fontSize:10, wordBreak:"break-all" }}>{line.text}</span>
@@ -763,40 +1012,46 @@ function TermLine({ line, isLast, stepIndex, currentStepIndex, lineRef }) {
       <span style={{ color:c, width:18, flexShrink:0, fontSize:9, paddingTop:2 }}>{pfx}</span>
       <span style={{ color:c, wordBreak:"break-word", lineHeight:1.65, flex:1, fontSize:10 }}>
         {line.text}
-        {isLast&&<span style={{ animation:"cur 1.1s step-end infinite", color:"#1e2535" }}> _</span>}
+        {isLast && <span style={{ animation:"cur 1.1s step-end infinite", color:"#1e2535" }}> _</span>}
       </span>
-      {line.lineNum&&<span style={{ marginLeft:8, color:"#2a3a50", fontSize:8, flexShrink:0, paddingTop:3 }}>:{line.lineNum}</span>}
+      {line.lineNum && <span style={{ marginLeft:8, color:"#2a3a50", fontSize:8, flexShrink:0, paddingTop:3 }}>:{line.lineNum}</span>}
     </div>
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// Code Editor (unchanged)
+// ══════════════════════════════════════════════════════════════════════════════
 function CodeEditor({ code, setCode, step, errorLineSet, onKeyDown, taRef }) {
   const lnRef = useRef(null);
   const lines = code.split("\n");
-  const syncScroll = useCallback(() => { if(taRef.current&&lnRef.current) lnRef.current.scrollTop=taRef.current.scrollTop; }, [taRef]);
+  const syncScroll = useCallback(() => {
+    if (taRef.current && lnRef.current) lnRef.current.scrollTop = taRef.current.scrollTop;
+  }, [taRef]);
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
-    ta.addEventListener("scroll", syncScroll, { passive:true });
+    ta.addEventListener("scroll", syncScroll, { passive: true });
     return () => ta.removeEventListener("scroll", syncScroll);
   }, [syncScroll]);
+
   return (
     <div style={{ flex:1, display:"flex", minHeight:0, overflow:"hidden", position:"relative" }}>
       <div ref={lnRef} style={{ width:38, flexShrink:0, background:"rgba(4,7,18,0.75)", borderRight:"1px solid rgba(255,255,255,0.05)", overflowY:"hidden", overflowX:"hidden", paddingTop:14, paddingBottom:14, display:"flex", flexDirection:"column", userSelect:"none", pointerEvents:"none", scrollbarWidth:"none", msOverflowStyle:"none" }}>
-        {lines.map((_,i) => {
-          const isAct=step?.lineNum===i, isErr=errorLineSet.has(i);
+        {lines.map((_, i) => {
+          const isAct = step?.lineNum === i, isErr = errorLineSet.has(i);
           return (
             <div key={i} style={{ height:LINE_H, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:7, fontFamily:"'JetBrains Mono',monospace", fontSize:9, lineHeight:1, color:isErr?"#f87171":isAct?"#60a5fa":"#2a3a54", background:isErr?"rgba(248,113,113,0.07)":isAct?"rgba(96,165,250,0.07)":"transparent", borderRadius:3, transition:"color 0.15s,background 0.15s" }}>
-              {i+1}
+              {i + 1}
             </div>
           );
         })}
       </div>
-      {step&&(
-        <div style={{ position:"absolute", left:38, right:0, height:LINE_H, top:14+step.lineNum*LINE_H, background:"rgba(96,165,250,0.04)", borderLeft:"2px solid rgba(96,165,250,0.4)", pointerEvents:"none", transition:"top 0.2s cubic-bezier(0.4,0,0.2,1)", zIndex:1 }}/>
+      {step && (
+        <div style={{ position:"absolute", left:38, right:0, height:LINE_H, top:14+step.lineNum*LINE_H, background:"rgba(96,165,250,0.04)", borderLeft:"2px solid rgba(96,165,250,0.4)", pointerEvents:"none", transition:"top 0.2s cubic-bezier(0.4,0,0.2,1)", zIndex:1 }} />
       )}
       {[...errorLineSet].map((i) => (
-        <div key={`e${i}`} style={{ position:"absolute", left:38, right:0, height:LINE_H, top:14+i*LINE_H, background:"rgba(248,113,113,0.05)", borderLeft:"2px solid rgba(248,113,113,0.45)", pointerEvents:"none", zIndex:1 }}/>
+        <div key={`e${i}`} style={{ position:"absolute", left:38, right:0, height:LINE_H, top:14+i*LINE_H, background:"rgba(248,113,113,0.05)", borderLeft:"2px solid rgba(248,113,113,0.45)", pointerEvents:"none", zIndex:1 }} />
       ))}
       <textarea
         ref={taRef}
@@ -815,102 +1070,11 @@ function CodeEditor({ code, setCode, step, errorLineSet, onKeyDown, taRef }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SIDEBAR NAV (new — desktop left rail + mobile bottom bar)
+// Right Sticky Nav (same as stack, but with Queue icon)
 // ══════════════════════════════════════════════════════════════════════════════
-function SidebarNav({ activeSection, onNav, hasSteps, hasErrors, termLines, onRun, onReset, playing, validating }) {
-  const hasTermErr = termLines.some(l => l.type==="error"||l.type==="stderr");
-  const hasTermOk  = termLines.some(l => l.type==="success");
-  const items = [
-    { id:"code",     icon:"⌨", label:"Code",  dot:null },
-    { id:"terminal", icon:"⬛", label:"Term",  dot:hasTermErr?"#f87171":hasTermOk?"#4ade80":null },
-    { id:"viz",      icon:"🔁", label:"Queue", dot:hasSteps?"#60a5fa":hasErrors?"#f87171":null },
-  ];
-  return (
-    <div style={{
-      position:"fixed", left:0, top:0, bottom:0,
-      width:62, zIndex:9000,
-      display:"flex", flexDirection:"column", alignItems:"center",
-      background:"rgba(4,6,20,0.98)",
-      borderRight:"1px solid rgba(96,165,250,0.1)",
-      padding:"10px 0 16px",
-      boxShadow:"2px 0 32px rgba(0,0,0,0.6),inset -1px 0 0 rgba(96,165,250,0.05)",
-      overflow:"hidden",
-    }}>
-      {/* top rainbow line */}
-      <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#60a5fa,#a78bfa,#f472b6,transparent)", opacity:0.7, pointerEvents:"none" }}/>
-      {/* bottom line */}
-      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(96,165,250,0.4),transparent)", pointerEvents:"none" }}/>
-
-      {/* Logo */}
-      <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, boxShadow:"0 0 20px rgba(96,165,250,0.5),0 0 40px rgba(96,165,250,0.1)", animation:"rPulse 3s ease-in-out infinite", flexShrink:0, marginBottom:6, cursor:"pointer" }}
-        onClick={onReset} title="Reset">🔁</div>
-
-      {/* Divider */}
-      <div style={{ width:32, height:1, background:"linear-gradient(90deg,transparent,rgba(96,165,250,0.25),transparent)", margin:"6px 0", flexShrink:0 }}/>
-
-      {/* Nav items */}
-      <div style={{ display:"flex", flexDirection:"column", gap:2, flex:1, width:"100%", padding:"0 7px" }}>
-        {items.map((item, i) => {
-          const isActive = activeSection === item.id;
-          return (
-            <button key={item.id} onClick={() => onNav(item.id)} style={{
-              position:"relative", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-              gap:3, width:"100%", padding:"9px 4px", borderRadius:10, cursor:"pointer",
-              border:`1px solid ${isActive?"rgba(96,165,250,0.32)":"transparent"}`,
-              background:isActive?"linear-gradient(180deg,rgba(96,165,250,0.16),rgba(167,139,250,0.1))":"transparent",
-              boxShadow:isActive?"0 0 16px rgba(96,165,250,0.15),inset 0 1px 0 rgba(255,255,255,0.06)":"none",
-              fontFamily:"'JetBrains Mono',monospace",
-              WebkitTapHighlightColor:"transparent",
-              transition:"all 0.18s",
-              animation:`navItemIn 0.3s ease ${i*0.06}s both`,
-            }}>
-              {/* active left bar */}
-              {isActive&&<div style={{ position:"absolute", left:-7, top:"50%", transform:"translateY(-50%)", width:3, height:"60%", borderRadius:"0 3px 3px 0", background:"linear-gradient(180deg,#60a5fa,#a78bfa)", boxShadow:"0 0 8px rgba(96,165,250,0.6)" }}/>}
-              {/* status dot */}
-              {item.dot&&(
-                <span style={{ position:"absolute", top:7, right:7, width:5, height:5, borderRadius:"50%", background:item.dot, boxShadow:`0 0 6px ${item.dot}`, zIndex:2 }}>
-                  <span style={{ position:"absolute", inset:0, borderRadius:"50%", background:item.dot, opacity:0.5, animation:"dotPing 1.5s ease-out infinite" }}/>
-                </span>
-              )}
-              {isActive&&<span style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center,rgba(96,165,250,0.08),transparent 70%)", pointerEvents:"none", borderRadius:10 }}/>}
-              <span style={{ fontSize:17, opacity:isActive?1:0.4, transition:"opacity 0.15s,transform 0.15s", transform:isActive?"scale(1.12)":"scale(1)", lineHeight:1, position:"relative" }}>{item.icon}</span>
-              <span style={{ fontSize:6.5, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:isActive?"#60a5fa":"#3d5470", transition:"color 0.18s", lineHeight:1 }}>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Divider */}
-      <div style={{ width:32, height:1, background:"linear-gradient(90deg,transparent,rgba(96,165,250,0.25),transparent)", margin:"6px 0", flexShrink:0 }}/>
-
-      {/* Run + Reset mini buttons */}
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"0 7px", width:"100%" }}>
-        <button onClick={onRun} disabled={playing||validating} title="Run (Ctrl+Enter)" style={{
-          width:"100%", padding:"6px 4px", borderRadius:8,
-          background:playing||validating?"linear-gradient(135deg,rgba(29,78,216,0.4),rgba(96,165,250,0.3))":"linear-gradient(135deg,rgba(29,78,216,0.4),rgba(96,165,250,0.3))",
-          border:"1px solid rgba(96,165,250,0.35)", color:"#60a5fa", fontSize:14,
-          cursor:playing||validating?"not-allowed":"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          boxShadow:"0 0 12px rgba(96,165,250,0.2)",
-          transition:"all 0.15s", opacity:playing||validating?0.6:1,
-          animation:playing||validating?"progressPulse 1.2s ease-in-out infinite":"none",
-          fontFamily:"'JetBrains Mono',monospace",
-        }}>{validating?"◌":playing?"⏸":"▶"}</button>
-        <button onClick={onReset} title="Reset" style={{
-          width:"100%", padding:"6px 4px", borderRadius:8,
-          background:"transparent", border:"1px solid rgba(255,255,255,0.07)", color:"#3d5470", fontSize:13,
-          cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-          transition:"all 0.15s", fontFamily:"'JetBrains Mono',monospace",
-        }}>↺</button>
-      </div>
-    </div>
-  );
-}
-
-// Mobile sticky right nav — same as before, unchanged
 function StickyNav({ activeSection, onNav, hasSteps, hasErrors, termLines }) {
-  const hasTermErr = termLines.some(l => l.type==="error"||l.type==="stderr");
-  const hasTermOk  = termLines.some(l => l.type==="success");
+  const hasTermErr = termLines.some(l => l.type === "error" || l.type === "stderr");
+  const hasTermOk  = termLines.some(l => l.type === "success");
   const items = [
     { id:"code",     icon:"⌨", label:"Code",  dot:null },
     { id:"terminal", icon:"⬛", label:"Term",  dot:hasTermErr?"#f87171":hasTermOk?"#4ade80":null },
@@ -918,19 +1082,19 @@ function StickyNav({ activeSection, onNav, hasSteps, hasErrors, termLines }) {
   ];
   return (
     <div style={{ position:"fixed", right:0, top:"50%", transform:"translateY(-50%)", zIndex:9000, display:"flex", flexDirection:"column", gap:0, background:"rgba(5,8,26,0.95)", border:"1px solid rgba(96,165,250,0.18)", borderRight:"none", borderRadius:"12px 0 0 12px", overflow:"hidden", boxShadow:"-4px 0 32px rgba(0,0,0,0.7),-1px 0 0 rgba(96,165,250,0.08)", backdropFilter:"blur(20px)" }}>
-      <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#60a5fa,#a78bfa,transparent)", opacity:0.6 }}/>
+      <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#60a5fa,#a78bfa,transparent)", opacity:0.6 }} />
       {items.map((item, i) => {
-        const isActive = activeSection===item.id;
+        const isActive = activeSection === item.id;
         return (
           <button key={item.id} onClick={() => onNav(item.id)} style={{ position:"relative", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, width:48, padding:"12px 4px", border:"none", background:isActive?"linear-gradient(180deg,rgba(96,165,250,0.18),rgba(167,139,250,0.12))":"transparent", cursor:"pointer", borderBottom:i<items.length-1?"1px solid rgba(255,255,255,0.06)":"none", WebkitTapHighlightColor:"transparent", transition:"background 0.18s", borderLeft:isActive?"2px solid #60a5fa":"2px solid transparent" }}>
-            {item.dot&&<span style={{ position:"absolute", top:7, right:9, width:5, height:5, borderRadius:"50%", background:item.dot, boxShadow:`0 0 6px ${item.dot}` }}/>}
-            {isActive&&<span style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center,rgba(96,165,250,0.08),transparent 70%)", pointerEvents:"none" }}/>}
+            {item.dot && <span style={{ position:"absolute", top:7, right:9, width:5, height:5, borderRadius:"50%", background:item.dot, boxShadow:`0 0 6px ${item.dot}` }} />}
+            {isActive && <span style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center,rgba(96,165,250,0.08),transparent 70%)", pointerEvents:"none" }} />}
             <span style={{ fontSize:16, opacity:isActive?1:0.4, transition:"opacity 0.15s,transform 0.15s", transform:isActive?"scale(1.1)":"scale(1)", lineHeight:1, position:"relative" }}>{item.icon}</span>
             <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:7, fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color:isActive?"#60a5fa":"rgba(255,255,255,0.22)", transition:"color 0.15s", position:"relative" }}>{item.label}</span>
           </button>
         );
       })}
-      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#f472b6,#60a5fa,transparent)", opacity:0.4 }}/>
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#f472b6,#60a5fa,transparent)", opacity:0.4 }} />
     </div>
   );
 }
@@ -967,14 +1131,14 @@ export default function QueueDSPage() {
   const sectionVizRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
-  const bump = () => setAnimKey(k => k+1);
+  const bump = () => setAnimKey(k => k + 1);
   const showToast = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2200); };
 
   const copyQueueState = () => {
     const s = steps[idx] ?? null;
     if (!s) return;
     const txt = s.queue.length ? `[${s.queue.join(", ")}]  FRONT: ${s.queue[0]}  BACK: ${s.queue[s.queue.length-1]}` : "[] (empty)";
-    navigator.clipboard?.writeText(txt).then(() => showToast("📋 Copied: "+txt)).catch(() => showToast("📋 "+txt));
+    navigator.clipboard?.writeText(txt).then(() => showToast("📋 Copied: " + txt)).catch(() => showToast("📋 " + txt));
   };
 
   const doReset = useCallback(() => {
@@ -983,14 +1147,14 @@ export default function QueueDSPage() {
     setAiErrors([]); setAiReason(""); setApiNote(""); setTermLines([]);
   }, []);
 
-  const handleChangeLang = (l) => { setLang(l); setCode(TPL[l]??""); doReset(); };
+  const handleChangeLang = (l) => { setLang(l); setCode(TPL[l] ?? ""); doReset(); };
 
   const buildTerm = (stps, errs, aiErrs, aiReason) => {
     const ls = [];
     const ts = new Date().toTimeString().slice(0,8);
     ls.push({ type:"output", text:`VisuoSlayer v2.1  ·  Queue  ·  ${ts}  ·  pid:${sessionId}` });
     ls.push({ type:"separator" });
-    if (aiErrs.length>0) {
+    if (aiErrs.length > 0) {
       ls.push({ type:"prompt", text:`validate --lang=${lang} --ds=queue` });
       ls.push({ type:"blank" });
       if (aiReason) ls.push({ type:"stderr", text:aiReason });
@@ -999,7 +1163,7 @@ export default function QueueDSPage() {
       ls.push({ type:"error", text:"Process exited with code 1" });
       return ls;
     }
-    if (errs.length>0) {
+    if (errs.length > 0) {
       ls.push({ type:"prompt", text:`run --lang=${lang}` });
       ls.push({ type:"blank" });
       errs.forEach(e => ls.push({ type:"stderr", text:e }));
@@ -1007,20 +1171,20 @@ export default function QueueDSPage() {
       ls.push({ type:"error", text:"Process exited with code 1" });
       return ls;
     }
-    if (stps.length>0) {
+    if (stps.length > 0) {
       ls.push({ type:"prompt", text:`run --lang=${lang} --ds=queue` });
       ls.push({ type:"blank" });
       stps.forEach((s, stepIdx) => {
-        const ie = s.type==="dequeue_error"||s.type==="front_error";
+        const ie = s.type === "dequeue_error" || s.type === "front_error";
         let out = "";
         switch (s.type) {
-          case "enqueue":       out=`enqueue(${s.value})  →  [${s.queue.join(", ")}]  size:${s.queue.length}`; break;
-          case "dequeue":       out=`dequeue()  →  ${s.value}  ·  [${s.queue.join(", ")}]  size:${s.queue.length}`; break;
-          case "dequeue_error": out="dequeue()  →  Error: Queue Underflow"; break;
-          case "front":         out=`front()  →  ${s.value}  ·  unchanged  size:${s.queue.length}`; break;
-          case "front_error":   out="front()  →  Error: Queue is empty"; break;
-          case "isEmpty":       out=`isEmpty()  →  ${s.result}  ·  ${s.queue.length} item${s.queue.length!==1?"s":""}`; break;
-          case "size":          out=`size()  →  ${s.result}  ·  queue has ${s.result} element${s.result!==1?"s":""}`; break;
+          case "enqueue":       out = `enqueue(${s.value})  →  [${s.queue.join(", ")}]  size:${s.queue.length}`; break;
+          case "dequeue":       out = `dequeue()  →  ${s.value}  ·  [${s.queue.join(", ")}]  size:${s.queue.length}`; break;
+          case "dequeue_error": out = `dequeue()  →  Error: Queue Underflow`; break;
+          case "front":         out = `front()  →  ${s.value}  ·  unchanged  size:${s.queue.length}`; break;
+          case "front_error":   out = `front()  →  Error: Queue is empty`; break;
+          case "isEmpty":       out = `isEmpty()  →  ${s.result}  ·  ${s.queue.length} item${s.queue.length!==1?"s":""}`; break;
+          case "size":          out = `size()  →  ${s.result}  ·  queue has ${s.result} element${s.result!==1?"s":""}`; break;
         }
         ls.push({ type:ie?"error":s.type, text:out, lineNum:s.lineNum+1, stepIndex:stepIdx });
       });
@@ -1036,41 +1200,45 @@ export default function QueueDSPage() {
     const v = await validateWithAI(code, lang);
     setValidating(false);
     if (!v.valid) {
-      setAiErrors(v.errors??[]); setAiReason(v.reason??"");
-      setTermLines(buildTerm([],[],v.errors??[],v.reason??""));
+      setAiErrors(v.errors ?? []);
+      setAiReason(v.reason ?? "");
+      setTermLines(buildTerm([], [], v.errors ?? [], v.reason ?? ""));
       if (isMobile) scrollToSection("terminal");
       return;
     }
     if (v.apiError) setApiNote(v.apiError);
-    const { steps:s, errors } = runCode(code, lang);
+    const { steps: s, errors } = runCode(code, lang);
     if (errors.length) {
-      setError(errors.join("\n")); setTermLines(buildTerm([],errors,[],"")); 
+      setError(errors.join("\n"));
+      setTermLines(buildTerm([], errors, [], ""));
       if (isMobile) scrollToSection("terminal");
       return;
     }
     setSteps(s); setIdx(0); bump(); setPlaying(true);
-    setTermLines(buildTerm(s,[],[],[]));
+    setTermLines(buildTerm(s, [], [], ""));
   };
 
   const goTo = useCallback((i) => {
-    clearInterval(timerRef.current); setPlaying(false);
-    setIdx(Math.max(0, Math.min(i, steps.length-1))); bump();
+    clearInterval(timerRef.current);
+    setPlaying(false);
+    setIdx(Math.max(0, Math.min(i, steps.length - 1)));
+    bump();
   }, [steps.length]);
 
   useEffect(() => {
-    const h = (e) => { if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();handleRun();} };
+    const h = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); handleRun(); } };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
   }, [code, lang]);
 
   useEffect(() => {
-    if (!playing||!steps.length) return;
+    if (!playing || !steps.length) return;
     timerRef.current = setInterval(() => {
       setIdx(p => {
-        if (p>=steps.length-1) { clearInterval(timerRef.current); setPlaying(false); setDone(true); return p; }
-        bump(); return p+1;
+        if (p >= steps.length - 1) { clearInterval(timerRef.current); setPlaying(false); setDone(true); return p; }
+        bump(); return p + 1;
       });
-    }, speed*1000);
+    }, speed * 1000);
     return () => clearInterval(timerRef.current);
   }, [playing, steps, speed]);
 
@@ -1080,40 +1248,40 @@ export default function QueueDSPage() {
 
   useEffect(() => {
     if (!isMobile) return;
-    const refs = [{ id:"code", ref:sectionCodeRef },{ id:"terminal", ref:sectionTermRef },{ id:"viz", ref:sectionVizRef }];
+    const refs = [{ id:"code", ref:sectionCodeRef }, { id:"terminal", ref:sectionTermRef }, { id:"viz", ref:sectionVizRef }];
     const obs = new IntersectionObserver((entries) => {
-      let best=null, bestRatio=0;
-      entries.forEach(e => { if(e.isIntersecting&&e.intersectionRatio>bestRatio){bestRatio=e.intersectionRatio;best=e.target.dataset.section;} });
+      let best = null, bestRatio = 0;
+      entries.forEach(e => { if (e.isIntersecting && e.intersectionRatio > bestRatio) { bestRatio = e.intersectionRatio; best = e.target.dataset.section; } });
       if (best) setActiveSection(best);
-    }, { root:scrollContainerRef.current, threshold:[0.3,0.6] });
-    refs.forEach(r => { if(r.ref.current){r.ref.current.dataset.section=r.id; obs.observe(r.ref.current);} });
+    }, { root: scrollContainerRef.current, threshold: [0.3, 0.6] });
+    refs.forEach(r => { if (r.ref.current) { r.ref.current.dataset.section = r.id; obs.observe(r.ref.current); } });
     return () => obs.disconnect();
   }, [isMobile]);
 
   const scrollToSection = useCallback((id) => {
-    const map = { code:sectionCodeRef, terminal:sectionTermRef, viz:sectionVizRef };
+    const map = { code: sectionCodeRef, terminal: sectionTermRef, viz: sectionVizRef };
     map[id]?.current?.scrollIntoView({ behavior:"smooth", block:"start" });
     setActiveSection(id);
   }, []);
 
   const onKeyDown = (e) => {
-    if (e.key!=="Tab") return;
+    if (e.key !== "Tab") return;
     e.preventDefault();
-    const s=e.target.selectionStart, en=e.target.selectionEnd;
-    const nv=code.slice(0,s)+"  "+code.slice(en);
+    const s = e.target.selectionStart, en = e.target.selectionEnd;
+    const nv = code.slice(0,s) + "  " + code.slice(en);
     setCode(nv);
-    requestAnimationFrame(() => { if(taRef.current){taRef.current.selectionStart=s+2;taRef.current.selectionEnd=s+2;} });
+    requestAnimationFrame(() => { if (taRef.current) { taRef.current.selectionStart = s+2; taRef.current.selectionEnd = s+2; } });
   };
 
   const step = steps[idx] ?? null;
-  const os = step ? (OP[step.type]??OP.enqueue) : null;
+  const os = step ? (OP[step.type] ?? OP.enqueue) : null;
   const prog = steps.length ? Math.round(((idx+1)/steps.length)*100) : 0;
   const hasAiErrors = aiErrors.length > 0;
-  const idle = steps.length===0 && !error && !hasAiErrors;
+  const idle = steps.length === 0 && !error && !hasAiErrors;
   const lm = LANGS[lang];
-  const errorLineSet = new Set(aiErrors.map(e => (e.line??1)-1));
+  const errorLineSet = new Set(aiErrors.map(e => (e.line ?? 1) - 1));
 
-  // ── MOBILE LAYOUT ──────────────────────────────────────────────────────────
+  // ── MOBILE LAYOUT (identical to stack but with queue label) ────────────────
   if (isMobile) {
     return (
       <>
@@ -1122,7 +1290,9 @@ export default function QueueDSPage() {
           *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
           html,body{height:100%;-webkit-text-size-adjust:100%;}
           body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
+
           :root{--cyan:#60a5fa;--cyan-dim:rgba(96,165,250,0.15);--cyan-glow:rgba(96,165,250,0.45);--pink:#f472b6;--pink-dim:rgba(244,114,182,0.15);--green:#4ade80;--green-dim:rgba(74,222,128,0.15);--green-glow:rgba(74,222,128,0.4);--purple:#a78bfa;--yellow:#fbbf24;--text-primary:#d4e4f7;--text-secondary:#6b8aaa;--text-muted:#3d5470;--border-subtle:rgba(255,255,255,0.07);--border-medium:rgba(255,255,255,0.13);--surface-0:#050818;--surface-1:rgba(8,14,36,0.95);--surface-2:rgba(12,20,48,0.8);--surface-3:rgba(16,26,58,0.7);}
+
           @keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
           @keyframes spin{to{transform:rotate(360deg)}}
           @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -1135,18 +1305,23 @@ export default function QueueDSPage() {
           @keyframes blkDrop{0%{transform:translateX(80px) scale(0.78);opacity:0}55%{transform:translateX(-5px) scale(1.04);opacity:1}78%{transform:translateX(2px) scale(0.98)}100%{transform:translateX(0) scale(1);opacity:1}}
           @keyframes flyAway{0%{transform:translateX(-50%) scale(1) rotate(0);opacity:1}35%{opacity:1}100%{transform:translateX(calc(-50% + 70px)) translateY(-120px) scale(0.5) rotate(22deg);opacity:0}}
           @keyframes pkRing{0%{transform:scale(1);opacity:0.9}100%{transform:scale(1.35);opacity:0}}
+          @keyframes pkPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.55) saturate(1.4)}}
+          @keyframes ecCheck{0%,100%{transform:scale(1)}35%{transform:scale(1.06) translateY(-4px)}68%{transform:scale(0.97) translateY(2px)}}
           @keyframes pShine{0%,100%{left:-100%}55%{left:160%}}
           @keyframes svSh{0%,100%{transform:none}18%{transform:translateX(-7px)}36%{transform:translateX(7px)}54%{transform:translateX(-4px)}72%{transform:translateX(4px)}}
-          @keyframes frontPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) saturate(1.4)}}
-          @keyframes dotPing{0%{transform:scale(1);opacity:1}100%{transform:scale(2.2);opacity:0}}
-          @keyframes navItemIn{from{opacity:0;transform:translateX(-8px) scale(0.94)}to{opacity:1;transform:none}}
+          @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(18px,-12px) scale(1.06)}66%{transform:translate(-10px,16px) scale(0.95)}}
+          @keyframes blob2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-20px,10px) scale(1.08)}70%{transform:translate(14px,-18px) scale(0.93)}}
+          @keyframes gridScroll{0%{background-position:0 0}100%{background-position:32px 32px}}
+          @keyframes scanline{0%{top:-10%}100%{top:110%}}
+
           .mob-pg{height:100vh;height:100dvh;display:flex;flex-direction:column;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(59,130,246,0.12) 0%,transparent 60%),#050818;padding-top:env(safe-area-inset-top,0);}
           .mob-hd{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);border-bottom:1px solid rgba(96,165,250,0.12);z-index:100;position:sticky;top:0;}
           .mob-logo{width:30px;height:30px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 16px rgba(96,165,250,0.5);animation:rPulse 3s ease-in-out infinite;}
           .mob-brand{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:800;background:linear-gradient(90deg,#93c5fd 0%,#a78bfa 50%,#f472b6 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;}
           .mob-sub{font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;}
+
           .mob-scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(96,165,250,0.15) transparent;padding-right:52px;padding-bottom:env(safe-area-inset-bottom,16px);}
-          .mob-scroll::-webkit-scrollbar{width:3px;}.mob-scroll::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.18);border-radius:4px;}
+          .mob-scroll::-webkit-scrollbar{width:3px;} .mob-scroll::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.18);border-radius:4px;}
           .mob-sec{display:flex;flex-direction:column;}
           .mob-sec-label{display:flex;align-items:center;gap:8px;padding:10px 14px 6px;font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);}
           .mob-sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(96,165,250,0.2),transparent);}
@@ -1182,22 +1357,23 @@ export default function QueueDSPage() {
           .qv-front-tag{color:#fbbf24;}
           .qv-back-tag{color:#4ade80;}
           .qv-items{display:flex;flex-direction:row;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;overflow-x:auto;padding-bottom:4px;max-width:100%;}
-          .qv-block{border-radius:13px;border:1.5px solid transparent;display:flex;align-items:center;justify-content:center;padding:0 8px;gap:6px;position:relative;transition:all 0.28s ease;flex-shrink:0;}
+          .qv-block{height:44px;min-width:70px;border-radius:13px;border:1.5px solid transparent;display:flex;align-items:center;justify-content:center;padding:0 8px;gap:6px;position:relative;transition:all 0.28s ease;flex-shrink:0;}
           .qv-block::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 58%);border-radius:inherit;pointer-events:none;}
           .qv-enq{animation:blkDrop 0.52s cubic-bezier(0.34,1.56,0.64,1) both;}
           .qv-front{animation:frontPulse 0.6s ease 2 both;}
+          @keyframes frontPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) saturate(1.4)}}
           .qv-pk-ring,.qv-pk-ring2{position:absolute;inset:-4px;border-radius:19px;border:2.5px solid;animation:pkRing 0.78s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none;}
           .qv-pk-ring2{animation-delay:0.16s;}
-          .qv-bidx{font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.42);}
-          .qv-bval{font-family:'JetBrains Mono',monospace;font-weight:700;color:#fff;text-shadow:0 2px 9px rgba(0,0,0,0.35);}
-          .qv-btag{font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.68);white-space:nowrap;}
+          .qv-bidx{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.42);}
+          .qv-bval{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#fff;text-shadow:0 2px 9px rgba(0,0,0,0.35);}
+          .qv-btag{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:rgba(255,255,255,0.68);white-space:nowrap;}
           .qv-btag.back{color:rgba(74,222,128,0.9);}
           .qv-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:120px;height:72px;border:1px dashed rgba(255,255,255,0.07);border-radius:13px;gap:5px;}
           .qv-empty.sv-empty-err{border-color:rgba(239,68,68,0.35);animation:svSh 0.38s ease;}
           .qv-ei{font-size:18px;opacity:0.45;}
           .qv-et{font-family:'JetBrains Mono',monospace;font-size:8px;color:#1e3050;letter-spacing:0.07em;}
-          .qv-fly{position:absolute;top:18px;left:50%;transform:translateX(-50%);border-radius:13px;display:flex;align-items:center;justify-content:center;gap:6px;z-index:20;pointer-events:none;border:1.5px solid rgba(255,255,255,0.28);animation:flyAway 0.76s cubic-bezier(0.22,1,0.36,1) forwards;white-space:nowrap;}
-          .qv-fly-v{font-family:'JetBrains Mono',monospace;font-weight:700;color:#fff;}
+          .qv-fly{position:absolute;top:18px;left:50%;transform:translateX(-50%);height:44px;min-width:70px;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:6px;z-index:20;pointer-events:none;border:1.5px solid rgba(255,255,255,0.28);animation:flyAway 0.76s cubic-bezier(0.22,1,0.36,1) forwards;white-space:nowrap;}
+          .qv-fly-v{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700;color:#fff;}
           .qv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.7);letter-spacing:0.06em;}
           .qv-plat{margin-top:5px;width:280px;height:11px;border-radius:7px;background:linear-gradient(90deg,rgba(96,165,250,0.28),rgba(96,165,250,0.14),rgba(96,165,250,0.28));position:relative;overflow:hidden;align-self:center;}
           .qv-plat-shine{position:absolute;top:0;left:-100%;width:55%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent);animation:pShine 3.2s ease-in-out infinite;}
@@ -1230,7 +1406,7 @@ export default function QueueDSPage() {
           .mob-si-v{opacity:0.55;margin-left:1px;}
           .mob-si-ln{margin-left:auto;font-size:7px;color:var(--text-muted);opacity:0.7;}
           .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:9px 18px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;white-space:nowrap;background:rgba(10,20,50,0.97);border:1px solid var(--border-medium);color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.5),0 0 16px var(--green-glow);z-index:9999;animation:toastIn 0.25s ease;}
-          ::-webkit-scrollbar{width:3px;height:3px;}::-webkit-scrollbar-track{background:transparent;}::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.2);border-radius:4px;}textarea::-webkit-scrollbar{width:3px;}
+          ::-webkit-scrollbar{width:3px;height:3px;} ::-webkit-scrollbar-track{background:transparent;} ::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.2);border-radius:4px;} textarea::-webkit-scrollbar{width:3px;}
         `}</style>
 
         <div className="mob-pg">
@@ -1252,20 +1428,20 @@ export default function QueueDSPage() {
               <div className="mob-sec-label"><span>⌨</span><span>01 · Code Editor</span></div>
               <div className="mob-editor-wrap">
                 <div className="mob-ph">
-                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }}/>
-                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }}/>
-                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }}/>
+                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }} />
+                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }} />
+                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }} />
                   <span className="ptl">Code Editor</span>
                   <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:lm.accent, background:`${lm.accent}10`, border:`1px solid ${lm.accent}25`, padding:"2px 8px", borderRadius:16, fontWeight:700 }}>{lm.name}</span>
                 </div>
                 <div className="mob-lb">
-                  {Object.entries(LANGS).map(([k,m]) => (
+                  {Object.entries(LANGS).map(([k, m]) => (
                     <button key={k} className={`mob-lt${lang===k?" la":""}`} onClick={() => handleChangeLang(k)} style={lang===k?{borderColor:`${m.accent}35`,color:m.accent,background:`${m.accent}0e`}:{}}>{m.name}</button>
                   ))}
                 </div>
                 <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, position:"relative" }}>
-                  <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
-                  {step&&os&&(
+                  <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef} />
+                  {step && os && (
                     <div className="mob-alb" style={{ borderColor:os.bd, background:os.bg }}>
                       <span style={{ color:os.c, fontSize:10 }}>{os.icon}</span>
                       <span className="mob-alb-ln" style={{ color:os.c }}>L{step.lineNum+1}</span>
@@ -1278,7 +1454,7 @@ export default function QueueDSPage() {
                 <button className={`mob-btn-run${playing||validating?" running":""}`} onClick={handleRun} disabled={playing||validating}>
                   {validating?"⟳ Reviewing…":playing?"▶ Running…":"▶  Run & Visualize"}
                 </button>
-                {(steps.length>0||error||hasAiErrors)&&<button className="mob-btn-rst" onClick={doReset}>↺ Reset</button>}
+                {(steps.length > 0 || error || hasAiErrors) && <button className="mob-btn-rst" onClick={doReset}>↺ Reset</button>}
               </div>
             </div>
 
@@ -1287,13 +1463,13 @@ export default function QueueDSPage() {
               <div className="mob-sec-label"><span>⬛</span><span>02 · Terminal</span></div>
               <div className="mob-term-wrap">
                 <div className="mob-ph">
-                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }}/>
-                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }}/>
-                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }}/>
+                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }} />
+                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }} />
+                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }} />
                   <span className="ptl">visualoslayer — bash</span>
                   <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)" }}>pid:{sessionId}</span>
                 </div>
-                <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx}/>
+                <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx} />
               </div>
             </div>
 
@@ -1302,15 +1478,15 @@ export default function QueueDSPage() {
               <div className="mob-sec-label"><span>🔁</span><span>03 · Queue Visualization</span></div>
               <div className="mob-viz-wrap">
                 <div className="mob-ph">
-                  <span className="dot" style={{ background:"#60a5fa", boxShadow:"0 0 5px #60a5fa" }}/>
-                  <span className="dot" style={{ background:"#f472b6", boxShadow:"0 0 5px #f472b6" }}/>
-                  <span className="dot" style={{ background:"#4ade80", boxShadow:"0 0 5px #4ade80" }}/>
+                  <span className="dot" style={{ background:"#60a5fa", boxShadow:"0 0 5px #60a5fa" }} />
+                  <span className="dot" style={{ background:"#f472b6", boxShadow:"0 0 5px #f472b6" }} />
+                  <span className="dot" style={{ background:"#4ade80", boxShadow:"0 0 5px #4ade80" }} />
                   <span className="ptl">Queue Visualization</span>
-                  {steps.length>0&&<span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(96,165,250,0.25)", padding:"2px 8px", borderRadius:16, fontWeight:700 }}>{idx+1} / {steps.length}</span>}
+                  {steps.length > 0 && <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(96,165,250,0.25)", padding:"2px 8px", borderRadius:16, fontWeight:700 }}>{idx+1} / {steps.length}</span>}
                 </div>
-                <QueueViz step={step} animKey={animKey} idle={idle} compact={true}/>
+                <QueueViz step={step} animKey={animKey} idle={idle} compact={true} />
                 <div className="mob-oi">
-                  {step&&os ? (
+                  {step && os ? (
                     <>
                       <div className="mob-oi-badge" style={{ color:os.c, background:os.bg, borderColor:os.bd }}>
                         <span>{os.icon}</span><span>{os.label}</span>
@@ -1328,7 +1504,7 @@ export default function QueueDSPage() {
                     </div>
                   )}
                 </div>
-                {steps.length>0&&(
+                {steps.length > 0 && (
                   <div className="mob-ctrl">
                     <button className="mob-cb" onClick={() => goTo(0)} disabled={idx<=0}>⏮</button>
                     <button className="mob-cb" onClick={() => goTo(idx-1)} disabled={idx<=0}>◀</button>
@@ -1337,32 +1513,32 @@ export default function QueueDSPage() {
                     </button>
                     <button className="mob-cb" onClick={() => goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
                     <button className="mob-cb" onClick={() => goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
-                    <div className="mob-csep"/>
+                    <div className="mob-csep" />
                     <div className="mob-spd">
                       {[[2,"½×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl]) => (
                         <button key={s} className={`mob-sb${speed===s?" sa":""}`} onClick={() => setSpeed(s)}>{lbl}</button>
                       ))}
                     </div>
-                    <div className="mob-csep"/>
+                    <div className="mob-csep" />
                     <button className="mob-cb" onClick={copyQueueState} style={{ fontSize:14 }}>📋</button>
                   </div>
                 )}
-                {steps.length>0&&(
+                {steps.length > 0 && (
                   <div className="mob-pr">
-                    <div className="mob-pt2"><div className="mob-pf" style={{ width:`${prog}%` }}/></div>
+                    <div className="mob-pt2"><div className="mob-pf" style={{ width:`${prog}%` }} /></div>
                     <span className="mob-ptx">{prog}%</span>
                   </div>
                 )}
-                {steps.length>0&&(
+                {steps.length > 0 && (
                   <>
                     <div className="mob-slh"><span>OPERATION LOG</span><span style={{ color:"var(--cyan)", fontSize:7 }}>{steps.length} ops</span></div>
                     <div className="mob-sl" ref={listRef}>
-                      {steps.map((s,i) => {
-                        const sm=OP[s.type]??OP.enqueue;
-                        const past=i<idx, active=i===idx;
+                      {steps.map((s, i) => {
+                        const sm = OP[s.type] ?? OP.enqueue;
+                        const past = i<idx, active = i===idx;
                         return (
                           <div key={i} className={`mob-si${active?" sl-active":""}`} onClick={() => goTo(i)}>
-                            <span className="mob-si-dot" style={{ background:past?"var(--green)":active?sm.c:"var(--text-muted)", boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none" }}/>
+                            <span className="mob-si-dot" style={{ background:past?"var(--green)":active?sm.c:"var(--text-muted)", boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none" }} />
                             <span style={{ color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)" }}>
                               {sm.label}
                               {s.type==="enqueue"&&<span className="mob-si-v">({s.value})</span>}
@@ -1379,20 +1555,20 @@ export default function QueueDSPage() {
                     </div>
                   </>
                 )}
-                <div style={{ height:16 }}/>
+                <div style={{ height:16 }} />
               </div>
             </div>
-            <div style={{ height:24 }}/>
+            <div style={{ height:24 }} />
           </div>
 
-          <StickyNav activeSection={activeSection} onNav={scrollToSection} hasSteps={steps.length>0} hasErrors={!!error||hasAiErrors} termLines={termLines}/>
+          <StickyNav activeSection={activeSection} onNav={scrollToSection} hasSteps={steps.length>0} hasErrors={!!error||hasAiErrors} termLines={termLines} />
         </div>
-        {toast&&<div className="toast">{toast}</div>}
+        {toast && <div className="toast">{toast}</div>}
       </>
     );
   }
 
-  // ── DESKTOP LAYOUT ──────────────────────────────────────────────────────────
+  // ── DESKTOP LAYOUT (identical to stack but with queue content) ──────────────
   return (
     <>
       <style>{`
@@ -1416,15 +1592,16 @@ export default function QueueDSPage() {
         @keyframes blkDrop{0%{transform:translateX(80px) scale(0.78);opacity:0}55%{transform:translateX(-5px) scale(1.05);opacity:1}78%{transform:translateX(2px) scale(0.98)}100%{transform:translateX(0) scale(1);opacity:1}}
         @keyframes flyAway{0%{transform:translateX(-50%) scale(1) rotate(0);opacity:1}35%{opacity:1}100%{transform:translateX(calc(-50% + 70px)) translateY(-120px) scale(0.5) rotate(22deg);opacity:0}}
         @keyframes pkRing{0%{transform:scale(1);opacity:0.9}100%{transform:scale(1.35);opacity:0}}
+        @keyframes pkPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.55) saturate(1.4)}}
+        @keyframes ecCheck{0%,100%{transform:scale(1)}35%{transform:scale(1.06) translateY(-5px)}68%{transform:scale(0.97) translateY(2px)}}
         @keyframes pShine{0%,100%{left:-100%}55%{left:160%}}
         @keyframes svSh{0%,100%{transform:none}18%{transform:translateX(-9px)}36%{transform:translateX(9px)}54%{transform:translateX(-5px)}72%{transform:translateX(5px)}}
-        @keyframes frontPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) saturate(1.4)}}
-        @keyframes dotPing{0%{transform:scale(1);opacity:1}100%{transform:scale(2.2);opacity:0}}
-        @keyframes navItemIn{from{opacity:0;transform:translateX(-8px) scale(0.94)}to{opacity:1;transform:none}}
-        @keyframes progressPulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(22px,-16px) scale(1.06)}66%{transform:translate(-14px,20px) scale(0.95)}}
+        @keyframes blob2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-26px,14px) scale(1.08)}70%{transform:translate(18px,-22px) scale(0.93)}}
+        @keyframes scanline{0%{top:-10%}100%{top:110%}}
+        @keyframes gridScroll{0%{background-position:0 0}100%{background-position:38px 38px}}
 
-        .pg{height:100vh;display:flex;flex-direction:row;overflow:hidden;background:radial-gradient(ellipse 60% 45% at 5% 0%,rgba(59,130,246,0.10) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 95% 100%,rgba(244,114,182,0.08) 0%,transparent 52%),radial-gradient(ellipse 40% 35% at 50% 50%,rgba(167,139,250,0.04) 0%,transparent 60%),#050818}
-        .pg-body{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;padding-left:62px;}
+        .pg{height:100vh;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(ellipse 60% 45% at 5% 0%,rgba(59,130,246,0.10) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 95% 100%,rgba(244,114,182,0.08) 0%,transparent 52%),radial-gradient(ellipse 40% 35% at 50% 50%,rgba(167,139,250,0.04) 0%,transparent 60%),#050818}
         .hd{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:9px 24px;background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);border-bottom:1px solid rgba(96,165,250,0.12);box-shadow:0 1px 0 rgba(96,165,250,0.06),0 4px 24px rgba(0,0,0,0.4)}
         .hd-logo{width:34px;height:34px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(96,165,250,0.5),0 0 40px rgba(96,165,250,0.15);animation:rPulse 3s ease-in-out infinite}
         .hd-brand{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.4px;background:linear-gradient(90deg,#93c5fd 0%,#a78bfa 50%,#f472b6 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite}
@@ -1483,6 +1660,7 @@ export default function QueueDSPage() {
         .qv-block::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 58%);border-radius:inherit;pointer-events:none;}
         .qv-enq{animation:blkDrop 0.52s cubic-bezier(0.34,1.56,0.64,1) both;}
         .qv-front{animation:frontPulse 0.6s ease 2 both;}
+        @keyframes frontPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) saturate(1.4)}}
         .qv-pk-ring,.qv-pk-ring2{position:absolute;inset:-4px;border-radius:19px;border:2.5px solid;animation:pkRing 0.78s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none}
         .qv-pk-ring2{animation-delay:0.16s}
         .qv-bidx{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(255,255,255,0.42);}
@@ -1531,199 +1709,184 @@ export default function QueueDSPage() {
         .si-v{opacity:0.55;margin-left:2px}
         .si-ln{margin-left:auto;font-size:7px;color:var(--text-muted);opacity:0.7}
         .toast{position:fixed;bottom:24px;right:24px;padding:8px 16px;border-radius:9px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;background:rgba(10,20,50,0.97);border:1px solid var(--border-medium);color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.5),0 0 16px var(--green-glow);z-index:9999;animation:toastIn 0.25s ease,toastOut 0.3s ease 1.8s forwards}
-        ::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.2);border-radius:4px}::-webkit-scrollbar-thumb:hover{background:rgba(96,165,250,0.4)}textarea::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar{width:4px;height:4px} ::-webkit-scrollbar-track{background:transparent} ::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.2);border-radius:4px} ::-webkit-scrollbar-thumb:hover{background:rgba(96,165,250,0.4)} textarea::-webkit-scrollbar{width:4px}
       `}</style>
 
       <div className="pg">
-        {/* ── SIDEBAR — desktop only ── */}
-        <SidebarNav
-          activeSection={activeSection}
-          onNav={scrollToSection}
-          hasSteps={steps.length>0}
-          hasErrors={!!error||hasAiErrors}
-          termLines={termLines}
-          onRun={handleRun}
-          onReset={doReset}
-          playing={playing}
-          validating={validating}
-        />
+        <header className="hd">
+          <div className="hd-logo">🔁</div>
+          <div>
+            <div className="hd-brand">VisuoSlayer</div>
+            <div className="hd-tagline">Queue DS Visualizer · Write · Run · Step through every operation</div>
+          </div>
+          <div className="hd-r">
+            <div className="hd-ds-badge">FIFO QUEUE</div>
+            <div className="hd-pill" style={{ color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28` }}>{lm.name}</div>
+            <div className="hd-pid">pid:{sessionId}</div>
+          </div>
+        </header>
 
-        <div className="pg-body">
-          <header className="hd">
-            <div className="hd-logo">🔁</div>
-            <div>
-              <div className="hd-brand">VisuoSlayer</div>
-              <div className="hd-tagline">Queue DS Visualizer · Write · Run · Step through every operation</div>
+        <main className="main">
+          {/* LEFT */}
+          <div className="panel left">
+            <div className="ph">
+              <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 6px #ff5f57" }} />
+              <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 6px #ffbd2e" }} />
+              <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 6px #28c840" }} />
+              <span className="ptl">Code Editor</span>
+              <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28`, padding:"2px 8px", borderRadius:20, fontWeight:700 }}>{lm.name}</span>
             </div>
-            <div className="hd-r">
-              <div className="hd-ds-badge">FIFO QUEUE</div>
-              <div className="hd-pill" style={{ color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28` }}>{lm.name}</div>
-              <div className="hd-pid">pid:{sessionId}</div>
-            </div>
-          </header>
 
-          <main className="main">
-            {/* LEFT */}
-            <div className="panel left">
-              <div className="ph">
-                <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 6px #ff5f57" }}/>
-                <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 6px #ffbd2e" }}/>
-                <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 6px #28c840" }}/>
-                <span className="ptl">Code Editor</span>
-                <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28`, padding:"2px 8px", borderRadius:20, fontWeight:700 }}>{lm.name}</span>
+            <div style={{ flex:termOpen?"0 0 58%":"1", display:"flex", flexDirection:"column", minHeight:0, borderBottom:"1px solid var(--border-subtle)" }}>
+              <div className="lb">
+                {Object.entries(LANGS).map(([k, m]) => (
+                  <button key={k} className={`lt${lang===k?" la":""}`} onClick={() => handleChangeLang(k)} style={lang===k?{borderColor:`${m.accent}35`,color:m.accent,background:`${m.accent}0e`}:{}}>{m.ext}</button>
+                ))}
               </div>
-
-              <div style={{ flex:termOpen?"0 0 58%":"1", display:"flex", flexDirection:"column", minHeight:0, borderBottom:"1px solid var(--border-subtle)" }}>
-                <div className="lb">
-                  {Object.entries(LANGS).map(([k,m]) => (
-                    <button key={k} className={`lt${lang===k?" la":""}`} onClick={() => handleChangeLang(k)} style={lang===k?{borderColor:`${m.accent}35`,color:m.accent,background:`${m.accent}0e`}:{}}>{m.ext}</button>
-                  ))}
-                </div>
-                <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
-                {step&&os&&(
-                  <div className="alb" style={{ borderColor:os.bd, background:os.bg }}>
-                    <span style={{ color:os.c, fontSize:10 }}>{os.icon}</span>
-                    <span className="alb-ln" style={{ color:os.c }}>L{step.lineNum+1}</span>
-                    <code className="alb-code">{step.codeLine}</code>
-                  </div>
-                )}
-                <div className="rr">
-                  <button className={`btn-run${playing||validating?" running":""}`} onClick={handleRun} disabled={playing||validating}>
-                    {validating?"⟳ VisuoSlayer…":playing?"▶ Running…":"▶  Run & Visualize"}
-                  </button>
-                  {(steps.length>0||error||hasAiErrors)&&<button className="btn-rst" onClick={doReset}>↺ Reset</button>}
-                  <span className="rr-hint">CTRL+ENTER</span>
-                </div>
-              </div>
-
-              <div className={`tm-wrap${termOpen?" tm-open":" tm-closed"}`}>
-                <div className="term-body-wrap" key={termOpen?"open":"closed"}>
-                  <div className="term-bar">
-                    <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }}/>
-                    <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }}/>
-                    <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }}/>
-                    <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px", userSelect:"none" }}>visualoslayer — bash</span>
-                    <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)", marginLeft:8 }}>pid:{sessionId}</span>
-                    <button className="term-toggle" onClick={() => setTermOpen(false)} title="Collapse">▾</button>
-                  </div>
-                  <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx}/>
-                </div>
-              </div>
-
-              {!termOpen&&(
-                <div className="term-bar-closed" onClick={() => setTermOpen(true)}>
-                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 4px #ff5f57" }}/>
-                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 4px #ffbd2e" }}/>
-                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 4px #28c840" }}/>
-                  <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px" }}>visualoslayer — bash</span>
-                  {termLines.some(l => l.type==="error"||l.type==="stderr")&&<span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#f87171", background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", padding:"1px 7px", borderRadius:10 }}>errors</span>}
-                  {termLines.some(l => l.type==="success")&&<span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--green)", background:"var(--green-dim)", border:"1px solid rgba(74,222,128,0.25)", padding:"1px 7px", borderRadius:10 }}>ok</span>}
-                  <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--cyan)", fontWeight:700 }}>▴ open</span>
+              <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef} />
+              {step && os && (
+                <div className="alb" style={{ borderColor:os.bd, background:os.bg }}>
+                  <span style={{ color:os.c, fontSize:10 }}>{os.icon}</span>
+                  <span className="alb-ln" style={{ color:os.c }}>L{step.lineNum+1}</span>
+                  <code className="alb-code">{step.codeLine}</code>
                 </div>
               )}
+              <div className="rr">
+                <button className={`btn-run${playing||validating?" running":""}`} onClick={handleRun} disabled={playing||validating}>
+                  {validating?"⟳ VisuoSlayer…":playing?"▶ Running…":"▶  Run & Visualize"}
+                </button>
+                {(steps.length > 0 || error || hasAiErrors) && <button className="btn-rst" onClick={doReset}>↺ Reset</button>}
+                <span className="rr-hint">CTRL+ENTER</span>
+              </div>
             </div>
 
-            {/* RIGHT */}
-            <div className="panel">
-              <div className="ph">
-                <span className="dot" style={{ background:"#60a5fa", boxShadow:"0 0 6px #60a5fa" }}/>
-                <span className="dot" style={{ background:"#f472b6", boxShadow:"0 0 6px #f472b6" }}/>
-                <span className="dot" style={{ background:"#4ade80", boxShadow:"0 0 6px #4ade80" }}/>
-                <span className="ptl">Queue Visualization</span>
-                {steps.length>0&&<span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(96,165,250,0.25)", padding:"2px 9px", borderRadius:20, fontWeight:700 }}>{idx+1} / {steps.length}</span>}
-              </div>
-
-              <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, overflow:"hidden" }}>
-                <QueueViz step={step} animKey={animKey} idle={idle}/>
-
-                <div className="oi">
-                  {step&&os ? (
-                    <>
-                      <div className="oi-badge" style={{ color:os.c, background:os.bg, borderColor:os.bd }}>
-                        <span>{os.icon}</span><span>{os.label}</span>
-                        {step.type==="enqueue"&&<span style={{opacity:0.55}}>({step.value})</span>}
-                        {(step.type==="dequeue"||step.type==="front")&&step.valid!==false&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
-                        {step.type==="isEmpty"&&<span style={{opacity:0.55}}>→ {String(step.result)}</span>}
-                        {step.type==="size"&&<span style={{opacity:0.55}}>→ {step.result}</span>}
-                      </div>
-                      <div className="oi-msg">{step.message}</div>
-                    </>
-                  ) : (
-                    <div className="oi-idle">
-                      <span>🔁</span>
-                      <span style={{ color:"var(--text-muted)" }}>
-                        {idle?"Write a Queue class, use it below, hit Run":hasAiErrors?"VisuoSlayer found errors — see terminal":error?"Fix errors and run again":validating?"VisuoSlayer reviewing your code…":"Waiting…"}
-                      </span>
-                    </div>
-                  )}
+            <div className={`tm-wrap${termOpen?" tm-open":" tm-closed"}`}>
+              <div className="term-body-wrap" key={termOpen?"open":"closed"}>
+                <div className="term-bar">
+                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }} />
+                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }} />
+                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }} />
+                  <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px", userSelect:"none" }}>visualoslayer — bash</span>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)", marginLeft:8 }}>pid:{sessionId}</span>
+                  <button className="term-toggle" onClick={() => setTermOpen(false)} title="Collapse">▾</button>
                 </div>
+                <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx} />
+              </div>
+            </div>
 
-                {steps.length>0&&(
-                  <div className="ctrl">
-                    <button className="cb" onClick={() => goTo(0)} disabled={idx<=0}>⏮</button>
-                    <button className="cb" onClick={() => goTo(idx-1)} disabled={idx<=0}>◀</button>
-                    <button className="cp" onClick={() => { if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}else{clearInterval(timerRef.current);setPlaying(p=>!p);} }}>
-                      {playing?"⏸":done?"↺":"▶"}
-                    </button>
-                    <button className="cb" onClick={() => goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
-                    <button className="cb" onClick={() => goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
-                    <div className="csep"/>
-                    <div className="spd">
-                      {[[2,"0.5×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl]) => (
-                        <button key={s} className={`sb${speed===s?" sa":""}`} onClick={() => setSpeed(s)}>{lbl}</button>
-                      ))}
+            {!termOpen && (
+              <div className="term-bar-closed" onClick={() => setTermOpen(true)}>
+                <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 4px #ff5f57" }} />
+                <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 4px #ffbd2e" }} />
+                <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 4px #28c840" }} />
+                <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px" }}>visualoslayer — bash</span>
+                {termLines.some((l) => l.type==="error"||l.type==="stderr") && <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#f87171", background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.25)", padding:"1px 7px", borderRadius:10 }}>errors</span>}
+                {termLines.some((l) => l.type==="success") && <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--green)", background:"var(--green-dim)", border:"1px solid rgba(74,222,128,0.25)", padding:"1px 7px", borderRadius:10 }}>ok</span>}
+                <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--cyan)", fontWeight:700 }}>▴ open</span>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT */}
+          <div className="panel">
+            <div className="ph">
+              <span className="dot" style={{ background:"#60a5fa", boxShadow:"0 0 6px #60a5fa" }} />
+              <span className="dot" style={{ background:"#f472b6", boxShadow:"0 0 6px #f472b6" }} />
+              <span className="dot" style={{ background:"#4ade80", boxShadow:"0 0 6px #4ade80" }} />
+              <span className="ptl">Queue Visualization</span>
+              {steps.length > 0 && <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(96,165,250,0.25)", padding:"2px 9px", borderRadius:20, fontWeight:700 }}>{idx+1} / {steps.length}</span>}
+            </div>
+
+            <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, overflow:"hidden" }}>
+              <QueueViz step={step} animKey={animKey} idle={idle} />
+
+              <div className="oi">
+                {step && os ? (
+                  <>
+                    <div className="oi-badge" style={{ color:os.c, background:os.bg, borderColor:os.bd }}>
+                      <span>{os.icon}</span><span>{os.label}</span>
+                      {step.type==="enqueue"&&<span style={{opacity:0.55}}>({step.value})</span>}
+                      {(step.type==="dequeue"||step.type==="front")&&step.valid!==false&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
+                      {step.type==="isEmpty"&&<span style={{opacity:0.55}}>→ {String(step.result)}</span>}
+                      {step.type==="size"&&<span style={{opacity:0.55}}>→ {step.result}</span>}
                     </div>
-                    <div className="csep"/>
-                    <button className="cb" onClick={copyQueueState} style={{ fontSize:12 }}>📋</button>
-                    <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-secondary)", marginLeft:2 }}>
-                      <span style={{ color:"var(--cyan)", fontWeight:700 }}>{idx+1}</span>
-                      <span style={{ color:"var(--text-muted)" }}>/{steps.length}</span>
+                    <div className="oi-msg">{step.message}</div>
+                  </>
+                ) : (
+                  <div className="oi-idle">
+                    <span>🔁</span>
+                    <span style={{ color:"var(--text-muted)" }}>
+                      {idle?"Write a Queue class, use it below, hit Run":hasAiErrors?"VisuoSlayer found errors — see terminal":error?"Fix errors and run again":validating?"VisuoSlayer reviewing your code…":"Waiting…"}
                     </span>
                   </div>
                 )}
-
-                {steps.length>0&&(
-                  <div className="pr">
-                    <div className="pt2"><div className="pf" style={{ width:`${prog}%` }}/></div>
-                    <span className="ptx">{prog}%</span>
-                  </div>
-                )}
-
-                {steps.length>0&&(
-                  <>
-                    <div className="slh">
-                      <span>OPERATION LOG — click to jump</span>
-                      <span className="slh-count">{steps.length} ops</span>
-                    </div>
-                    <div className="sl" ref={listRef}>
-                      {steps.map((s,i) => {
-                        const sm=OP[s.type]??OP.enqueue;
-                        const past=i<idx, active=i===idx;
-                        return (
-                          <div key={i} className={`si${active?" sl-active":""}`} onClick={() => goTo(i)}>
-                            <span className="si-dot" style={{ background:past?"var(--green)":active?sm.c:"var(--text-muted)", boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none" }}/>
-                            <span style={{ color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)" }}>
-                              {sm.label}
-                              {s.type==="enqueue"&&<span className="si-v">({s.value})</span>}
-                              {s.type==="dequeue"&&s.valid!==false&&<span className="si-v"> → {s.value}</span>}
-                              {s.type==="front"&&s.valid!==false&&<span className="si-v"> = {s.value}</span>}
-                              {s.type==="isEmpty"&&<span className="si-v"> = {String(s.result)}</span>}
-                              {s.type==="size"&&<span className="si-v"> = {s.result}</span>}
-                              {(s.type==="dequeue_error"||s.type==="front_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
-                            </span>
-                            <span className="si-ln">L{s.lineNum+1}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
               </div>
+
+              {steps.length > 0 && (
+                <div className="ctrl">
+                  <button className="cb" onClick={() => goTo(0)} disabled={idx<=0}>⏮</button>
+                  <button className="cb" onClick={() => goTo(idx-1)} disabled={idx<=0}>◀</button>
+                  <button className="cp" onClick={() => { if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}else{clearInterval(timerRef.current);setPlaying(p=>!p);} }}>
+                    {playing?"⏸":done?"↺":"▶"}
+                  </button>
+                  <button className="cb" onClick={() => goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
+                  <button className="cb" onClick={() => goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
+                  <div className="csep" />
+                  <div className="spd">
+                    {[[2,"0.5×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl]) => (
+                      <button key={s} className={`sb${speed===s?" sa":""}`} onClick={() => setSpeed(s)}>{lbl}</button>
+                    ))}
+                  </div>
+                  <div className="csep" />
+                  <button className="cb" onClick={copyQueueState} style={{ fontSize:12 }}>📋</button>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-secondary)", marginLeft:2 }}>
+                    <span style={{ color:"var(--cyan)", fontWeight:700 }}>{idx+1}</span>
+                    <span style={{ color:"var(--text-muted)" }}>/{steps.length}</span>
+                  </span>
+                </div>
+              )}
+
+              {steps.length > 0 && (
+                <div className="pr">
+                  <div className="pt2"><div className="pf" style={{ width:`${prog}%` }} /></div>
+                  <span className="ptx">{prog}%</span>
+                </div>
+              )}
+
+              {steps.length > 0 && (
+                <>
+                  <div className="slh">
+                    <span>OPERATION LOG — click to jump</span>
+                    <span className="slh-count">{steps.length} ops</span>
+                  </div>
+                  <div className="sl" ref={listRef}>
+                    {steps.map((s, i) => {
+                      const sm = OP[s.type] ?? OP.enqueue;
+                      const past = i<idx, active = i===idx;
+                      return (
+                        <div key={i} className={`si${active?" sl-active":""}`} onClick={() => goTo(i)}>
+                          <span className="si-dot" style={{ background:past?"var(--green)":active?sm.c:"var(--text-muted)", boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none" }} />
+                          <span style={{ color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)" }}>
+                            {sm.label}
+                            {s.type==="enqueue"&&<span className="si-v">({s.value})</span>}
+                            {s.type==="dequeue"&&s.valid!==false&&<span className="si-v"> → {s.value}</span>}
+                            {s.type==="front"&&s.valid!==false&&<span className="si-v"> = {s.value}</span>}
+                            {s.type==="isEmpty"&&<span className="si-v"> = {String(s.result)}</span>}
+                            {s.type==="size"&&<span className="si-v"> = {s.result}</span>}
+                            {(s.type==="dequeue_error"||s.type==="front_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
+                          </span>
+                          <span className="si-ln">L{s.lineNum+1}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
-          </main>
-        </div>
+          </div>
+        </main>
       </div>
-      {toast&&<div className="toast">{toast}</div>}
+      {toast && <div className="toast">{toast}</div>}
     </>
   );
 }
