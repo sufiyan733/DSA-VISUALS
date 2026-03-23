@@ -1397,7 +1397,6 @@ function MessageBubble({msg,idx,speakingIdx,onSpeak,onStopSpeak,voiceSpeed,onSpe
           </div>
           <span style={{fontFamily:MONO,fontSize:"9px",fontWeight:700,color:ACCENT2,letterSpacing:"0.1em"}}>VISUOSLAYER AI</span>
           <div style={{width:"4px",height:"4px",borderRadius:"50%",background:"#34d399",boxShadow:"0 0 5px #34d399"}}/>
-          {isStreaming&&!streamDone&&<span style={{fontFamily:MONO,fontSize:"8px",color:ACCENT3,animation:"bot-antenna-pulse 1s infinite"}}>GENERATING…</span>}
         </div>
       )}
 
@@ -1855,7 +1854,7 @@ export default function ChatBot(){
   },[input,messages,loading,userLanguage,stopSpeak]);
 
   const handleKey=(e)=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendMessage();}};
-  const handleInput=(e)=>{setInput(e.target.value);setCharCount(e.target.value.length);soundEngine.playTyping();};
+  const handleInput=(e)=>{setInput(e.target.value);setCharCount(e.target.value.length);};
 
   if(!mounted)return null;
   const hasMessages=messages.length>0;
@@ -1987,7 +1986,6 @@ export default function ChatBot(){
                 {userLanguage&&<><span style={{color:TEXT_DIM,fontSize:"8px"}}>·</span><span style={{fontFamily:MONO,fontSize:"9px",color:ACCENT2,opacity:0.75}}>{userLanguage}</span></>}
                 {messages.length>0&&<><span style={{color:TEXT_DIM,fontSize:"8px"}}>·</span><span style={{fontFamily:MONO,fontSize:"9px",color:TEXT_DIM}}>{messages.length} msgs</span></>}
                 {focusMode&&<><span style={{color:TEXT_DIM,fontSize:"8px"}}>·</span><span style={{fontFamily:MONO,fontSize:"9px",color:"#fbbf24"}}>FOCUS</span></>}
-                {loading&&<><span style={{color:TEXT_DIM,fontSize:"8px"}}>·</span><span style={{fontFamily:MONO,fontSize:"9px",color:ACCENT3,animation:"bot-antenna-pulse 1s infinite"}}>THINKING</span></>}
               </div>
             </div>
             <div className="bot-hbtns" style={{display:"flex",gap:"3px",flexShrink:0,alignItems:"center"}}>
@@ -2061,7 +2059,7 @@ export default function ChatBot(){
                   ref={el=>{inputRef.current=el;textareaRef.current=el;}}
                   value={input} onChange={handleInput} onKeyDown={handleKey}
                   onFocus={()=>setInputFoc(true)} onBlur={()=>setInputFoc(false)}
-                  placeholder="ask a topic or type 'X code' for code only…"
+                  placeholder=""
                   rows={1}
                   style={{flex:1,background:"none",border:"none",outline:"none",fontFamily:SANS,
                     fontSize:"13px",color:TEXT_PRI,fontWeight:400,resize:"none",lineHeight:"1.55",
