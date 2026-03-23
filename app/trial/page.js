@@ -1,1531 +1,2382 @@
 "use client";
-import { useState, useRef, useEffect, useCallback } from "react";
-
-// ── Color palette ────────────────────────────────────────────────────────────
-const PALETTE = [
-  { g1:"#4facfe", g2:"#00f2fe", glow:"rgba(79,172,254,0.65)",  border:"#4facfe" },
-  { g1:"#f093fb", g2:"#f5576c", glow:"rgba(245,87,108,0.65)",  border:"#f5576c" },
-  { g1:"#43e97b", g2:"#38f9d7", glow:"rgba(67,233,123,0.65)",  border:"#43e97b" },
-  { g1:"#fda085", g2:"#f6d365", glow:"rgba(246,211,101,0.65)", border:"#fda085" },
-  { g1:"#a18cd1", g2:"#fbc2eb", glow:"rgba(161,140,209,0.65)", border:"#a18cd1" },
-  { g1:"#30cfd0", g2:"#667eea", glow:"rgba(102,126,234,0.65)", border:"#30cfd0" },
-  { g1:"#ff9966", g2:"#ff5e62", glow:"rgba(255,94,98,0.65)",   border:"#ff9966" },
-  { g1:"#89f7fe", g2:"#66a6ff", glow:"rgba(102,166,255,0.65)", border:"#89f7fe" },
-];
-const col = (v) => PALETTE[Math.abs(Math.round(v) || 0) % PALETTE.length];
-
-const OP = {
-  push:       { label:"push",      icon:"⬇", c:"#4ade80", bg:"rgba(74,222,128,0.10)",  bd:"rgba(74,222,128,0.35)"  },
-  pop:        { label:"pop",       icon:"⬆", c:"#f472b6", bg:"rgba(244,114,182,0.10)", bd:"rgba(244,114,182,0.35)" },
-  pop_error:  { label:"UNDERFLOW", icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.10)",   bd:"rgba(239,68,68,0.35)"   },
-  peek:       { label:"peek",      icon:"👁", c:"#fbbf24", bg:"rgba(251,191,36,0.10)",  bd:"rgba(251,191,36,0.35)"  },
-  peek_error: { label:"EMPTY",     icon:"⚠", c:"#ef4444", bg:"rgba(239,68,68,0.10)",   bd:"rgba(239,68,68,0.35)"   },
-  isEmpty:    { label:"isEmpty",   icon:"∅", c:"#60a5fa", bg:"rgba(96,165,250,0.10)",  bd:"rgba(96,165,250,0.35)"  },
-};
-
-const LANGS = {
-  c:          { name:"C",          ext:"C",   accent:"#a8daff", custom:false },
-  cpp:        { name:"C++",        ext:"C++", accent:"#00b4d8", custom:false },
-  java:       { name:"Java",       ext:"JV",  accent:"#ed8b00", custom:false },
-  go:         { name:"Go",         ext:"GO",  accent:"#00add8", custom:false },
-  python:     { name:"Python",     ext:"PY",  accent:"#4ec9b0", custom:false },
-  javascript: { name:"JavaScript", ext:"JS",  accent:"#f7df1e", custom:false },
-};
-
-const LINE_H = 21;
-
-// ── CODE TEMPLATES ────────────────────────────────────────────────────────────
-const TPL = {
-c: `// Linked List Stack — C
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdbool.h>
-
-typedef struct Node {
-    int data;
-    struct Node* next;
-} Node;
-
-typedef struct {
-    Node* top;
-} Stack;
-
-void init(Stack* s) {
-    s->top = NULL;
-}
-
-void push(Stack* s, int val) {
-    Node* newNode = (Node*)malloc(sizeof(Node));
-    newNode->data = val;
-    newNode->next = s->top;
-    s->top = newNode;
-}
-
-int pop(Stack* s) {
-    if (s->top == NULL) return -1;
-    Node* temp = s->top;
-    int val = temp->data;
-    s->top = s->top->next;
-    free(temp);
-    return val;
-}
-
-int peek(Stack* s) {
-    if (s->top == NULL) return -1;
-    return s->top->data;
-}
-
-bool isEmpty(Stack* s) {
-    return s->top == NULL;
-}
-
-int size(Stack* s) {
-    int count = 0;
-    Node* cur = s->top;
-    while (cur) {
-        count++;
-        cur = cur->next;
-    }
-    return count;
-}
-
-int main() {
-    Stack s;
-    init(&s);
-    push(&s, 10);
-    push(&s, 25);
-    push(&s, 37);
-    peek(&s);
-    pop(&s);
-    push(&s, 99);
-    push(&s, 4);
-    isEmpty(&s);
-    pop(&s);
-    pop(&s);
-    return 0;
-}`,
-
-cpp: `// Linked List Stack — C++
-#include <iostream>
-using namespace std;
-
-struct Node {
-    int data;
-    Node* next;
-    Node(int val) : data(val), next(nullptr) {}
-};
-
-class Stack {
-private:
-    Node* top;
-
-public:
-    Stack() : top(nullptr) {}
-
-    ~Stack() {
-        while (!isEmpty()) pop();
-    }
-
-    void push(int val) {
-        Node* newNode = new Node(val);
-        newNode->next = top;
-        top = newNode;
-    }
-
-    int pop() {
-        if (isEmpty()) return -1;
-        int val = top->data;
-        Node* temp = top;
-        top = top->next;
-        delete temp;
-        return val;
-    }
-
-    int peek() {
-        return isEmpty() ? -1 : top->data;
-    }
-
-    bool isEmpty() {
-        return top == nullptr;
-    }
-
-    int size() {
-        int count = 0;
-        Node* cur = top;
-        while (cur) {
-            count++;
-            cur = cur->next;
-        }
-        return count;
-    }
-};
-
-int main() {
-    Stack s;
-    s.push(10);
-    s.push(25);
-    s.push(37);
-    s.peek();
-    s.pop();
-    s.push(99);
-    s.push(42);
-    s.isEmpty();
-    return 0;
-}`,
-
-java: `// Linked List Stack — Java
-public class Main {
-
-    static class Node<T> {
-        T data;
-        Node<T> next;
-
-        Node(T data) {
-            this.data = data;
-        }
-    }
-
-    static class Stack<T> {
-        private Node<T> top;
-
-        public void push(T data) {
-            Node<T> newNode = new Node<>(data);
-            newNode.next = top;
-            top = newNode;
-        }
-
-        public T pop() {
-            if (isEmpty()) return null;
-            T data = top.data;
-            top = top.next;
-            return data;
-        }
-
-        public T peek() {
-            return isEmpty() ? null : top.data;
-        }
-
-        public boolean isEmpty() {
-            return top == null;
-        }
-
-        public int size() {
-            int count = 0;
-            Node<T> cur = top;
-            while (cur != null) {
-                count++;
-                cur = cur.next;
-            }
-            return count;
-        }
-    }
-
-    public static void main(String[] args) {
-        Stack<Integer> s = new Stack<>();
-        s.push(10);
-        s.push(25);
-        s.push(37);
-        s.peek();
-        s.pop();
-        s.push(99);
-        s.push(42);
-        s.isEmpty();
-    }
-}`,
-
-go: `// Linked List Stack — Go
-package main
-
-import "fmt"
-
-type Node struct {
-    value int
-    next  *Node
-}
-
-type Stack struct {
-    top *Node
-}
-
-func (s *Stack) Push(value int) {
-    newNode := &Node{value: value, next: s.top}
-    s.top = newNode
-}
-
-func (s *Stack) Pop() (int, bool) {
-    if s.IsEmpty() {
-        return 0, false
-    }
-    value := s.top.value
-    s.top = s.top.next
-    return value, true
-}
-
-func (s *Stack) Peek() (int, bool) {
-    if s.IsEmpty() {
-        return 0, false
-    }
-    return s.top.value, true
-}
-
-func (s *Stack) IsEmpty() bool {
-    return s.top == nil
-}
-
-func (s *Stack) Size() int {
-    count := 0
-    cur := s.top
-    for cur != nil {
-        count++
-        cur = cur.next
-    }
-    return count
-}
-
-func main() {
-    s := &Stack{}
-    s.Push(10)
-    s.Push(25)
-    s.Push(37)
-    s.Peek()
-    s.Pop()
-    s.Push(99)
-    s.Push(42)
-    s.IsEmpty()
-    fmt.Println("Done")
-}`,
-
-python: `# Linked List Stack — Python
-class Node:
-    def __init__(self, value):
-        self.value = value
-        self.next = None
-
-
-class Stack:
-    def __init__(self):
-        self.top = None
-
-    def push(self, value):
-        new_node = Node(value)
-        new_node.next = self.top
-        self.top = new_node
-
-    def pop(self):
-        if self.is_empty():
-            return None
-        value = self.top.value
-        self.top = self.top.next
-        return value
-
-    def peek(self):
-        return self.top.value if self.top else None
-
-    def is_empty(self):
-        return self.top is None
-
-    def size(self):
-        count = 0
-        cur = self.top
-        while cur:
-            count += 1
-            cur = cur.next
-        return count
-
-
-s = Stack()
-s.push(10)
-s.push(25)
-s.push(37)
-s.peek()
-s.pop()
-s.push(99)
-s.push(42)
-s.is_empty()`,
-
-javascript: `// Linked List Stack — JavaScript
-class Node {
-    constructor(value) {
-        this.value = value;
-        this.next = null;
-    }
-}
-
-class Stack {
-    constructor() {
-        this.top = null;
-    }
-
-    push(value) {
-        const newNode = new Node(value);
-        newNode.next = this.top;
-        this.top = newNode;
-    }
-
-    pop() {
-        if (this.isEmpty()) return undefined;
-        const value = this.top.value;
-        this.top = this.top.next;
-        return value;
-    }
-
-    peek() {
-        return this.isEmpty() ? undefined : this.top.value;
-    }
-
-    isEmpty() {
-        return this.top === null;
-    }
-
-    get size() {
-        let count = 0;
-        let cur = this.top;
-        while (cur) {
-            count++;
-            cur = cur.next;
-        }
-        return count;
-    }
-}
-
-const s = new Stack();
-s.push(10);
-s.push(25);
-s.push(37);
-s.peek();
-s.pop();
-s.push(99);
-s.push(4);
-s.isEmpty();
-s.pop();
-s.pop();`,
-};
-
-// ── Parser functions ───────────────────────────────────────────────────────
-function parseCStack(code) {
-  const steps = [], stack = [];
-  const lines = code.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    const t = lines[i].trim();
-    if (!t || t.startsWith("//") || t.startsWith("*") || t.startsWith("#")) continue;
-    const pushM = /\bpush\s*\(\s*&?\w+\s*,\s*(-?[\d.]+)\s*\)/.exec(t);
-    const isPopT    = /\bpop\s*\(\s*&?\w+\s*\)/.test(t);
-    const isPeekT   = /\bpeek\s*\(\s*&?\w+\s*\)/.test(t);
-    const isEmptyT  = /\bisEmpty\s*\(\s*&?\w+\s*\)/.test(t);
-    if (pushM) {
-      const v = parseFloat(pushM[1]);
-      stack.push(v);
-      steps.push({ type:"push", value:v, stack:[...stack], lineNum:i, codeLine:t, message:buildMessage({type:"push",value:v,stack:[...stack]}) });
-    } else if (isPopT) {
-      if (stack.length === 0) steps.push({ type:"pop_error", value:null, stack:[], lineNum:i, codeLine:t, message:buildMessage({type:"pop_error"}) });
-      else { const v = stack.pop(); steps.push({ type:"pop", value:v, stack:[...stack], lineNum:i, codeLine:t, message:buildMessage({type:"pop",value:v,stack:[...stack]}) }); }
-    } else if (isPeekT) {
-      if (stack.length === 0) steps.push({ type:"peek_error", value:null, stack:[], lineNum:i, codeLine:t, message:buildMessage({type:"peek_error"}) });
-      else { const v = stack[stack.length-1]; steps.push({ type:"peek", value:v, stack:[...stack], lineNum:i, codeLine:t, message:buildMessage({type:"peek",value:v,stack:[...stack]}) }); }
-    } else if (isEmptyT) {
-      const e = stack.length === 0;
-      steps.push({ type:"isEmpty", result:e, stack:[...stack], lineNum:i, codeLine:t, message:buildMessage({type:"isEmpty",result:e,stack:[...stack]}) });
-    }
-  }
-  if (!steps.length) return { steps:[], errors:["No stack operations found.\nMake sure main() calls push(&s,N), pop(&s), peek(&s), or isEmpty(&s)."] };
-  return { steps, errors:[] };
-}
-
-function countBraces(line) {
-  let o=0,c=0,inS=false,sc="";
-  const ci=line.indexOf("//"),cl=ci>=0?line.slice(0,ci):line;
-  for(let i=0;i<cl.length;i++){
-    const ch=cl[i];
-    if(!inS&&(ch==='"'||ch==="'"||ch==="`")){inS=true;sc=ch;continue;}
-    if(inS&&ch===sc&&cl[i-1]!=="\\"){inS=false;continue;}
-    if(!inS){if(ch==="{")o++;else if(ch==="}")c++;}
-  }
-  return{opens:o,closes:c};
-}
-function extractClassBlock(code,cn){
-  const re=new RegExp(`\\bclass\\s+${cn}(?:\\s+[^{]*)?\\{`);
-  const m=re.exec(code);if(!m)return null;
-  let d=1,i=m.index+m[0].length;
-  while(i<code.length&&d>0){if(code[i]==="{")d++;else if(code[i]==="}") d--;i++;}
-  return{text:code.slice(m.index,i),start:m.index,end:i};
-}
-
-function runJavaScript(code){
-  const cm=/\bclass\s+(\w+)/.exec(code);
-  if(!cm)return{steps:[],errors:["No class definition found."]};
-  const cn=cm[1];
-  const fm=/this\.(\w+)\s*=\s*(?:\[\s*\]|new\s+Array\s*\(\s*\))/.exec(code);
-  const f=fm?.[1]??"items";
-  const cb=extractClassBlock(code,cn);
-  if(!cb)return{steps:[],errors:[`Could not parse class '${cn}'.`]};
-  const ec=code.slice(0,cb.start)+"\n"+code.slice(cb.end);
-  const ins=`"use strict";
-const __S=[];
-class ${cn}{
-  constructor(){this.${f}=[];}
-  push(v){this.${f}.push(v);__S.push({type:"push",value:v,stack:[...this.${f}]});}
-  pop(){
-    if(this.${f}.length===0){__S.push({type:"pop_error",value:null,stack:[]});return undefined;}
-    const v=this.${f}.pop();__S.push({type:"pop",value:v,stack:[...this.${f}]});return v;
-  }
-  peek(){
-    if(this.${f}.length===0){__S.push({type:"peek_error",value:null,stack:[]});return undefined;}
-    const v=this.${f}[this.${f}.length-1];__S.push({type:"peek",value:v,stack:[...this.${f}]});return v;
-  }
-  top(){return this.peek();}front(){return this.peek();}
-  isEmpty(){const e=this.${f}.length===0;__S.push({type:"isEmpty",result:e,stack:[...this.${f}]});return e;}
-  get size(){return this.${f}.length;}get length(){return this.${f}.length;}
-  toString(){return "[Stack: "+this.${f}.join(", ")+"]";}
-}
-${ec}
-return __S;`;
-  let raw;
-  try{const fn=new Function("console",ins);raw=fn({log:()=>{},warn:()=>{},error:()=>{},info:()=>{}});}
-  catch(e){return{steps:[],errors:[e.message]};}
-  if(!raw?.length)return{steps:[],errors:["No stack operations were executed."]};
-  const lines=code.split("\n");
-  const cls=[];let cur=0,cel=0;
-  for(let i=0;i<lines.length;i++){if(cur>=cb.end){cel=i;break;}cur+=lines[i].length+1;}
-  for(let i=cel;i<lines.length;i++){
-    const t=lines[i].trim();
-    if(t.startsWith("//")||t.startsWith("*")||t.startsWith("/*"))continue;
-    if(/\.(push|pop|peek|top|front|isEmpty|is_empty|empty|size)\s*\(/.test(t))cls.push(i);
-  }
-  return{steps:raw.map((s,ix)=>({
-    ...s,lineNum:cls[ix]??cel,
-    codeLine:lines[cls[ix]??cel]?.trim()??"",
-    message:buildMessage(s),
-  })),errors:[]};
-}
-
-function parseScoped(code,lang){if(lang==="python")return parsePython(code);return parseBraced(code,lang);}
-function parsePython(code){
-  const lines=code.split("\n"),ex=[];
-  for(let i=0;i<lines.length;i++){
-    const l=lines[i],t=l.trim();
-    if(!t||t.startsWith("#"))continue;
-    const ind=l.match(/^(\s*)/)?.[1]?.length??0;
-    if(ind===0&&!t.startsWith("class ")&&!t.startsWith("def ")&&!t.startsWith("import ")&&!t.startsWith("from ")&&!t.startsWith("if __name__"))
-      ex.push({lineIdx:i,line:t});
-    if(i>0&&lines[i-1].trim().includes("__main__")&&ind===4)ex.push({lineIdx:i,line:t});
-  }
-  return simulateOps(ex,code.split("\n"),lang);
-}
-function parseBraced(code,lang){
-  const lines=code.split("\n"),ex=[];
-  let d=0,inC=false,cd=-1,inM=false,md=-1,ml=false;
-  const nm=["java","cpp","go","rust"];
-  for(let i=0;i<lines.length;i++){
-    const l=lines[i],t=l.trim();
-    if(ml){if(t.includes("*/"))ml=false;continue;}
-    if(t.startsWith("/*")){ml=true;continue;}
-    if(t.startsWith("//")||t.startsWith("*")||t.startsWith("#")||!t)continue;
-    const{opens,closes}=countBraces(l);
-    const db=d;d+=opens-closes;
-    if(/\bclass\s+\w+/.test(t)){inC=true;cd=db;}
-    if(nm.includes(lang)&&(/\bmain\s*\(/.test(t)||/\bfunc\s+main\s*\(/.test(t))){inM=true;md=db;}
-    if(inC&&d<=cd){inC=false;cd=-1;}
-    if(inM&&d<=md){inM=false;md=-1;}
-    const isEx=nm.includes(lang)?(inM&&d===md+1&&!inC):(lang==="javascript")?(d===0&&!inC):true;
-    if(isEx)ex.push({lineIdx:i,line:t});
-  }
-  return simulateOps(ex,lines,lang);
-}
-function simulateOps(ex,all,lang){
-  const steps=[],errors=[],stack=[];
-  const PR=[/\.(?:push|Push|append|add|enqueue)\s*\(\s*(-?[\d.]+)\s*\)/,/\bappend\s*\(\s*\w+\s*,\s*(-?[\d.]+)\s*\)/];
-  const POR=/\.(?:pop|Pop|pop_back|remove_last|dequeue|poll|delete_last)\s*\(\s*\)/;
-  const PKR=/\.(?:peek|Peek|top|Top|last|back|front)\s*\(\s*\)|\.(?:peek|top)\(\)|\.last\(\)/;
-  const ER=/\.(?:isEmpty|IsEmpty|is_empty|empty|Empty)\s*\(\s*\)/;
-  for(const{lineIdx:li,line}of ex){
-    const ol=all[li]?.trim()??line;
-    let pv=null;
-    for(const re of PR){const m=line.match(re);if(m){pv=parseFloat(m[1]);break;}}
-    if(pv!==null&&!isNaN(pv)){
-      stack.push(pv);
-      steps.push({type:"push",value:pv,stack:[...stack],lineNum:li,codeLine:ol,message:buildMessage({type:"push",value:pv,stack:[...stack]})});
-      continue;
-    }
-    if(POR.test(line)){
-      if(stack.length===0)steps.push({type:"pop_error",value:null,stack:[],lineNum:li,codeLine:ol,message:buildMessage({type:"pop_error"})});
-      else{const v=stack.pop();steps.push({type:"pop",value:v,stack:[...stack],lineNum:li,codeLine:ol,message:buildMessage({type:"pop",value:v,stack:[...stack]})});}
-      continue;
-    }
-    if(PKR.test(line)){
-      if(stack.length===0)steps.push({type:"peek_error",value:null,stack:[],lineNum:li,codeLine:ol,message:buildMessage({type:"peek_error"})});
-      else{const v=stack[stack.length-1];steps.push({type:"peek",value:v,stack:[...stack],lineNum:li,codeLine:ol,message:buildMessage({type:"peek",value:v,stack:[...stack]})});}
-      continue;
-    }
-    if(ER.test(line)){
-      const e=stack.length===0;
-      steps.push({type:"isEmpty",result:e,stack:[...stack],lineNum:li,codeLine:ol,message:buildMessage({type:"isEmpty",result:e,stack:[...stack]})});
-      continue;
-    }
-  }
-  if(!steps.length)errors.push("No stack operations detected.\nCall push(N), pop(), peek(), or isEmpty() on your stack instance.");
-  return{steps,errors};
-}
-function buildMessage(s){
-  switch(s.type){
-    case"push":      return`push(${s.value})  ·  stack: [${s.stack.join(", ")}]  (size: ${s.stack.length})`;
-    case"pop":       return`pop()  →  ${s.value}  ·  stack: [${s.stack.join(", ")}]  (size: ${s.stack.length})`;
-    case"pop_error": return`pop()  →  ⚠ Stack Underflow — cannot pop from empty stack`;
-    case"peek":      return`peek()  →  ${s.value}  ·  stack unchanged  (size: ${s.stack.length})`;
-    case"peek_error":return`peek()  →  ⚠ Stack is empty — nothing to peek at`;
-    case"isEmpty":   return`isEmpty()  →  ${s.result}  ·  ${s.stack?.length??0} element${s.stack?.length!==1?"s":""}`;
-    default:         return"";
-  }
-}
-
-async function validateWithVisuoSlayer(code,lang){
-  const prompt=`You are a strict code reviewer for VisuoSlayer, a Stack data-structure visualizer.
-The user wrote a Stack in ${lang}. Check:
-1. Is it a correct complete Stack with push and pop?
-2. Logic bugs: wrong LIFO, pop not removing from top, peek removing elements, isEmpty wrong?
-3. Syntax errors?
-Return ONLY valid JSON (no markdown):
-{"valid":true|false,"reason":"one sentence","errors":[{"line":<1-based int>,"message":"<issue>"}]}
-Code:
-\`\`\`${lang}
-${code}
-\`\`\``;
-  try{
-    const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
-    const data=await res.json();
-    if(data.error)return{valid:true,reason:"",errors:[],apiError:data.error};
-    const raw=data.content??"";
-    const cleaned=raw.replace(/```json|```/gi,"").trim();
-    const parsed=JSON.parse(cleaned);
-    return{valid:!!parsed.valid,reason:parsed.reason??"",errors:Array.isArray(parsed.errors)?parsed.errors:[],apiError:null};
-  }catch(e){return{valid:true,reason:"",errors:[],apiError:e.message};}
-}
-
-function runCode(code,lang){
-  if(!code.trim())return{steps:[],errors:["Please write some code first."]};
-  if(lang==="c")return parseCStack(code);
-  if(lang==="javascript")return runJavaScript(code);
-  return parseScoped(code,lang);
-}
-
-// ── useIsMobile ─────────────────────────────────────────────────────────────
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(false);
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
-    check();
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-  return isMobile;
-}
-
-// ── SHARED CSS ───────────────────────────────────────────────────────────────
-const SHARED_CSS = `
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-
-:root{
-  --cyan:#60a5fa; --cyan-dim:rgba(96,165,250,0.15); --cyan-glow:rgba(96,165,250,0.45);
-  --pink:#f472b6; --pink-dim:rgba(244,114,182,0.15);
-  --green:#4ade80; --green-dim:rgba(74,222,128,0.15); --green-glow:rgba(74,222,128,0.4);
-  --purple:#a78bfa; --yellow:#fbbf24;
-  --text-primary:#d4e4f7; --text-secondary:#6b8aaa; --text-muted:#3d5470;
-  --border-subtle:rgba(255,255,255,0.07); --border-medium:rgba(255,255,255,0.13);
-  --surface-0:#050818; --surface-1:rgba(8,14,36,0.95); --surface-2:rgba(12,20,48,0.8); --surface-3:rgba(16,26,58,0.7);
-}
-
-@keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
-@keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
-@keyframes rPulse{0%,100%{box-shadow:0 0 16px rgba(96,165,250,0.4)}50%{box-shadow:0 0 32px rgba(96,165,250,0.7)}}
-@keyframes toastIn{0%{opacity:0;transform:translateY(8px) scale(0.94)}100%{opacity:1;transform:none}}
-@keyframes blkDrop{
-  0%{transform:translateY(-55px) scale(0.8);opacity:0;filter:blur(2px)}
-  55%{transform:translateY(4px) scale(1.04);opacity:1;filter:blur(0)}
-  75%{transform:translateY(-2px) scale(0.98)}
-  100%{transform:translateY(0) scale(1);opacity:1}
-}
-@keyframes flyAway{
-  0%{opacity:1;transform:translateX(-50%) translateY(0) scale(1) rotate(0deg)}
-  30%{opacity:1}
-  100%{opacity:0;transform:translateX(-50%) translateY(-90px) scale(0.45) rotate(18deg)}
-}
-@keyframes pkRing{0%{transform:scale(1);opacity:0.9}100%{transform:scale(1.38);opacity:0}}
-@keyframes pkPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.55) saturate(1.4)}}
-@keyframes ecCheck{0%,100%{transform:scale(1)}35%{transform:scale(1.06) translateY(-4px)}68%{transform:scale(0.97) translateY(2px)}}
-@keyframes pShine{0%,100%{left:-100%}55%{left:160%}}
-@keyframes svSh{0%,100%{transform:none}18%{transform:translateX(-7px)}36%{transform:translateX(7px)}54%{transform:translateX(-4px)}72%{transform:translateX(4px)}}
-@keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(18px,-12px) scale(1.06)}66%{transform:translate(-10px,16px) scale(0.95)}}
-@keyframes blob2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-20px,10px) scale(1.08)}70%{transform:translate(14px,-18px) scale(0.93)}}
-@keyframes gridScroll{0%{background-position:0 0}100%{background-position:32px 32px}}
-@keyframes arrowFade{0%{opacity:0;transform:translateY(-4px)}100%{opacity:1;transform:none}}
-@keyframes scanline{0%{top:-10%}100%{top:110%}}
-@keyframes termSlideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
-@keyframes stepPop{0%{transform:scale(0.88);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
-
-/* ── Shared viz styles ─────────────────────────────────────────────────── */
-.sv{display:flex;flex-direction:column;flex:1;min-height:0;position:relative;overflow:hidden}
-.sv-col{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding:12px 12px 0;position:relative;overflow:hidden}
-.sv-col::before{
-  content:'';position:absolute;inset:0;pointer-events:none;
-  background-image:linear-gradient(rgba(96,165,250,0.05) 1px,transparent 1px),linear-gradient(90deg,rgba(96,165,250,0.05) 1px,transparent 1px);
-  background-size:32px 32px;animation:gridScroll 10s linear infinite
-}
-.sv-col::after{
-  content:'';position:absolute;left:0;right:0;height:60px;pointer-events:none;z-index:0;
-  background:linear-gradient(to bottom,transparent,rgba(96,165,250,0.025),transparent);
-  animation:scanline 7s ease-in-out infinite
-}
-.sv-blob{position:absolute;border-radius:50%;pointer-events:none;filter:blur(55px);mix-blend-mode:screen}
-.sv-blob-1{width:180px;height:180px;top:-20px;left:-10px;background:radial-gradient(circle,rgba(59,130,246,0.14),transparent 65%);animation:blobFloat 13s ease-in-out infinite}
-.sv-blob-2{width:140px;height:140px;bottom:20px;right:-10px;background:radial-gradient(circle,rgba(244,114,182,0.10),transparent 65%);animation:blob2 10s ease-in-out infinite}
-
-/* fly-away: fixed position so it escapes the stacking context */
-.sv-fly-container{position:absolute;top:0;left:0;right:0;height:0;pointer-events:none;z-index:50}
-.sv-fly{
-  position:absolute;
-  top:10px;
-  left:50%;
-  transform:translateX(-50%);
-  border-radius:10px;
-  display:flex;align-items:center;justify-content:center;gap:7px;
-  border:1.5px solid rgba(255,255,255,0.25);
-  animation:flyAway 0.82s cubic-bezier(0.22,1,0.36,1) forwards;
-  will-change:transform,opacity;
-  white-space:nowrap;
-}
-.sv-fly-v{font-family:'JetBrains Mono',monospace;font-weight:700;color:#fff}
-.sv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.6);letter-spacing:0.06em}
-
-/* top pointer */
-.sv-top-pointer{
-  position:absolute;top:-26px;left:50%;transform:translateX(-50%);
-  display:flex;flex-direction:column;align-items:center;z-index:3;
-  background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);
-  padding:2px 10px;border-radius:20px;border:1px solid var(--cyan);white-space:nowrap;
-}
-.sv-top-arrow{font-size:11px;color:var(--cyan);}
-.sv-top-label{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--cyan);letter-spacing:0.1em;}
-
-/* blocks */
-.sv-blocks{display:flex;flex-direction:column;align-items:center;width:100%;position:relative;z-index:2}
-.sv-node-wrapper{display:flex;flex-direction:column;align-items:center;width:100%;}
-.sv-block{
-  border-radius:10px;border:1.5px solid transparent;
-  display:flex;align-items:center;padding:0 10px;gap:7px;
-  position:relative;overflow:hidden;
-  transition:width 0.28s,box-shadow 0.28s,height 0.28s;
-  cursor:default;
-}
-.sv-block-shine{
-  position:absolute;inset:0;
-  background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 52%);
-  border-radius:inherit;pointer-events:none
-}
-.sv-block:hover{filter:brightness(1.08)}
-.sv-push{animation:blkDrop 0.5s cubic-bezier(0.34,1.56,0.64,1) both}
-.sv-pr,.sv-pr2{position:absolute;inset:-4px;border-radius:14px;border:2px solid;animation:pkRing 0.75s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none}
-.sv-pr2{animation-delay:0.16s}
-.sv-peek{animation:pkPulse 0.6s ease 2 both}
-.sv-top{z-index:2}
-.sv-ec{animation:ecCheck 0.46s ease both}
-.sv-bidx{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.35);flex-shrink:0;font-weight:600}
-.sv-bval{font-family:'JetBrains Mono',monospace;font-weight:700;color:#fff;flex:1;text-align:center;text-shadow:0 2px 8px rgba(0,0,0,0.35)}
-.sv-btag{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.6);flex-shrink:0;letter-spacing:0.06em}
-
-/* connector */
-.sv-connector{display:flex;flex-direction:column;align-items:center;animation:arrowFade 0.2s ease}
-.sv-arrow-line{width:2px;background:rgba(96,165,250,0.4);box-shadow:0 0 4px rgba(96,165,250,0.3);}
-.sv-arrow-head{font-size:9px;color:rgba(96,165,250,0.7);margin-top:-1px;line-height:1;}
-
-/* null */
-.sv-null{padding:2px 8px;background:rgba(0,0,0,0.3);border-radius:12px;border:1px dashed rgba(96,165,250,0.3);text-align:center;}
-.sv-null-text{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(96,165,250,0.5);letter-spacing:0.08em;}
-
-/* empty state */
-.sv-empty{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  border:1px dashed rgba(255,255,255,0.08);border-radius:12px;gap:6px;
-  background:rgba(255,255,255,0.015);z-index:2;position:relative
-}
-.sv-empty.sv-empty-err{border-color:rgba(248,113,113,0.3);animation:svSh 0.36s ease;background:rgba(248,113,113,0.03)}
-.sv-ei{opacity:0.4}
-.sv-et{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);letter-spacing:0.08em}
-
-/* platform */
-.sv-plat{
-  height:7px;border-radius:5px;
-  background:linear-gradient(90deg,rgba(96,165,250,0.22),rgba(96,165,250,0.1),rgba(96,165,250,0.22));
-  position:relative;overflow:hidden;box-shadow:0 0 14px rgba(96,165,250,0.22)
-}
-.sv-plat-shine{
-  position:absolute;top:0;left:-100%;width:55%;height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,0.3),transparent);
-  animation:pShine 3.5s ease-in-out infinite
-}
-.sv-base{
-  font-family:'JetBrains Mono',monospace;font-size:7px;
-  color:var(--text-muted);letter-spacing:0.15em
-}
-
-/* ── Error state ─── */
-.sv-err .sv-empty-err{animation:svSh 0.36s ease}
-
-/* ── Common scrollbar ─── */
-::-webkit-scrollbar{width:4px;height:4px}
-::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.2);border-radius:4px}
-::-webkit-scrollbar-thumb:hover{background:rgba(96,165,250,0.4)}
-textarea::-webkit-scrollbar{width:4px}
-`;
-
-const DESKTOP_CSS = `
-html,body{height:100%;overflow:hidden}
-body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
-
-@keyframes rPulse2{0%,100%{box-shadow:0 0 20px rgba(96,165,250,0.4)}50%{box-shadow:0 0 44px rgba(96,165,250,0.7),0 0 80px rgba(96,165,250,0.2)}}
-@keyframes toastOut{0%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px) scale(0.94)}}
-
-.pg{height:100vh;display:flex;flex-direction:column;overflow:hidden;
-  background:radial-gradient(ellipse 60% 45% at 5% 0%,rgba(59,130,246,0.10) 0%,transparent 55%),
-    radial-gradient(ellipse 50% 40% at 95% 100%,rgba(244,114,182,0.08) 0%,transparent 52%),
-    radial-gradient(ellipse 40% 35% at 50% 50%,rgba(167,139,250,0.04) 0%,transparent 60%),#050818}
-.hd{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:9px 24px;
-  background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(96,165,250,0.12);
-  box-shadow:0 1px 0 rgba(96,165,250,0.06),0 4px 24px rgba(0,0,0,0.4)}
-.hd-logo{width:34px;height:34px;border-radius:9px;flex-shrink:0;
-  background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);
-  display:flex;align-items:center;justify-content:center;font-size:17px;
-  box-shadow:0 0 20px rgba(96,165,250,0.5),0 0 40px rgba(96,165,250,0.15);
-  animation:rPulse2 3s ease-in-out infinite}
-.hd-brand{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.4px;
-  background:linear-gradient(90deg,#93c5fd 0%,#a78bfa 50%,#f472b6 100%);
-  background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  animation:shimmer 4s linear infinite}
-.hd-tagline{font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;letter-spacing:0.04em}
-.hd-r{margin-left:auto;display:flex;align-items:center;gap:8px}
-.hd-pill{font-family:'JetBrains Mono',monospace;font-size:8.5px;padding:3px 10px;border-radius:20px;letter-spacing:0.07em;white-space:nowrap;font-weight:700}
-.hd-pid{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);padding:3px 9px;border-radius:20px;border:1px solid var(--border-subtle);background:var(--surface-2)}
-.hd-ds-badge{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--cyan);padding:3px 9px;border-radius:20px;border:1px solid rgba(96,165,250,0.25);background:rgba(96,165,250,0.08);letter-spacing:0.08em}
-.main{flex:1;display:grid;gap:10px;padding:10px 24px;min-height:0;overflow:hidden;grid-template-columns:1fr 1fr;}
-.panel{background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:14px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04);min-height:0}
-.ph{padding:9px 14px;border-bottom:1px solid var(--border-subtle);background:rgba(8,14,38,0.85);display:flex;align-items:center;gap:7px;flex-shrink:0}
-.dot{width:9px;height:9px;border-radius:50%;transition:box-shadow 0.3s;flex-shrink:0}
-.ptl{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-left:8px;font-weight:600}
-.left{display:flex;flex-direction:column;min-height:0}
-.lb{display:flex;gap:3px;flex-wrap:wrap;padding:7px 11px;border-bottom:1px solid var(--border-subtle);background:rgba(6,11,30,0.8);flex-shrink:0}
-.lt{padding:3px 9px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);transition:all 0.15s;letter-spacing:0.05em}
-.lt:hover{color:var(--text-secondary);border-color:var(--border-medium);background:rgba(255,255,255,0.04)}
-.lt.la{color:#e8f4ff;background:rgba(255,255,255,0.06);box-shadow:inset 0 1px 0 rgba(255,255,255,0.1)}
-.alb{display:flex;align-items:center;gap:8px;padding:5px 14px;border-left:2px solid;min-height:26px;border-top:1px solid var(--border-subtle);flex-shrink:0;animation:fadeIn 0.18s ease;backdrop-filter:blur(4px)}
-.alb-ln{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;white-space:nowrap}
-.alb-code{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
-.rr{padding:8px 12px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:7px;flex-shrink:0;background:rgba(4,8,22,0.6)}
-.btn-run{padding:7px 18px;border-radius:8px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);border:1px solid rgba(96,165,250,0.35);color:#fff;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;transition:all 0.18s;box-shadow:0 0 20px rgba(96,165,250,0.3),0 2px 8px rgba(0,0,0,0.4);letter-spacing:0.04em;position:relative;overflow:hidden;white-space:nowrap}
-.btn-run::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%);border-radius:inherit;pointer-events:none}
-.btn-run:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 36px rgba(96,165,250,0.55),0 6px 20px rgba(0,0,0,0.5)}
-.btn-run:active:not(:disabled){transform:translateY(0)}
-.btn-run.running{animation:rPulse 1.2s ease-in-out infinite;background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#3b82f6)}
-.btn-run:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
-.btn-rst{padding:7px 11px;border-radius:8px;background:transparent;border:1px solid rgba(248,113,113,0.28);color:#f87171;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;cursor:pointer;transition:all 0.16s}
-.btn-rst:hover{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.5)}
-.rr-hint{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-muted);letter-spacing:0.07em;padding:3px 7px;border-radius:5px;border:1px solid var(--border-subtle);background:var(--surface-2)}
-.term-bar{display:flex;align-items:center;gap:6px;padding:6px 13px;background:rgba(4,7,18,0.95);border-bottom:1px solid var(--border-subtle);border-top:1px solid var(--border-subtle);flex-shrink:0}
-.tm-wrap{display:flex;flex-direction:column;min-height:0;transition:flex-basis 0.32s cubic-bezier(0.4,0,0.2,1),opacity 0.25s ease;overflow:hidden}
-.tm-wrap.tm-open{flex:1;min-height:90px}
-.tm-wrap.tm-closed{flex:0 0 0px;min-height:0;opacity:0;pointer-events:none}
-.term-body-wrap{flex:1;display:flex;flex-direction:column;min-height:0;animation:termSlideDown 0.28s cubic-bezier(0.4,0,0.2,1)}
-.term-toggle{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;border:1px solid var(--border-medium);background:rgba(255,255,255,0.04);cursor:pointer;flex-shrink:0;color:var(--text-secondary);font-size:9px;font-weight:700;transition:all 0.15s;margin-left:auto;font-family:'JetBrains Mono',monospace;line-height:1;user-select:none}
-.term-toggle:hover{background:var(--cyan-dim);color:var(--cyan);border-color:rgba(96,165,250,0.4)}
-.term-bar-closed{display:flex;align-items:center;gap:6px;padding:6px 13px;background:rgba(4,7,18,0.95);border-top:1px solid var(--border-subtle);flex-shrink:0;cursor:pointer;transition:background 0.15s}
-.term-bar-closed:hover{background:rgba(8,14,32,0.95)}
-
-/* desktop viz */
-.sv-col{padding:14px 14px 0}
-.sv-blob-1{width:200px;height:200px}
-.sv-blob-2{width:160px;height:160px}
-.sv-fly{width:180px;height:44px}
-.sv-fly-v{font-size:15px}
-.sv-empty{width:175px;height:78px}
-.sv-ei{font-size:20px}
-.sv-plat{width:210px;margin-top:4px}
-.sv-base{margin-top:4px;margin-bottom:8px}
-
-.toast{position:fixed;bottom:24px;right:24px;padding:8px 16px;border-radius:9px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;background:rgba(10,20,50,0.97);border:1px solid var(--border-medium);color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.5),0 0 16px var(--green-glow);z-index:9999;animation:toastIn 0.25s ease,toastOut 0.3s ease 1.8s forwards}
-`;
-
-const MOBILE_CSS = `
-html,body{height:100%;-webkit-text-size-adjust:100%;}
-body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
-
-.mob-pg{
-  min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;
-  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(59,130,246,0.12) 0%,transparent 60%),#050818;
-  padding-top:env(safe-area-inset-top,0);
-}
-.mob-hd{
-  flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 16px;
-  background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);
-  border-bottom:1px solid rgba(96,165,250,0.12);z-index:100;position:sticky;top:0;
-}
-.mob-logo{
-  width:30px;height:30px;border-radius:8px;flex-shrink:0;
-  background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);
-  display:flex;align-items:center;justify-content:center;font-size:14px;
-  box-shadow:0 0 16px rgba(96,165,250,0.5);animation:rPulse 3s ease-in-out infinite;
-}
-.mob-brand{
-  font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:800;
-  background:linear-gradient(90deg,#93c5fd 0%,#a78bfa 50%,#f472b6 100%);
-  background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  animation:shimmer 4s linear infinite;
-}
-.mob-sub{font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;}
-.mob-scroll{
-  flex:1;overflow-y:auto;overflow-x:hidden;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:thin;scrollbar-color:rgba(96,165,250,0.15) transparent;
-  padding-right:52px;
-  padding-bottom:env(safe-area-inset-bottom,16px);
-}
-.mob-scroll::-webkit-scrollbar{width:3px;}
-.mob-scroll::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.18);border-radius:4px;}
-.mob-sec{display:flex;flex-direction:column;}
-.mob-sec-label{display:flex;align-items:center;gap:8px;padding:10px 14px 6px;font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);}
-.mob-sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(96,165,250,0.2),transparent);}
-.mob-ph{padding:8px 14px;border-bottom:1px solid var(--border-subtle);background:rgba(8,14,38,0.9);display:flex;align-items:center;gap:7px;flex-shrink:0;}
-.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-.ptl{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-left:6px;font-weight:600;}
-.mob-lb{
-  display:flex;gap:4px;padding:8px 12px;overflow-x:auto;
-  border-bottom:1px solid var(--border-subtle);background:rgba(6,11,30,0.8);
-  flex-shrink:0;scrollbar-width:none;-ms-overflow-style:none;-webkit-overflow-scrolling:touch;
-}
-.mob-lb::-webkit-scrollbar{display:none;}
-.mob-lt{padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);transition:all 0.15s;flex-shrink:0;}
-.mob-lt.la{color:#e8f4ff;background:rgba(255,255,255,0.06);}
-.mob-editor-wrap{background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);display:flex;flex-direction:column;height:340px;}
-.mob-rr{padding:10px 12px;border-top:1px solid rgba(96,165,250,0.18);display:flex;align-items:center;gap:8px;flex-shrink:0;background:rgba(4,8,22,0.96);box-shadow:0 -4px 16px rgba(0,0,0,0.4);}
-.mob-btn-run{flex:1;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);border:1px solid rgba(96,165,250,0.4);color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.18s;box-shadow:0 0 24px rgba(96,165,250,0.35),0 4px 12px rgba(0,0,0,0.4);-webkit-tap-highlight-color:transparent;letter-spacing:0.03em;}
-.mob-btn-run:active{transform:scale(0.97);box-shadow:0 0 12px rgba(96,165,250,0.2);}
-.mob-btn-run.running{animation:rPulse 1.2s ease-in-out infinite;}
-.mob-btn-run:disabled{opacity:0.4;cursor:not-allowed;}
-.mob-btn-rst{padding:12px 14px;border-radius:12px;background:transparent;border:1px solid rgba(248,113,113,0.3);color:#f87171;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.16s;-webkit-tap-highlight-color:transparent;white-space:nowrap;}
-.mob-btn-rst:active{background:rgba(248,113,113,0.12);}
-.mob-alb{display:flex;align-items:center;gap:7px;padding:6px 14px;border-left:2px solid;min-height:30px;border-top:1px solid var(--border-subtle);flex-shrink:0;animation:fadeIn 0.18s ease;}
-.mob-alb-ln{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;white-space:nowrap;}
-.mob-alb-code{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
-.mob-term-wrap{background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);display:flex;flex-direction:column;height:220px;}
-
-/* ── Mobile viz: key fix — relative positioned container, proper overflow ─── */
-.mob-viz-wrap{
-  background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);
-  display:flex;flex-direction:column;
-  min-height:380px;
-  position:relative;
-  overflow:hidden;
-}
-.mob-viz-wrap .sv{overflow:visible;}
-.mob-viz-wrap .sv-col{
-  padding:12px 12px 0;
-  justify-content:flex-end;
-  min-height:320px;
-}
-
-/* Mobile-specific fly: smaller */
-.mob-viz-wrap .sv-fly{
-  width:140px;height:38px;
-  top:14px;
-}
-.mob-viz-wrap .sv-fly-v{font-size:13px;}
-.mob-viz-wrap .sv-empty{width:150px;height:70px;}
-.mob-viz-wrap .sv-ei{font-size:18px;}
-.mob-viz-wrap .sv-plat{width:170px;margin-top:4px;}
-
-.toast{
-  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-  padding:9px 18px;border-radius:10px;font-family:'JetBrains Mono',monospace;
-  font-size:10px;font-weight:600;white-space:nowrap;
-  background:rgba(10,20,50,0.97);border:1px solid var(--border-medium);
-  color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.5),0 0 16px var(--green-glow);
-  z-index:9999;animation:toastIn 0.25s ease;
-}
-`;
-
-// ── Terminal ─────────────────────────────────────────────────────────────────
-function Terminal({lines,sessionId,validating,currentStepIndex}){
-  const bodyRef=useRef(null);
-  const lineRefs=useRef({});
-  useEffect(()=>{
-    if(currentStepIndex===undefined||currentStepIndex===-1)return;
-    lineRefs.current[currentStepIndex]?.scrollIntoView({block:"nearest",behavior:"smooth"});
-  },[currentStepIndex]);
-  useEffect(()=>{if(bodyRef.current)bodyRef.current.scrollTop=bodyRef.current.scrollHeight;},[lines,validating]);
-  return(
-    <div style={{flex:1,display:"flex",flexDirection:"column",background:"#06080f",minHeight:0,fontFamily:"'JetBrains Mono',monospace",fontSize:"11px"}}>
-      <div ref={bodyRef} style={{flex:1,overflowY:"auto",padding:"10px 0 10px",scrollbarWidth:"thin",scrollbarColor:"rgba(96,165,250,0.2) transparent"}}>
-        {lines.length===0&&!validating&&(
-          <div style={{padding:"3px 16px",display:"flex",alignItems:"center",gap:6}}>
-            <span style={{color:"#4ade80",userSelect:"none"}}>$</span>
-            <span style={{animation:"cur 1.1s step-end infinite",color:"#1a2a1a",marginLeft:4}}>_</span>
-          </div>
-        )}
-        {lines.map((line,i)=><TermLine key={i} line={line} isLast={i===lines.length-1&&!validating} stepIndex={line.stepIndex} currentStepIndex={currentStepIndex} lineRef={el=>lineRefs.current[line.stepIndex]=el}/>)}
-        {validating&&(
-          <div style={{padding:"3px 16px",display:"flex",alignItems:"center",gap:9}}>
-            <span style={{display:"inline-block",width:10,height:10,borderRadius:"50%",border:"1.5px solid rgba(96,165,250,0.18)",borderTopColor:"#60a5fa",animation:"spin 0.7s linear infinite",flexShrink:0}}/>
-            <span style={{color:"#3a5070",fontSize:10}}>VisuoSlayer reviewing…</span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function TermLine({line,isLast,stepIndex,currentStepIndex,lineRef}){
-  const[vis,setVis]=useState(false);
-  useEffect(()=>{const t=setTimeout(()=>setVis(true),15);return()=>clearTimeout(t);},[]);
-  const isActive=stepIndex!==undefined&&stepIndex===currentStepIndex&&currentStepIndex!==-1;
-  if(line.type==="separator")return<div style={{margin:"5px 16px",borderTop:"1px solid rgba(255,255,255,0.05)",opacity:vis?1:0,transition:"opacity 0.12s"}}/>;
-  if(line.type==="blank")return<div style={{height:6}}/>;
-  if(line.type==="prompt")return(
-    <div style={{padding:"2px 16px",display:"flex",alignItems:"center",gap:7,opacity:vis?1:0,transition:"opacity 0.1s"}}>
-      <span style={{color:"#4ade80",userSelect:"none",flexShrink:0}}>$</span>
-      <span style={{color:"#3a6090",fontSize:10,wordBreak:"break-all"}}>{line.text}</span>
-    </div>
-  );
-  const cm={push:"#4ade80",pop:"#f472b6",peek:"#fbbf24",isEmpty:"#60a5fa",pop_error:"#f87171",peek_error:"#f87171",error:"#f87171",stderr:"#f87171",success:"#4ade80",warn:"#fbbf24",info:"#60a5fa",output:"#3a4e6a",stdout:"#4a607a"};
-  const pm={error:"✗",stderr:"✗",pop_error:"✗",peek_error:"✗",success:"✓",warn:"⚠",info:"·",push:"⬇",pop:"⬆",peek:"👁",isEmpty:"∅",output:"",stdout:""};
-  const c=cm[line.type]??"#3a5070";
-  const pfx=pm[line.type]??"";
-  return(
-    <div ref={lineRef} style={{padding:"1.5px 16px",display:"flex",alignItems:"flex-start",opacity:vis?1:0,transition:"opacity 0.09s",background:isActive?"rgba(96,165,250,0.1)":"transparent",borderLeft:isActive?"2px solid #60a5fa":"2px solid transparent"}}>
-      <span style={{color:c,width:18,flexShrink:0,fontSize:9,paddingTop:2}}>{pfx}</span>
-      <span style={{color:c,wordBreak:"break-word",lineHeight:1.65,flex:1,fontSize:10}}>
-        {line.text}
-        {isLast&&<span style={{animation:"cur 1.1s step-end infinite",color:"#1e2535"}}> _</span>}
-      </span>
-      {line.lineNum&&<span style={{marginLeft:8,color:"#2a3a50",fontSize:8,flexShrink:0,paddingTop:3}}>:{line.lineNum}</span>}
-    </div>
-  );
-}
-
-// ── Code Editor ──────────────────────────────────────────────────────────────
-function CodeEditor({code,setCode,step,errorLineSet,onKeyDown,taRef}){
-  const lnRef=useRef(null);
-  const lines=code.split("\n");
-  const syncScroll=useCallback(()=>{if(taRef.current&&lnRef.current)lnRef.current.scrollTop=taRef.current.scrollTop;},[taRef]);
-  useEffect(()=>{const ta=taRef.current;if(!ta)return;ta.addEventListener("scroll",syncScroll,{passive:true});return()=>ta.removeEventListener("scroll",syncScroll);},[syncScroll]);
-  return(
-    <div style={{flex:1,display:"flex",minHeight:0,overflow:"hidden",position:"relative"}}>
-      <div ref={lnRef} style={{width:38,flexShrink:0,background:"rgba(4,7,18,0.75)",borderRight:"1px solid rgba(255,255,255,0.05)",overflowY:"hidden",overflowX:"hidden",paddingTop:14,paddingBottom:14,display:"flex",flexDirection:"column",userSelect:"none",pointerEvents:"none",scrollbarWidth:"none",msOverflowStyle:"none"}}>
-        {lines.map((_,i)=>{
-          const isAct=step?.lineNum===i,isErr=errorLineSet.has(i);
-          return(<div key={i} style={{height:LINE_H,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:7,fontFamily:"'JetBrains Mono',monospace",fontSize:9,lineHeight:1,color:isErr?"#f87171":isAct?"#60a5fa":"#2a3a54",background:isErr?"rgba(248,113,113,0.07)":isAct?"rgba(96,165,250,0.07)":"transparent",borderRadius:3,transition:"color 0.15s,background 0.15s"}}>{i+1}</div>);
-        })}
-      </div>
-      {step&&<div style={{position:"absolute",left:38,right:0,height:LINE_H,top:14+step.lineNum*LINE_H,background:"rgba(96,165,250,0.04)",borderLeft:"2px solid rgba(96,165,250,0.4)",pointerEvents:"none",transition:"top 0.2s cubic-bezier(0.4,0,0.2,1)",zIndex:1}}/>}
-      {[...errorLineSet].map(i=>(<div key={`e${i}`} style={{position:"absolute",left:38,right:0,height:LINE_H,top:14+i*LINE_H,background:"rgba(248,113,113,0.05)",borderLeft:"2px solid rgba(248,113,113,0.45)",pointerEvents:"none",zIndex:1}}/>))}
-      <textarea ref={taRef} style={{flex:1,padding:"14px 12px 14px 10px",background:"transparent",border:"none",outline:"none",color:"#7ecfff",fontFamily:"'JetBrains Mono',monospace",fontSize:11,lineHeight:`${LINE_H}px`,resize:"none",caretColor:"#60a5fa",tabSize:2,whiteSpace:"pre",overflowY:"auto",overflowX:"auto",scrollbarWidth:"thin",scrollbarColor:"rgba(96,165,250,0.2) transparent",position:"relative",zIndex:2,WebkitUserSelect:"text",touchAction:"manipulation"}}
-        value={code} onChange={e=>setCode(e.target.value)} onKeyDown={onKeyDown} spellCheck={false}
-        placeholder="// Write your Stack implementation here..." autoCorrect="off" autoCapitalize="none" autoComplete="off"
-      />
-    </div>
-  );
-}
-
-// ── Stack Visualizer ─────────────────────────────────────────────────────────
-function StackViz({step,animKey,idle,compact}){
-  const[fly,setFly]=useState(null);
-  
-  useEffect(()=>{
-    if(step?.type==="pop"&&step.value!=null){
-      setFly({v:step.value,key:animKey});
-      const t=setTimeout(()=>setFly(null),850);
-      return()=>clearTimeout(t);
-    }
-    if(step?.type!=="pop") setFly(null);
-  },[animKey,step?.type,step?.value]);
-
-  const stack=step?.stack??[];
-  const isPush=step?.type==="push";
-  const isPeek=step?.type==="peek";
-  const isEmpOp=step?.type==="isEmpty";
-  const isErr=step?.type==="pop_error"||step?.type==="peek_error";
-
-  // Dynamic sizing
-  const len=stack.length;
-  const baseH=Math.max(compact?28:34, (compact?40:46) - Math.max(0,len-5)*1.5);
-  const baseW=Math.max(compact?90:110, (compact?148:162) - Math.max(0,len-5)*3);
-  const gap=Math.max(2,4-Math.max(0,len-6)*0.4);
-  const nullW=Math.max(compact?75:90, baseW-20);
-
-  const nodes=[...stack].reverse();
-
-  return(
-    <div className={`sv${isErr?" sv-err":""}`} key={isErr?`e${animKey}`:"sv"}>
-      <div className="sv-col">
-        <div className="sv-blob sv-blob-1"/>
-        <div className="sv-blob sv-blob-2"/>
-
-        {/* Fly-away bubble — rendered in its own absolute container so it escapes overflow */}
-        <div className="sv-fly-container">
-          {fly&&(
-            <div
-              key={fly.key}
-              className="sv-fly"
-              style={{
-                background:`linear-gradient(135deg,${col(fly.v).g1},${col(fly.v).g2})`,
-                boxShadow:`0 0 36px ${col(fly.v).glow},0 0 70px ${col(fly.v).glow}40`,
-              }}
-            >
-              <span className="sv-fly-v">{fly.v}</span>
-              <span className="sv-fly-tag">↑ POP</span>
-            </div>
-          )}
-        </div>
-
-        {/* TOP pointer */}
-        {nodes.length>0&&(
-          <div className="sv-top-pointer">
-            <span className="sv-top-arrow">▼</span>
-            <span className="sv-top-label">TOP</span>
-          </div>
-        )}
-
-        <div className="sv-blocks" style={{gap:`${gap}px`}}>
-          {nodes.length===0&&!fly?(
-            <div className={`sv-empty${isErr?" sv-empty-err":""}`}>
-              <div className="sv-ei">{idle?"📚":isErr?"⚠":"∅"}</div>
-              <div className="sv-et">{idle?"Run code to start":isErr?"Stack underflow!":"Stack is empty"}</div>
-            </div>
-          ):nodes.map((v,idx)=>{
-            const isTop=idx===0;
-            const isNew=isTop&&isPush;
-            const pk=isTop&&isPeek;
-            const ec=isEmpOp;
-            const c=col(v);
-            const nodeIndex=nodes.length-1-idx;
-            const blockH=baseH;
-            const blockW=Math.max(baseW-idx*2,compact?60:70);
-            return(
-              <div key={`node-${v}-${idx}-${animKey}`} className="sv-node-wrapper">
-                <div
-                  className={["sv-block",isNew?"sv-push":"",pk?"sv-peek":"",isTop?"sv-top":"",ec?"sv-ec":""].filter(Boolean).join(" ")}
-                  style={{
-                    background:`linear-gradient(135deg,${c.g1},${c.g2})`,
-                    boxShadow:isTop
-                      ?`0 0 32px ${c.glow},0 0 64px ${c.glow}40,0 5px 18px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.25)`
-                      :`0 2px 10px rgba(0,0,0,0.45),inset 0 1px 0 rgba(255,255,255,0.12)`,
-                    borderColor:isTop?c.border:"rgba(255,255,255,0.08)",
-                    width:`${blockW}px`,
-                    height:`${blockH}px`,
-                  }}
-                >
-                  <div className="sv-block-shine"/>
-                  {pk&&<div className="sv-pr" key={`r1-${animKey}`} style={{borderColor:c.border}}/>}
-                  {pk&&<div className="sv-pr2" key={`r2-${animKey}`} style={{borderColor:c.border}}/>}
-                  <span className="sv-bidx">[{nodeIndex}]</span>
-                  <span className="sv-bval" style={{fontSize:compact?"12px":"14px"}}>{v}</span>
-                  {isTop&&<span className="sv-btag">← TOP</span>}
-                </div>
-                {idx<nodes.length-1&&(
-                  <div className="sv-connector" style={{margin:`${gap}px 0`}}>
-                    <div className="sv-arrow-line" style={{height:`${gap+5}px`}}/>
-                    <div className="sv-arrow-head">▼</div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {nodes.length>0&&(
-            <div className="sv-null" style={{width:`${nullW}px`,marginTop:`${gap}px`}}>
-              <span className="sv-null-text">NULL</span>
-            </div>
-          )}
-        </div>
-
-        <div className="sv-plat"><div className="sv-plat-shine"/></div>
-        <p className="sv-base">▲ BASE OF STACK (tail)</p>
-      </div>
-    </div>
-  );
-}
-
-// ── Right Sticky Nav ──────────────────────────────────────────────────────────
-function StickyNav({activeSection,onNav,hasSteps,hasErrors,termLines}){
-  const hasTermErr=termLines.some(l=>l.type==="error"||l.type==="stderr");
-  const hasTermOk=termLines.some(l=>l.type==="success");
-  const items=[
-    {id:"code",     icon:"⌨", label:"Code",  dot:null},
-    {id:"terminal", icon:"⬛", label:"Term",  dot:hasTermErr?"#f87171":hasTermOk?"#4ade80":null},
-    {id:"viz",      icon:"📚", label:"Stack", dot:hasSteps?"#60a5fa":hasErrors?"#f87171":null},
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VOICE ENGINE
+// ═══════════════════════════════════════════════════════════════════════════════
+function getMaleVoice() {
+  if (typeof window === "undefined") return null;
+  const all = window.speechSynthesis.getVoices();
+  const picks = [
+    v => v.name === "Google UK English Male",
+    v => v.name === "Microsoft Ryan Online (Natural) - English (United Kingdom)",
+    v => v.name === "Microsoft Guy Online (Natural) - English (United States)",
+    v => v.name === "Microsoft Davis Online (Natural) - English (United States)",
+    v => v.name === "Alex", v => v.name === "Daniel",
+    v => /Natural/i.test(v.name) && /male|man|guy|ryan|davis|mark|daniel|alex/i.test(v.name) && v.lang.startsWith("en"),
+    v => v.lang.startsWith("en-GB"), v => v.lang.startsWith("en"),
   ];
-  return(
-    <div style={{position:"fixed",right:0,top:"50%",transform:"translateY(-50%)",zIndex:9000,display:"flex",flexDirection:"column",gap:0,background:"rgba(5,8,26,0.95)",border:"1px solid rgba(96,165,250,0.18)",borderRight:"none",borderRadius:"12px 0 0 12px",overflow:"hidden",boxShadow:"-4px 0 32px rgba(0,0,0,0.7),-1px 0 0 rgba(96,165,250,0.08)",backdropFilter:"blur(20px)"}}>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,#60a5fa,#a78bfa,transparent)",opacity:0.6}}/>
-      {items.map((item,i)=>{
-        const isActive=activeSection===item.id;
-        return(
-          <button key={item.id} onClick={()=>onNav(item.id)} style={{position:"relative",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:4,width:48,padding:"12px 4px",border:"none",background:isActive?"linear-gradient(180deg,rgba(96,165,250,0.18),rgba(167,139,250,0.12))":"transparent",cursor:"pointer",borderBottom:i<items.length-1?"1px solid rgba(255,255,255,0.06)":"none",WebkitTapHighlightColor:"transparent",transition:"background 0.18s",borderLeft:isActive?"2px solid #60a5fa":"2px solid transparent"}}>
-            {item.dot&&<span style={{position:"absolute",top:7,right:9,width:5,height:5,borderRadius:"50%",background:item.dot,boxShadow:`0 0 6px ${item.dot}`}}/>}
-            {isActive&&<span style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,rgba(96,165,250,0.08),transparent 70%)",pointerEvents:"none"}}/>}
-            <span style={{fontSize:16,opacity:isActive?1:0.4,transition:"opacity 0.15s,transform 0.15s",transform:isActive?"scale(1.1)":"scale(1)",lineHeight:1,position:"relative"}}>{item.icon}</span>
-            <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7,fontWeight:700,letterSpacing:"0.05em",textTransform:"uppercase",color:isActive?"#60a5fa":"rgba(255,255,255,0.22)",transition:"color 0.15s",position:"relative"}}>{item.label}</span>
-          </button>
-        );
-      })}
-      <div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,#f472b6,#60a5fa,transparent)",opacity:0.4}}/>
+  for (const fn of picks) { const m = all.find(fn); if (m) return m; }
+  return all[0] ?? null;
+}
+let currentRate = 1.25;
+function voiceSpeak(text, onEnd, rate) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const go = () => {
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = rate ?? currentRate; u.pitch = 0.92; u.volume = 1;
+    const v = getMaleVoice(); if (v) u.voice = v;
+    u.onend = onEnd; u.onerror = () => onEnd?.();
+    window.speechSynthesis.speak(u);
+  };
+  window.speechSynthesis.getVoices().length === 0
+    ? (window.speechSynthesis.onvoiceschanged = () => { go(); window.speechSynthesis.onvoiceschanged = null; })
+    : go();
+}
+function voiceStop() { typeof window !== "undefined" && window.speechSynthesis?.cancel(); }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NARRATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+const NARR = {
+  intro: `A graph is the most powerful and versatile data structure in computer science. While trees are hierarchical and arrays are linear, graphs are unrestricted — any node can connect to any other node, in any direction, with any weight. Think of a social network where every person is a node and every friendship is an edge. Think of Google Maps where intersections are nodes and roads are weighted edges. Think of the internet itself — every webpage a node, every hyperlink an edge. Graphs model relationships, and relationships are everywhere. Mastering graphs means mastering the structure of the real world.`,
+  terminology: `Before algorithms, you must speak the language. A vertex, also called a node, is a point in the graph. An edge is a connection between two vertices. A directed graph, or digraph, has arrows — edges have a specific direction from source to destination. An undirected graph has bidirectional edges — connections go both ways. A weighted graph assigns a numeric cost to each edge, representing distance, time, or priority. Degree counts how many edges touch a vertex. In-degree counts incoming edges; out-degree counts outgoing. A path is a sequence of vertices connected by edges. A cycle is a path that returns to its starting vertex.`,
+  directed: `A directed graph, or digraph, is a graph where every edge has a direction — it flows from a source vertex to a target vertex. This models one‑way relationships: Twitter follows, hyperlinks between web pages, or prerequisite chains in a curriculum. In a directed graph, you can traverse an edge only in the direction of the arrow. The degree splits into in‑degree (edges coming in) and out‑degree (edges going out). Directed graphs are essential for representing hierarchies, workflows, and any system where relationships are not mutual. Algorithms like topological sort and detecting strongly connected components rely on directed edges.`,
+  undirected: `An undirected graph is the simplest form of a graph: edges have no direction — they represent mutual, bidirectional connections. Think of a friendship on Facebook: if Alice is friends with Bob, Bob is also friends with Alice. The edge is a two‑way street. In an undirected graph, the degree of a vertex simply counts how many edges touch it. Many classic graph algorithms are designed for undirected graphs: finding connected components, minimum spanning trees, and BFS/DFS for simple traversal. Social networks, road maps without one‑way streets, and electrical circuits are all naturally undirected.`,
+  weighted: `A weighted graph attaches a numeric cost, distance, or weight to each edge. This extra information allows us to model real‑world quantities: the distance between cities, the time to travel a road, the cost of a network cable, or the priority of a relationship. Weighted graphs are the foundation for GPS navigation, network routing, and machine learning clustering. Edges can have positive or negative weights, though negative weights require special algorithms like Bellman‑Ford. Without weights, graphs only tell us if a connection exists; with weights, they tell us how much that connection costs.`,
+  representation: `How you store a graph completely determines the speed of every operation. The adjacency matrix is a two-dimensional array where matrix[u][v] equals one if an edge exists from u to v. Checking an edge is O one — instantly. But storing it costs O V squared space — wasteful for sparse graphs. The adjacency list stores each vertex alongside a list of its neighbors. Space is O V plus E — efficient for sparse graphs. Edge lookup takes O degree time. For most real-world graphs like social networks and road maps, adjacency lists are the clear winner. Choose your representation based on density: dense graphs favor matrices, sparse graphs favor lists.`,
+  bfs: `Breadth-First Search is the algorithm that explores level by level, like ripples spreading from a stone dropped in water. Start at a source vertex, mark it visited, add it to a queue. Then repeatedly dequeue a vertex, visit all its unvisited neighbors, and enqueue them. This guarantees you visit all vertices at distance one before any at distance two, then all at distance two before three, and so on. The result is a shortest-path tree — for unweighted graphs, BFS finds the minimum number of edges between source and any reachable vertex. BFS runs in O V plus E time, visiting every vertex and edge exactly once. It powers social network friend suggestions, GPS navigation on unweighted maps, and web crawlers.`,
+  dfs: `Depth-First Search dives as deep as possible before backtracking. Start at a source, mark it visited, then recursively visit an unvisited neighbor. Keep going deeper until you reach a dead end — a vertex with no unvisited neighbors — then backtrack and try another path. DFS runs in O V plus E time and uses O V space on the call stack. But its true power lies in what it discovers during traversal. DFS finds connected components, detects cycles, produces topological orderings, and identifies strongly connected components. The order in which vertices finish their DFS exploration — the finish time — is one of the most powerful concepts in all of graph theory.`,
+  dijkstra: `Dijkstra's algorithm solves the single-source shortest path problem on graphs with non-negative edge weights. The insight is elegant: always process the unvisited vertex with the smallest known distance from the source. Use a min-heap priority queue. Start with source distance zero, all others infinity. Extract the minimum, relax all its neighbors — if going through this vertex gives a shorter path, update that neighbor's distance. Repeat until all vertices are processed. With a binary heap, Dijkstra runs in O E log V time. It powers every GPS navigation system, every network routing protocol, and every game pathfinding algorithm. The only restriction: no negative edge weights, which can corrupt the greedy assumption.`,
+  bellman: `Bellman-Ford solves shortest paths even when edge weights are negative — something Dijkstra cannot do. The algorithm is beautifully simple: repeat V minus one times the process of relaxing every single edge. After k iterations, all shortest paths using at most k edges are found. After V minus one iterations, all shortest paths are found — because any shortest path in a graph with V vertices can use at most V minus one edges. Bellman-Ford also detects negative weight cycles: if any distance can still be reduced after V minus one rounds, a negative cycle exists. The time complexity is O V times E, slower than Dijkstra but universal. It powers financial arbitrage detection and network routing with variable costs.`,
+  topo: `Topological sort orders the vertices of a directed acyclic graph — a DAG — such that for every directed edge from u to v, u appears before v in the ordering. It only makes sense on DAGs: any cycle makes a topological order impossible. The DFS-based algorithm is elegant: run DFS on all unvisited vertices. When a vertex finishes — all its descendants explored — push it onto a stack. The stack's reverse is the topological order. Kahn's algorithm uses in-degrees instead: start with all zero-in-degree vertices in a queue, process them, reduce neighbors' in-degrees, enqueue newly zero-in-degree vertices. Topological sort is the engine behind build systems like Make and Gradle, course prerequisite scheduling, spreadsheet formula evaluation, and compiler dependency resolution.`,
+  mst: `A Minimum Spanning Tree is a subset of edges that connects all vertices in a weighted undirected graph with minimum total edge weight, using exactly V minus one edges and no cycles. Kruskal's algorithm sorts all edges by weight, then greedily adds the cheapest edge that does not create a cycle — using a Union-Find data structure to detect cycles efficiently. Time: O E log E. Prim's algorithm grows the MST from a starting vertex, always adding the minimum-weight edge that connects the tree to a new vertex — similar in spirit to Dijkstra. Time: O E log V with a binary heap. MSTs are used in network design, clustering algorithms, image segmentation, and circuit layout. They form the backbone of efficient infrastructure.`,
+  quiz: `Excellent work reaching the quiz! You have covered the complete graph foundation: the nature of graphs and their real-world power, all essential terminology including directed, undirected, weighted, degree, path, and cycle, the two storage representations — matrix and list — and when to choose each, Breadth-First Search for level-by-level exploration and shortest unweighted paths, Depth-First Search for deep exploration and cycle detection, Dijkstra's algorithm for non-negative weighted shortest paths, Bellman-Ford for graphs with negative weights, topological sort for DAG ordering, and Minimum Spanning Trees with Kruskal's and Prim's algorithms. This is the complete graph toolkit. Let's find out what you truly know.`,
+};
+
+const NAV_SECTIONS = [
+  { id:"intro",          icon:"🕸️", label:"Intro",        col:"#38bdf8" },
+  { id:"terminology",    icon:"📐", label:"Terms",        col:"#818cf8" },
+  { id:"directed",       icon:"➡️", label:"Directed",     col:"#f43f5e" },
+  { id:"undirected",     icon:"🔁", label:"Undirected",   col:"#10b981" },
+  { id:"weighted",       icon:"⚖️", label:"Weighted",     col:"#f59e0b" },
+  { id:"representation", icon:"🗄️", label:"Represent",    col:"#34d399" },
+  { id:"bfs",            icon:"🌊", label:"BFS",          col:"#60a5fa" },
+  { id:"dfs",            icon:"🌀", label:"DFS",          col:"#a78bfa" },
+  { id:"dijkstra",       icon:"🗺️", label:"Dijkstra",     col:"#fbbf24" },
+  { id:"bellman",        icon:"⚖️", label:"Bellman-Ford", col:"#fb7185" },
+  { id:"topo",           icon:"📋", label:"Topo Sort",    col:"#4ade80" },
+  { id:"mst",            icon:"🌲", label:"MST",          col:"#f97316" },
+  { id:"visualizer",     icon:"💻", label:"Visualizer",   col:"#e879f9" },
+  { id:"quiz",           icon:"🧠", label:"Quiz",         col:"#ec4899" },
+];
+
+const SPEED_OPTIONS = [0.75, 1.0, 1.25, 1.5, 2.0];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHARED HOOKS
+// ═══════════════════════════════════════════════════════════════════════════════
+function useVisible(threshold = 0.07) {
+  const ref = useRef(null); const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) setVis(true); }, { threshold });
+    if (ref.current) io.observe(ref.current);
+    return () => io.disconnect();
+  }, []);
+  return [ref, vis];
+}
+
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const media = window.matchMedia(query);
+    if (media.matches !== matches) setMatches(media.matches);
+    const listener = () => setMatches(media.matches);
+    media.addEventListener('change', listener);
+    return () => media.removeEventListener('change', listener);
+  }, [matches, query]);
+  return matches;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PROGRESS BAR, SPEAKING WAVE, SPEED PANEL, RIGHT SIDEBAR, BACKTOTOP, BADGE, MINIPLAYER
+// ═══════════════════════════════════════════════════════════════════════════════
+function ProgressBar() {
+  const [p, setP] = useState(0);
+  useEffect(() => {
+    const h = () => { const mx = document.documentElement.scrollHeight - window.innerHeight; setP(mx > 0 ? (window.scrollY / mx) * 100 : 0); };
+    window.addEventListener("scroll", h, { passive: true }); return () => window.removeEventListener("scroll", h);
+  }, []);
+  return (
+    <div style={{ position:"fixed",top:0,left:0,right:0,height:3,zIndex:999,background:"rgba(255,255,255,0.04)" }}>
+      <div style={{ height:"100%",width:`${p}%`,background:"linear-gradient(90deg,#38bdf8,#818cf8,#4ade80)",transition:"width 0.12s linear",boxShadow:"0 0 10px rgba(56,189,248,0.7)" }}/>
     </div>
   );
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
-export default function StackDSPage(){
-  const[lang,        setLang]       =useState("c");
-  const[code,        setCode]       =useState(TPL.c);
-  const[steps,       setSteps]      =useState([]);
-  const[idx,         setIdx]        =useState(-1);
-  const[error,       setError]      =useState("");
-  const[playing,     setPlaying]    =useState(false);
-  const[speed,       setSpeed]      =useState(1.1);
-  const[animKey,     setAnimKey]    =useState(0);
-  const[done,        setDone]       =useState(false);
-  const[validating,  setValidating] =useState(false);
-  const[aiErrors,    setAiErrors]   =useState([]);
-  const[termLines,   setTermLines]  =useState([]);
-  const[sessionId,   setSessionId]  =useState("");
-  const[mounted,     setMounted]    =useState(false);
-  const[toast,       setToast]      =useState(null);
-  const[termOpen,    setTermOpen]   =useState(true);
-  const[activeSection,setActiveSection]=useState("code");
+function SpeakingWave({ color = "#38bdf8", size = 16 }) {
+  return (
+    <div style={{ display:"flex",alignItems:"center",gap:2,height:size }}>
+      {[0,1,2,3].map(i => (
+        <div key={i} style={{ width:size*0.18,height:size*0.5,background:color,borderRadius:99,animation:`wave 1.1s ease-in-out ${i*0.15}s infinite` }}/>
+      ))}
+    </div>
+  );
+}
 
-  useEffect(()=>{
-    setMounted(true);
-    setSessionId(Math.random().toString(36).slice(2,8).toUpperCase());
-  },[]);
+function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount, open, setOpen }) {
+  const [show, setShow] = useState(false);
+  const [speedOpen, setSpeedOpen] = useState(false);
+  const isMobile = useMediaQuery('(max-width: 600px)');
 
-  const isMobile=useIsMobile();
-  const timerRef=useRef(null),taRef=useRef(null),listRef=useRef(null);
-  const sectionCodeRef=useRef(null),sectionTermRef=useRef(null),sectionVizRef=useRef(null);
-  const scrollContainerRef=useRef(null);
+  useEffect(() => {
+    const h = () => setShow(window.scrollY > 500);
+    window.addEventListener("scroll", h, { passive: true });
+    return () => window.removeEventListener("scroll", h);
+  }, []);
 
-  const bump=()=>setAnimKey(k=>k+1);
-  const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(null),2200);};
-
-  const doReset=useCallback(()=>{
-    clearInterval(timerRef.current);
-    setSteps([]);setIdx(-1);setError("");setPlaying(false);setDone(false);setAiErrors([]);setTermLines([]);
-  },[]);
-
-  const handleChangeLang=(l)=>{setLang(l);setCode(TPL[l]??"");doReset();};
-
-  const buildTerm=(stps,errs,aiErrs,aiReason)=>{
-    const ls=[];
-    const ts=new Date().toTimeString().slice(0,8);
-    ls.push({type:"output",text:`VisuoSlayer v2.1  ·  ${ts}  ·  pid:${sessionId}`});
-    ls.push({type:"separator"});
-    if(aiErrs.length>0){
-      ls.push({type:"prompt",text:`validate --lang=${lang} --ds=stack`});ls.push({type:"blank"});
-      if(aiReason)ls.push({type:"stderr",text:aiReason});
-      aiErrs.forEach(e=>ls.push({type:"error",text:`  L${e.line??'?'}  ${e.message}`,lineNum:e.line}));
-      ls.push({type:"blank"});ls.push({type:"error",text:"Process exited with code 1"});return ls;
-    }
-    if(errs.length>0){
-      ls.push({type:"prompt",text:`run --lang=${lang}`});ls.push({type:"blank"});
-      errs.forEach(e=>ls.push({type:"stderr",text:e}));
-      ls.push({type:"blank"});ls.push({type:"error",text:"Process exited with code 1"});return ls;
-    }
-    if(stps.length>0){
-      ls.push({type:"prompt",text:`run --lang=${lang} --ds=stack`});ls.push({type:"blank"});
-      stps.forEach((s,stepIdx)=>{
-        const ie=s.type==="pop_error"||s.type==="peek_error";
-        let out="";
-        switch(s.type){
-          case"push":      out=`push(${s.value})  →  [${s.stack.join(", ")}]  size:${s.stack.length}`;break;
-          case"pop":       out=`pop()  →  ${s.value}  ·  [${s.stack.join(", ")}]  size:${s.stack.length}`;break;
-          case"pop_error": out=`pop()  →  Error: Stack Underflow`;break;
-          case"peek":      out=`peek()  →  ${s.value}  ·  unchanged  size:${s.stack.length}`;break;
-          case"peek_error":out=`peek()  →  Error: Stack is empty`;break;
-          case"isEmpty":   out=`isEmpty()  →  ${s.result}  ·  ${s.stack.length} item${s.stack.length!==1?"s":""}`;break;
-        }
-        ls.push({type:ie?"error":s.type,text:out,lineNum:s.lineNum+1,stepIndex:stepIdx});
-      });
-      ls.push({type:"blank"});
-      ls.push({type:"success",text:`${stps.length} op${stps.length!==1?"s":""} completed  ·  exit code 0`});
-    }
-    return ls;
-  };
-
-  const handleRun=async()=>{
-    doReset();setValidating(true);
-    const v=await validateWithVisuoSlayer(code,lang);
-    setValidating(false);
-    if(!v.valid){
-      setAiErrors(v.errors??[]);setTermLines(buildTerm([],[],v.errors??[],v.reason??""));
-      if(isMobile)scrollToSection("terminal");return;
-    }
-    const{steps:s,errors}=runCode(code,lang);
-    if(errors.length){setError(errors.join("\n"));setTermLines(buildTerm([],errors,[],"")); if(isMobile)scrollToSection("terminal");return;}
-    setSteps(s);setIdx(0);bump();setPlaying(true);setTermLines(buildTerm(s,[],[],""));
-  };
-
-  const goTo=useCallback((i)=>{
-    clearInterval(timerRef.current);setPlaying(false);setIdx(Math.max(0,Math.min(i,steps.length-1)));bump();
-  },[steps.length]);
-
-  useEffect(()=>{
-    const h=(e)=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();handleRun();}};
-    window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);
-  },[code,lang]);
-
-  useEffect(()=>{
-    if(!playing||!steps.length)return;
-    timerRef.current=setInterval(()=>{
-      setIdx(p=>{
-        if(p>=steps.length-1){clearInterval(timerRef.current);setPlaying(false);setDone(true);return p;}
-        bump();return p+1;
-      });
-    },speed*1000);
-    return()=>clearInterval(timerRef.current);
-  },[playing,steps,speed]);
-
-  useEffect(()=>{listRef.current?.querySelector(".sl-active")?.scrollIntoView({block:"nearest",behavior:"smooth"});},[idx]);
-
-  useEffect(()=>{
-    if(!isMobile)return;
-    const refs=[{id:"code",ref:sectionCodeRef},{id:"terminal",ref:sectionTermRef},{id:"viz",ref:sectionVizRef}];
-    const obs=new IntersectionObserver((entries)=>{
-      let best=null,bestRatio=0;
-      entries.forEach(e=>{if(e.isIntersecting&&e.intersectionRatio>bestRatio){bestRatio=e.intersectionRatio;best=e.target.dataset.section;}});
-      if(best)setActiveSection(best);
-    },{root:scrollContainerRef.current,threshold:[0.3,0.6]});
-    refs.forEach(r=>{if(r.ref.current){r.ref.current.dataset.section=r.id;obs.observe(r.ref.current);}});
-    return()=>obs.disconnect();
-  },[isMobile]);
-
-  const scrollToSection=useCallback((id)=>{
-    const map={code:sectionCodeRef,terminal:sectionTermRef,viz:sectionVizRef};
-    map[id]?.current?.scrollIntoView({behavior:"smooth",block:"start"});
-    setActiveSection(id);
-  },[]);
-
-  const onKeyDown=(e)=>{
-    if(e.key!=="Tab")return;e.preventDefault();
-    const s=e.target.selectionStart,en=e.target.selectionEnd;
-    const nv=code.slice(0,s)+"  "+code.slice(en);setCode(nv);
-    requestAnimationFrame(()=>{if(taRef.current){taRef.current.selectionStart=s+2;taRef.current.selectionEnd=s+2;}});
-  };
-
-  const step=steps[idx]??null;
-  const os=step?(OP[step.type]??OP.push):null;
-  const hasAiErrors=aiErrors.length>0;
-  const idle=steps.length===0&&!error&&!hasAiErrors;
-  const lm=LANGS[lang];
-  const errorLineSet=new Set(aiErrors.map(e=>(e.line??1)-1));
-
-  // ── MOBILE ─────────────────────────────────────────────────────────────────
-  if(isMobile){
-    return(
-      <>
-        <style>{SHARED_CSS+MOBILE_CSS}</style>
-        <div className="mob-pg">
-          <header className="mob-hd">
-            <div className="mob-logo">📚</div>
-            <div style={{flex:1,minWidth:0}}>
-              <div className="mob-brand">VisuoSlayer</div>
-              <div className="mob-sub">Linked List Stack · Write · Run · Visualize</div>
-            </div>
-            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:lm.accent,background:`${lm.accent}12`,border:`1px solid ${lm.accent}28`,padding:"2px 8px",borderRadius:20,fontWeight:700}}>{lm.ext}</span>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,color:"var(--text-muted)",padding:"2px 7px",borderRadius:16,border:"1px solid var(--border-subtle)",background:"var(--surface-2)"}}>{mounted?sessionId:"------"}</span>
-            </div>
-          </header>
-
-          <div className="mob-scroll" ref={scrollContainerRef}>
-            {/* CODE */}
-            <div ref={sectionCodeRef} className="mob-sec">
-              <div className="mob-sec-label"><span>⌨</span><span>01 · Code Editor</span></div>
-              <div className="mob-editor-wrap">
-                <div className="mob-ph">
-                  <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f57"}}/>
-                  <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e"}}/>
-                  <span className="dot" style={{background:"#28c840",boxShadow:"0 0 5px #28c840"}}/>
-                  <span className="ptl">Code Editor</span>
-                  <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:lm.accent,background:`${lm.accent}10`,border:`1px solid ${lm.accent}25`,padding:"2px 8px",borderRadius:16,fontWeight:700}}>{lm.name}</span>
-                </div>
-                <div className="mob-lb">
-                  {Object.entries(LANGS).map(([k,m])=>(
-                    <button key={k}
-                      className={`mob-lt${lang===k?" la":""}`}
-                      onClick={()=>handleChangeLang(k)}
-                      style={lang===k?{borderColor:`${m.accent}35`,color:m.accent,background:`${m.accent}0e`}:{}}
-                    >{m.name}</button>
-                  ))}
-                </div>
-                <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0,position:"relative"}}>
-                  <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
-                  {step&&os&&(
-                    <div className="mob-alb" style={{borderColor:os.bd,background:os.bg}}>
-                      <span style={{color:os.c,fontSize:10}}>{os.icon}</span>
-                      <span className="mob-alb-ln" style={{color:os.c}}>L{step.lineNum+1}</span>
-                      <code className="mob-alb-code">{step.codeLine}</code>
-                    </div>
-                  )}
-                </div>
-              </div>
-              <div className="mob-rr">
-                <button className={`mob-btn-run${playing||validating?" running":""}`} onClick={handleRun} disabled={playing||validating}>
-                  {validating?"⟳ Reviewing…":playing?"▶ Running…":"▶  Run & Visualize"}
-                </button>
-                {(steps.length>0||error||hasAiErrors)&&<button className="mob-btn-rst" onClick={doReset}>↺ Reset</button>}
-              </div>
-            </div>
-
-            {/* TERMINAL */}
-            <div ref={sectionTermRef} className="mob-sec" style={{marginTop:2}}>
-              <div className="mob-sec-label"><span>⬛</span><span>02 · Terminal</span></div>
-              <div className="mob-term-wrap">
-                <div className="mob-ph">
-                  <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f57"}}/>
-                  <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e"}}/>
-                  <span className="dot" style={{background:"#28c840",boxShadow:"0 0 5px #28c840"}}/>
-                  <span className="ptl">visualoslayer — bash</span>
-                  <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--text-muted)"}}>pid:{mounted?sessionId:"------"}</span>
-                </div>
-                <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx}/>
-              </div>
-            </div>
-
-            {/* VIZ */}
-            <div ref={sectionVizRef} className="mob-sec" style={{marginTop:2}}>
-              <div className="mob-sec-label"><span>📚</span><span>03 · Linked List Stack</span></div>
-              <div className="mob-viz-wrap">
-                <div className="mob-ph">
-                  <span className="dot" style={{background:"#60a5fa",boxShadow:"0 0 5px #60a5fa"}}/>
-                  <span className="dot" style={{background:"#f472b6",boxShadow:"0 0 5px #f472b6"}}/>
-                  <span className="dot" style={{background:"#4ade80",boxShadow:"0 0 5px #4ade80"}}/>
-                  <span className="ptl">Linked List Stack</span>
-                  {steps.length>0&&<span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--cyan)",background:"var(--cyan-dim)",border:"1px solid rgba(96,165,250,0.25)",padding:"2px 8px",borderRadius:16,fontWeight:700}}>{idx+1} / {steps.length}</span>}
-                </div>
-                <StackViz step={step} animKey={animKey} idle={idle} compact={true}/>
-              </div>
-            </div>
-            <div style={{height:24}}/>
-          </div>
-
-          <StickyNav activeSection={activeSection} onNav={scrollToSection} hasSteps={steps.length>0} hasErrors={!!error||hasAiErrors} termLines={termLines}/>
-        </div>
-        {toast&&<div className="toast">{toast}</div>}
-      </>
+  if (!open) {
+    // Collapsed button — smaller
+    const btnSize = isMobile ? 28 : 32;
+    return (
+      <button onClick={() => setOpen(true)} style={{
+        position: "fixed",
+        right: isMobile ? 8 : 12,
+        top: "50%",
+        transform: "translateY(-50%)",
+        zIndex: 950,
+        width: btnSize,
+        height: btnSize,
+        borderRadius: btnSize / 2,
+        background: "rgba(56,189,248,0.2)",
+        border: "1px solid rgba(56,189,248,0.4)",
+        backdropFilter: "blur(12px)",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: isMobile ? 14 : 16,
+        color: "#38bdf8",
+        transition: "all 0.2s",
+        boxShadow: "0 4px 12px rgba(0,0,0,0.3)"
+      }}>◀</button>
     );
   }
 
-  // ── DESKTOP ─────────────────────────────────────────────────────────────────
-  return(
-    <>
-      <style>{SHARED_CSS+DESKTOP_CSS}</style>
-      <div className="pg">
-        <header className="hd">
-          <div className="hd-logo">📚</div>
-          <div>
-            <div className="hd-brand">VisuoSlayer</div>
-            <div className="hd-tagline">Linked List Stack · Write · Run · Step through every operation</div>
-          </div>
-          <div className="hd-r">
-            <div className="hd-ds-badge">LIFO STACK</div>
-            <div className="hd-pill" style={{color:lm.accent,background:`${lm.accent}12`,border:`1px solid ${lm.accent}28`}}>{lm.name}</div>
-            <div className="hd-pid">pid:{mounted?sessionId:"------"}</div>
-          </div>
-        </header>
+  // Smaller dimensions
+  const btnSize = isMobile ? 24 : 28;
+  const fontSizeIcon = isMobile ? 14 : 14;
+  const gap = isMobile ? 2 : 3;
+  const padding = isMobile ? "4px 4px" : "6px 4px";
+  const borderRadius = isMobile ? 20 : 24;
 
-        <main className="main">
-          {/* LEFT */}
-          <div className="panel left">
-            <div className="ph">
-              <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 6px #ff5f57"}}/>
-              <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 6px #ffbd2e"}}/>
-              <span className="dot" style={{background:"#28c840",boxShadow:"0 0 6px #28c840"}}/>
-              <span className="ptl">Code Editor</span>
-              <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:lm.accent,background:`${lm.accent}12`,border:`1px solid ${lm.accent}28`,padding:"2px 8px",borderRadius:20,fontWeight:700}}>{lm.name}</span>
+  return (
+    <nav style={{
+      position: "fixed",
+      right: isMobile ? 8 : 12,
+      top: "50%",
+      transform: "translateY(-50%)",
+      zIndex: 900,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: gap,
+      padding: padding,
+      background: "rgba(3,6,18,0.94)",
+      backdropFilter: "blur(28px) saturate(180%)",
+      borderRadius: borderRadius,
+      border: "1px solid rgba(255,255,255,0.07)",
+      boxShadow: "0 12px 48px rgba(0,0,0,0.7)",
+      opacity: show ? 1 : 0,
+      pointerEvents: show ? "auto" : "none",
+      transition: "opacity 0.3s ease",
+      maxHeight: isMobile ? "85vh" : "auto",
+      overflowY: isMobile ? "auto" : "visible",
+      scrollbarWidth: "thin",
+    }}>
+      {/* Close button */}
+      <button onClick={() => setOpen(false)} style={{
+        width: btnSize,
+        height: btnSize,
+        borderRadius: 8,
+        border: "none",
+        background: "rgba(255,255,255,0.05)",
+        cursor: "pointer",
+        fontSize: 12,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "#94a3b8",
+        marginBottom: 2,
+        flexShrink: 0,
+      }}>✕</button>
+
+      {/* Section buttons */}
+      {NAV_SECTIONS.map((s) => (
+        <button
+          key={s.id}
+          onClick={() => document.getElementById(s.id)?.scrollIntoView({ behavior: "smooth" })}
+          title={s.label}
+          style={{
+            width: btnSize,
+            height: btnSize,
+            borderRadius: 8,
+            border: "none",
+            cursor: "pointer",
+            background: active === s.id ? `${s.col}22` : "transparent",
+            outline: active === s.id ? `1.5px solid ${s.col}55` : "1.5px solid transparent",
+            fontSize: fontSizeIcon,
+            transition: "all 0.2s",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            flexShrink: 0,
+          }}
+        >
+          {s.icon}
+        </button>
+      ))}
+
+      {/* Progress indicator — more compact */}
+      <div style={{
+        padding: "2px 6px",
+        borderRadius: 12,
+        background: "rgba(56,189,248,0.08)",
+        border: "1px solid rgba(56,189,248,0.2)",
+        display: "flex",
+        alignItems: "center",
+        gap: 3,
+        marginTop: 2,
+      }}>
+        <div style={{ width: 20, height: 3, borderRadius: 99, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+          <div style={{
+            height: "100%",
+            width: `${(seenCount / NAV_SECTIONS.length) * 100}%`,
+            background: "#38bdf8",
+            borderRadius: 99,
+            transition: "width 0.5s ease"
+          }} />
+        </div>
+        <span style={{
+          fontFamily: "'JetBrains Mono',monospace",
+          fontSize: 7,
+          color: "#38bdf8",
+          fontWeight: 700,
+        }}>{seenCount}/{NAV_SECTIONS.length}</span>
+      </div>
+
+      {/* Speed control — smaller */}
+      <div style={{ position: "relative", width: "100%", marginTop: 2 }}>
+        <button onClick={() => setSpeedOpen(o => !o)} style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          padding: "3px 6px",
+          borderRadius: 12,
+          cursor: "pointer",
+          background: speedOpen ? "rgba(56,189,248,0.2)" : "rgba(255,255,255,0.05)",
+          border: `1.5px solid ${speedOpen ? "#38bdf8" : "rgba(255,255,255,0.1)"}`,
+          fontFamily: "'JetBrains Mono',monospace",
+          fontSize: isMobile ? 8 : 7,
+          fontWeight: 700,
+          color: speedOpen ? "#7dd3fc" : "#64748b",
+          transition: "all 0.2s",
+          width: "100%",
+        }}>
+          ⚡ {speed}×
+        </button>
+        {speedOpen && (
+          <div style={{
+            position: "absolute",
+            top: 0,
+            right: "calc(100% + 6px)",
+            background: "rgba(5,8,20,0.97)",
+            backdropFilter: "blur(28px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: 10,
+            padding: "3px 3px",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+            zIndex: 1000,
+            minWidth: 70,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.8)",
+            animation: "panelPop 0.18s cubic-bezier(0.22,1,0.36,1) both"
+          }}>
+            <div style={{
+              fontFamily: "'JetBrains Mono',monospace",
+              fontSize: 5.5,
+              color: "#2d3748",
+              letterSpacing: "0.1em",
+              padding: "1px 5px 2px",
+              borderBottom: "1px solid rgba(255,255,255,0.06)"
+            }}>SPEED</div>
+            {SPEED_OPTIONS.map((s) => (
+              <button key={s} onClick={() => {
+                currentRate = s;
+                setSpeed(s);
+                setSpeedOpen(false);
+                if (speaking) onRestart();
+              }} style={{
+                padding: "2px 6px",
+                borderRadius: 4,
+                cursor: "pointer",
+                textAlign: "left",
+                background: speed === s ? "rgba(56,189,248,0.2)" : "transparent",
+                border: `1px solid ${speed === s ? "rgba(56,189,248,0.45)" : "transparent"}`,
+                fontFamily: "'JetBrains Mono',monospace",
+                fontSize: 7,
+                fontWeight: 700,
+                color: speed === s ? "#7dd3fc" : "#475569",
+                transition: "all 0.15s"
+              }}>{s === 1.25 ? `${s}× ★` : `${s}×`}</button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Speaking indicator — smaller */}
+      {speaking && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 2,
+          padding: "2px 5px",
+          borderRadius: 10,
+          background: "rgba(56,189,248,0.12)",
+          border: "1px solid rgba(56,189,248,0.3)",
+          marginTop: 2,
+        }}>
+          <SpeakingWave color="#38bdf8" size={isMobile ? 8 : 7} />
+        </div>
+      )}
+    </nav>
+  );
+}
+
+function BackToTop() {
+  const [show, setShow] = useState(false);
+  useEffect(() => { const h = () => setShow(window.scrollY > 1200); window.addEventListener("scroll", h, { passive:true }); return () => window.removeEventListener("scroll", h); }, []);
+  return (
+    <button onClick={() => window.scrollTo({ top:0, behavior:"smooth" })} style={{ position:"fixed",bottom:24,right:20,zIndex:850,width:44,height:44,borderRadius:14,cursor:"pointer",background:"rgba(56,189,248,0.15)",border:"1px solid rgba(56,189,248,0.35)",color:"#7dd3fc",fontSize:18,display:"flex",alignItems:"center",justifyContent:"center",opacity:show?1:0,transform:show?"scale(1)":"scale(0.7)",pointerEvents:show?"auto":"none",transition:"all 0.3s cubic-bezier(0.22,1,0.36,1)",boxShadow:"0 8px 24px rgba(56,189,248,0.3)" }}>↑</button>
+  );
+}
+
+function CompletedBadge({ seen }) {
+  if (!seen) return null;
+  return <span style={{ padding:"2px 9px",borderRadius:20,fontSize:9,fontFamily:"'JetBrains Mono',monospace",fontWeight:700,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.3)",color:"#38bdf8",letterSpacing:"0.08em",animation:"fadeIn 0.4s ease both" }}>✓ READ</span>;
+}
+
+function MiniPlayer({ speaking, speakingLabel, onStop, speed }) {
+  if (!speaking) return null;
+  return (
+    <div style={{ position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",zIndex:850,display:"flex",alignItems:"center",gap:12,padding:"10px 20px",borderRadius:99,background:"rgba(8,12,24,0.94)",backdropFilter:"blur(24px)",border:"1px solid rgba(56,189,248,0.3)",boxShadow:"0 8px 36px rgba(56,189,248,0.15)",animation:"slideUp 0.35s cubic-bezier(0.22,1,0.36,1) both",maxWidth:"calc(100vw - 48px)" }}>
+      <SpeakingWave color="#38bdf8" size={16}/>
+      <div>
+        <div style={{ fontFamily:"'DM Sans',sans-serif",fontSize:12,fontWeight:600,color:"#e2e8f0",lineHeight:1 }}>{speakingLabel}</div>
+        <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#38bdf8",marginTop:2 }}>{speed}× speed · male voice</div>
+      </div>
+      <button onClick={onStop} style={{ background:"rgba(239,68,68,0.15)",border:"1px solid rgba(239,68,68,0.35)",borderRadius:20,cursor:"pointer",padding:"4px 12px",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#f87171" }}>⏹ STOP</button>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION WRAPPER
+// ═══════════════════════════════════════════════════════════════════════════════
+function Sect({ id, icon, title, color, visual, cards, voice, speaking, onVoice, seen }) {
+  const [ref, vis] = useVisible();
+  const isSp = speaking === id;
+  return (
+    <section id={id} ref={ref} style={{ padding:"0 0 80px",opacity:vis?1:0,transform:vis?"none":"translateY(52px)",transition:"opacity 0.78s cubic-bezier(0.22,1,0.36,1),transform 0.78s cubic-bezier(0.22,1,0.36,1)" }}>
+      <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:24,flexWrap:"wrap" }}>
+        <div style={{ width:50,height:50,borderRadius:16,flexShrink:0,background:`${color}14`,border:`1px solid ${color}38`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,boxShadow:`0 0 28px ${color}18` }}>{icon}</div>
+        <h2 style={{ flex:1,margin:0,minWidth:0,fontFamily:"'Syne',sans-serif",fontSize:"clamp(19px,3.8vw,30px)",fontWeight:800,color:"#f8fafc",letterSpacing:"-0.022em",lineHeight:1.15 }}>{title}</h2>
+        <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
+          <CompletedBadge seen={seen}/>
+          <button onClick={() => onVoice(id, voice)} style={{ display:"flex",alignItems:"center",gap:6,padding:"7px 14px",borderRadius:28,cursor:"pointer",background:isSp?`${color}20`:"rgba(255,255,255,0.04)",border:`1.5px solid ${isSp?color:"rgba(255,255,255,0.1)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:isSp?color:"#475569",transition:"all 0.22s" }}>
+            {isSp ? <SpeakingWave color={color} size={12}/> : <span style={{ fontSize:12 }}>🔊</span>}
+            {isSp?"STOP":"LISTEN"}
+          </button>
+        </div>
+      </div>
+      <div className="sg" style={{ display:"grid",gridTemplateColumns:"minmax(0,1.12fr) minmax(0,0.88fr)",gap:18 }}>
+        <div style={{ padding:20,borderRadius:22,background:"linear-gradient(150deg,rgba(255,255,255,0.028) 0%,rgba(0,0,0,0.22) 100%)",border:`1px solid ${color}18`,boxShadow:`0 0 64px ${color}09`,minWidth:0 }}>{visual}</div>
+        <div style={{ display:"flex",flexDirection:"column",gap:9,minWidth:0 }}>
+          {cards.map((c,i) => (
+            <div key={i} style={{ padding:"12px 14px",borderRadius:13,background:"rgba(255,255,255,0.022)",border:"1px solid rgba(255,255,255,0.052)",borderLeft:`3px solid ${color}55`,animation:vis?`sRight 0.5s cubic-bezier(0.22,1,0.36,1) ${0.1+i*0.1}s both`:"none" }}>
+              {c.lbl && <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,fontWeight:700,color,letterSpacing:"0.12em",marginBottom:5,opacity:0.88 }}>{c.lbl}</div>}
+              <div style={{ fontFamily:"'DM Sans',sans-serif",fontSize:13,color:"#94a3b8",lineHeight:1.68 }}>{c.body}</div>
             </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
-            <div style={{flex:termOpen?"0 0 58%":"1",display:"flex",flexDirection:"column",minHeight:0,borderBottom:"1px solid var(--border-subtle)"}}>
-              <div className="lb">
-                {Object.entries(LANGS).map(([k,m])=>(
-                  <button key={k}
-                    className={`lt${lang===k?" la":""}`}
-                    onClick={()=>handleChangeLang(k)}
-                    style={lang===k?{borderColor:`${m.accent}35`,color:m.accent,background:`${m.accent}0e`}:{}}
-                  >{m.ext}</button>
+// ═══════════════════════════════════════════════════════════════════════════════
+// HERO
+// ═══════════════════════════════════════════════════════════════════════════════
+function Hero({ onStart, onVoice }) {
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick(x => x+1), 1200); return () => clearInterval(t); }, []);
+
+  const nodes = [
+    {id:0,x:240,y:90,  col:"#38bdf8"},{id:1,x:130,y:170, col:"#818cf8"},
+    {id:2,x:350,y:175, col:"#4ade80"},{id:3,x:80, y:270, col:"#fbbf24"},
+    {id:4,x:200,y:280, col:"#fb7185"},{id:5,x:310,y:270, col:"#a78bfa"},
+    {id:6,x:420,y:240, col:"#34d399"},{id:7,x:160,y:350, col:"#f97316"},
+  ];
+  const edges = [[0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[2,6],[3,7],[4,7],[5,6]];
+  const pulseNode = tick % nodes.length;
+
+  return (
+    <div style={{ minHeight:"100vh",display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 24px 48px",textAlign:"center",position:"relative",overflow:"hidden" }}>
+      <div style={{ position:"absolute",inset:0,pointerEvents:"none",backgroundImage:"radial-gradient(circle,rgba(56,189,248,0.045) 1px,transparent 1px)",backgroundSize:"38px 38px" }}/>
+      <div style={{ position:"absolute",top:"5%",left:"3%",width:480,height:480,borderRadius:"50%",background:"radial-gradient(circle,rgba(56,189,248,0.12) 0%,transparent 68%)",filter:"blur(72px)",pointerEvents:"none",animation:"hOrb1 22s ease-in-out infinite" }}/>
+      <div style={{ position:"absolute",bottom:"8%",right:"2%",width:360,height:360,borderRadius:"50%",background:"radial-gradient(circle,rgba(129,140,248,0.1) 0%,transparent 68%)",filter:"blur(60px)",pointerEvents:"none",animation:"hOrb2 28s ease-in-out infinite" }}/>
+
+      <div style={{ width:"100%",maxWidth:500,marginBottom:32 }}>
+        <svg viewBox="0 0 500 420" width="100%">
+          <defs>
+            <filter id="heroGlw"><feGaussianBlur stdDeviation="7" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+            <marker id="heroArr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="rgba(56,189,248,0.5)"/></marker>
+          </defs>
+          {edges.map(([a,b],i) => {
+            const n1=nodes[a], n2=nodes[b];
+            const active = pulseNode===a||pulseNode===b;
+            return <line key={i} x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={active?"rgba(56,189,248,0.6)":"rgba(255,255,255,0.08)"} strokeWidth={active?2:1.2} style={{transition:"all 0.5s ease",animation:`edgeFd 0.6s ease ${i*0.06}s both`}}/>;
+          })}
+          {nodes.map((n,i) => (
+            <g key={n.id} style={{animation:`nodePp 0.6s cubic-bezier(0.22,1,0.36,1) ${i*0.09}s both`}}>
+              {pulseNode===i && <circle cx={n.x} cy={n.y} r={38} fill="none" stroke={n.col} strokeWidth="1.5" strokeOpacity="0.25" style={{animation:"nodeRip 1s ease-out forwards"}}/>}
+              <circle cx={n.x} cy={n.y} r={pulseNode===i?26:20} fill={`${n.col}${pulseNode===i?"2a":"14"}`} stroke={n.col} strokeWidth={pulseNode===i?2.5:1.5} filter={pulseNode===i?"url(#heroGlw)":"none"} style={{transition:"all 0.5s cubic-bezier(0.22,1,0.36,1)"}}/>
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={n.col} fontSize={pulseNode===i?13:10} fontFamily="'JetBrains Mono',monospace" fontWeight="700" style={{transition:"font-size 0.5s"}}>{n.id}</text>
+            </g>
+          ))}
+          <style>{`@keyframes nodePp{from{opacity:0;transform-origin:50% 50%;transform:scale(0) rotate(-12deg)}to{opacity:1;transform:scale(1) rotate(0)}}@keyframes edgeFd{from{opacity:0}to{opacity:1}}@keyframes nodeRip{from{r:26;opacity:0.5}to{r:54;opacity:0}}`}</style>
+        </svg>
+      </div>
+
+      <div style={{ maxWidth:640,position:"relative" }}>
+        <div style={{ display:"inline-flex",alignItems:"center",gap:8,marginBottom:20,padding:"5px 18px",borderRadius:40,background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.25)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#38bdf8",letterSpacing:"0.1em" }}>🕸️ INTERACTIVE VISUAL GUIDE · FOR COMPLETE BEGINNERS</div>
+        <h1 style={{ margin:"0 0 18px",fontFamily:"'Syne',sans-serif",fontSize:"clamp(36px,7.5vw,76px)",fontWeight:800,letterSpacing:"-0.035em",lineHeight:1.02,background:"linear-gradient(145deg,#f8fafc 0%,#bae6fd 30%,#818cf8 60%,#4ade80 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>Graph Data<br/>Structures</h1>
+        <p style={{ margin:"0 auto 32px",fontFamily:"'DM Sans',sans-serif",fontSize:"clamp(14px,2.2vw,18px)",color:"#64748b",lineHeight:1.68,maxWidth:520 }}>
+          Every major graph concept — animated, explained, and narrated with a <strong style={{ color:"#38bdf8" }}>natural male voice</strong> at your chosen speed. Plus an interactive code visualizer.
+        </p>
+        <div style={{ display:"flex",gap:12,justifyContent:"center",flexWrap:"wrap" }}>
+          <button onClick={onStart} style={{ padding:"15px 36px",borderRadius:16,cursor:"pointer",background:"linear-gradient(135deg,#0ea5e9 0%,#818cf8 100%)",border:"none",fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:700,color:"#fff",boxShadow:"0 8px 36px rgba(14,165,233,0.45)",transition:"all 0.25s" }} onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-3px) scale(1.02)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";}}>
+            Begin Learning ↓
+          </button>
+          <button onClick={onVoice} style={{ padding:"15px 26px",borderRadius:16,cursor:"pointer",background:"rgba(255,255,255,0.05)",border:"1.5px solid rgba(255,255,255,0.15)",fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:600,color:"#94a3b8",transition:"all 0.25s",display:"flex",alignItems:"center",gap:9 }} onMouseEnter={e=>{e.currentTarget.style.background="rgba(255,255,255,0.1)";e.currentTarget.style.color="#f8fafc";}} onMouseLeave={e=>{e.currentTarget.style.background="rgba(255,255,255,0.05)";e.currentTarget.style.color="#94a3b8";}}>
+            <span style={{ fontSize:18 }}>🔊</span> Hear Intro
+          </button>
+        </div>
+        <div style={{ display:"flex",gap:6,justifyContent:"center",alignItems:"center",marginTop:20,flexWrap:"wrap" }}>
+          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",letterSpacing:"0.08em" }}>VOICE SPEED:</span>
+          {SPEED_OPTIONS.map(s => (
+            <button key={s} onClick={() => { currentRate=s; }} style={{ padding:"4px 11px",borderRadius:20,cursor:"pointer",background:currentRate===s?"rgba(56,189,248,0.18)":"rgba(255,255,255,0.04)",border:`1px solid ${currentRate===s?"rgba(56,189,248,0.5)":"rgba(255,255,255,0.08)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:currentRate===s?"#38bdf8":"#2d3748",transition:"all 0.18s" }}>{s}×</button>
+          ))}
+        </div>
+        <div style={{ display:"flex",gap:28,justifyContent:"center",marginTop:44,flexWrap:"wrap" }}>
+          {[["12","Sections"],["8+","Animations"],["6","Quiz Qs"],["💻","Visualizer"]].map(([n,l]) => (
+            <div key={l} style={{ textAlign:"center" }}>
+              <div style={{ fontFamily:"'Syne',sans-serif",fontSize:28,fontWeight:800,background:"linear-gradient(135deg,#38bdf8,#818cf8)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",backgroundClip:"text" }}>{n}</div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",letterSpacing:"0.1em",marginTop:3 }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Intro
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisIntro() {
+  const [mode, setMode] = useState("undirected");
+  const [tick, setTick] = useState(0);
+  useEffect(() => { const t = setInterval(() => setTick(x => x+1), 700); return () => clearInterval(t); }, []);
+
+  const nodes = [{id:0,x:160,y:60,col:"#38bdf8"},{id:1,x:80,y:160,col:"#818cf8"},{id:2,x:240,y:155,col:"#4ade80"},{id:3,x:60,y:260,col:"#fbbf24"},{id:4,x:180,y:265,col:"#fb7185"},{id:5,x:300,y:230,col:"#a78bfa"}];
+  const edges = [[0,1,4],[0,2,7],[1,3,2],[1,4,5],[2,4,3],[2,5,6],[3,4,8]];
+  const pulseEdge = tick % edges.length;
+
+  return (
+    <div>
+      <div style={{ display:"flex",gap:5,marginBottom:10,justifyContent:"center",flexWrap:"wrap" }}>
+        {[["undirected","Undirected"],["directed","Directed"],["weighted","Weighted"]].map(([m,lbl]) => (
+          <button key={m} onClick={() => setMode(m)} style={{ padding:"4px 10px",borderRadius:20,cursor:"pointer",background:mode===m?"rgba(56,189,248,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${mode===m?"#38bdf8":"rgba(255,255,255,0.1)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:mode===m?"#38bdf8":"#475569",transition:"all 0.2s" }}>{lbl}</button>
+        ))}
+      </div>
+      <svg viewBox="0 0 360 310" width="100%" style={{ maxHeight:295 }}>
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#38bdf8"/></marker>
+          <filter id="gGlw"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        {edges.map(([a,b,w],i) => {
+          const n1=nodes[a],n2=nodes[b];
+          const active=pulseEdge===i;
+          const dx=n2.x-n1.x,dy=n2.y-n1.y,dist=Math.sqrt(dx*dx+dy*dy);
+          const ex1=n1.x+(dx/dist)*22, ey1=n1.y+(dy/dist)*22;
+          const ex2=n2.x-(dx/dist)*22, ey2=n2.y-(dy/dist)*22;
+          const mx=(n1.x+n2.x)/2, my=(n1.y+n2.y)/2;
+          return (
+            <g key={i}>
+              <line x1={ex1} y1={ey1} x2={ex2} y2={ey2} stroke={active?"#38bdf8":"rgba(255,255,255,0.12)"} strokeWidth={active?2.5:1.5} markerEnd={mode==="directed"?"url(#arr)":undefined} filter={active?"url(#gGlw)":undefined} style={{transition:"all 0.4s"}}/>
+              {mode==="weighted" && <text x={mx+5} y={my-5} fill={active?"#38bdf8":"#334155"} fontSize="10" fontFamily="'JetBrains Mono',monospace" fontWeight="700" style={{transition:"fill 0.4s"}}>{w}</text>}
+            </g>
+          );
+        })}
+        {nodes.map((n) => (
+          <g key={n.id} style={{animation:"nodePp 0.5s cubic-bezier(0.22,1,0.36,1) both"}}>
+            <circle cx={n.x} cy={n.y} r={20} fill={`${n.col}18`} stroke={n.col} strokeWidth="1.8"/>
+            <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={n.col} fontSize="12" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.id}</text>
+          </g>
+        ))}
+        <text x={180} y={298} textAnchor="middle" fill="#334155" fontSize="9" fontFamily="'JetBrains Mono',monospace">
+          {mode==="undirected"?"Undirected: edges have no direction":mode==="directed"?"Directed: edges are one-way arrows":"Weighted: edges carry numeric costs"}
+        </text>
+        <style>{`@keyframes nodePp{from{opacity:0;transform-origin:50% 50%;transform:scale(0)}to{opacity:1;transform:scale(1)}}`}</style>
+      </svg>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Terminology
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisTerminology() {
+  const [hov, setHov] = useState(null);
+  const nodes = [{id:"A",x:160,y:60,col:"#38bdf8"},{id:"B",x:80,y:150,col:"#818cf8"},{id:"C",x:240,y:150,col:"#4ade80"},{id:"D",x:60,y:250,col:"#fbbf24"},{id:"E",x:185,y:250,col:"#fb7185"}];
+  const edges = [["A","B",5],["A","C",3],["B","D",7],["B","E",2],["C","E",4]];
+  const nodeMap = Object.fromEntries(nodes.map(n=>[n.id,n]));
+  const terms = [
+    {id:"vertex",  label:"VERTEX",  target:"B",  desc:"A node in the graph — any point with connections",           col:"#818cf8"},
+    {id:"edge",    label:"EDGE",    target:null, desc:"Connection between two vertices — the relationship",         col:"#38bdf8"},
+    {id:"degree",  label:"DEGREE",  target:"B",  desc:"B has degree 3 — connected to A, D, and E",                 col:"#4ade80"},
+    {id:"path",    label:"PATH",    target:null, desc:"A→B→E is a path of length 2 edges",                         col:"#fbbf24"},
+    {id:"weight",  label:"WEIGHT",  target:null, desc:"Numeric cost on an edge — distance, time, priority",        col:"#f97316"},
+  ];
+
+  return (
+    <div>
+      <svg viewBox="0 0 360 285" width="100%" style={{ maxHeight:285 }}>
+        <defs><filter id="tGlw"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        {edges.map(([a,b,w],i) => {
+          const n1=nodeMap[a],n2=nodeMap[b];
+          const pathHL=hov==="path"&&((a==="A"&&b==="B")||(a==="B"&&b==="E"));
+          const edgeHL=hov==="edge";
+          const wHL=hov==="weight";
+          return (
+            <g key={i}>
+              <line x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={pathHL?"#fbbf24":edgeHL?"#38bdf8":"rgba(255,255,255,0.1)"} strokeWidth={pathHL||edgeHL?2.5:1.5} style={{transition:"all 0.25s"}}/>
+              <text x={(n1.x+n2.x)/2+5} y={(n1.y+n2.y)/2-5} fill={wHL?"#f97316":"#253046"} fontSize="10" fontFamily="'JetBrains Mono',monospace" fontWeight="700" style={{transition:"fill 0.25s"}}>{w}</text>
+            </g>
+          );
+        })}
+        {nodes.map(n => {
+          const vHL=hov==="vertex"&&n.id==="B";
+          const degHL=hov==="degree"&&n.id==="B";
+          return (
+            <g key={n.id}>
+              <circle cx={n.x} cy={n.y} r={22} fill={vHL||degHL?`${n.col}30`:`${n.col}14`} stroke={vHL||degHL?n.col:`${n.col}80`} strokeWidth={vHL||degHL?2.5:1.5} filter={vHL||degHL?"url(#tGlw)":undefined} style={{transition:"all 0.25s"}}/>
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={n.col} fontSize="13" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.id}</text>
+            </g>
+          );
+        })}
+        {hov==="path" && <>
+          <circle cx={160} cy={60} r={26} fill="none" stroke="#fbbf24" strokeWidth="2" strokeOpacity="0.5" strokeDasharray="5,3"/>
+          <circle cx={80} cy={150} r={26} fill="none" stroke="#fbbf24" strokeWidth="2" strokeOpacity="0.5" strokeDasharray="5,3"/>
+          <circle cx={185} cy={250} r={26} fill="none" stroke="#fbbf24" strokeWidth="2" strokeOpacity="0.5" strokeDasharray="5,3"/>
+        </>}
+      </svg>
+      <div style={{ display:"flex",flexWrap:"wrap",gap:5,marginTop:4 }}>
+        {terms.map(t => (
+          <button key={t.id} onMouseEnter={()=>setHov(t.id)} onMouseLeave={()=>setHov(null)} style={{ padding:"4px 10px",borderRadius:20,cursor:"default",background:hov===t.id?`${t.col}20`:"rgba(255,255,255,0.03)",border:`1px solid ${hov===t.id?t.col:"rgba(255,255,255,0.07)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:hov===t.id?t.col:"#334155",transition:"all 0.2s" }}>{t.label}</button>
+        ))}
+      </div>
+      {hov && <div style={{ marginTop:8,padding:"8px 12px",borderRadius:10,background:"rgba(255,255,255,0.03)",border:`1px solid ${terms.find(t=>t.id===hov)?.col}28`,fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:"#94a3b8",lineHeight:1.5,animation:"fadeIn 0.2s ease" }}>{terms.find(t=>t.id===hov)?.desc}</div>}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ★ CRAZY VISUAL: Directed Graph — cinematic social network
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisDirected() {
+  const [activeEdge, setActiveEdge] = useState(null);
+  const [hovNode, setHovNode] = useState(null);
+  const [tick, setTick] = useState(0);
+  const [particles, setParticles] = useState([]);
+  const animRef = useRef();
+
+  useEffect(() => {
+    const t = setInterval(() => setTick(x => (x + 1) % 360), 50);
+    return () => clearInterval(t);
+  }, []);
+
+  // Spawn a particle along active edge
+  useEffect(() => {
+    if (activeEdge === null) return;
+    const id = Date.now();
+    setParticles(p => [...p.slice(-12), { id, edge: activeEdge, t: 0 }]);
+  }, [activeEdge]);
+
+  useEffect(() => {
+    let frame;
+    const loop = () => {
+      setParticles(prev => prev.map(p => ({ ...p, t: p.t + 0.025 })).filter(p => p.t < 1));
+      frame = requestAnimationFrame(loop);
+    };
+    frame = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  const nodes = [
+    { id: 0, x: 90,  y: 110, lbl: "A", role: "Creator",   col: "#f43f5e", followers: 12400 },
+    { id: 1, x: 220, y: 45,  lbl: "B", role: "Influencer", col: "#818cf8", followers: 87200 },
+    { id: 2, x: 340, y: 110, lbl: "C", role: "Brand",     col: "#38bdf8", followers: 33100 },
+    { id: 3, x: 150, y: 195, lbl: "D", role: "Fan",       col: "#4ade80", followers: 890   },
+    { id: 4, x: 290, y: 195, lbl: "E", role: "Reporter",  col: "#fbbf24", followers: 19500 },
+  ];
+
+  const edges = [
+    { u: 0, v: 1, label: "follows", type: "follow" },
+    { u: 0, v: 3, label: "follows", type: "follow" },
+    { u: 1, v: 2, label: "partners", type: "partner" },
+    { u: 1, v: 4, label: "mentions", type: "mention" },
+    { u: 2, v: 4, label: "sponsors", type: "sponsor" },
+    { u: 3, v: 1, label: "follows", type: "follow" },
+  ];
+
+  const typeColors = { follow: "#818cf8", partner: "#f43f5e", mention: "#38bdf8", sponsor: "#fbbf24" };
+
+  return (
+    <div style={{ position: "relative" }}>
+      {/* Glassy legend */}
+      <div style={{ display:"flex",gap:6,marginBottom:10,flexWrap:"wrap",justifyContent:"center" }}>
+        {Object.entries(typeColors).map(([k,c]) => (
+          <div key={k} style={{ display:"flex",alignItems:"center",gap:4,padding:"3px 9px",borderRadius:20,background:`${c}12`,border:`1px solid ${c}35`,fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,color:c,letterSpacing:"0.08em" }}>
+            <div style={{ width:6,height:6,borderRadius:"50%",background:c,boxShadow:`0 0 6px ${c}` }}/>
+            {k.toUpperCase()}
+          </div>
+        ))}
+      </div>
+
+      <svg viewBox="0 0 430 255" width="100%" style={{ maxHeight: 255, overflow:"visible" }}>
+        <defs>
+          {Object.entries(typeColors).map(([k,c]) => (
+            <marker key={k} id={`arr_${k}`} markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+              <path d="M0,1 L0,9 L10,5 z" fill={c} opacity="0.9"/>
+            </marker>
+          ))}
+          {nodes.map(n => (
+            <radialGradient key={n.id} id={`ng_${n.id}`} cx="50%" cy="30%" r="70%">
+              <stop offset="0%" stopColor={n.col} stopOpacity="0.45"/>
+              <stop offset="100%" stopColor={n.col} stopOpacity="0.05"/>
+            </radialGradient>
+          ))}
+          <filter id="dirGlw" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="dirGlwStrong" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="10" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+
+        {/* Background grid lines */}
+        {[60,120,180].map(y => <line key={y} x1={0} y1={y} x2={430} y2={y} stroke="rgba(255,255,255,0.025)" strokeWidth="1"/>)}
+        {[86,172,258,344].map(x => <line key={x} x1={x} y1={0} x2={x} y2={255} stroke="rgba(255,255,255,0.025)" strokeWidth="1"/>)}
+
+        {/* Edges */}
+        {edges.map((e, i) => {
+          const n1 = nodes[e.u], n2 = nodes[e.v];
+          const col = typeColors[e.type];
+          const isActive = activeEdge === i;
+          const dx = n2.x - n1.x, dy = n2.y - n1.y;
+          const len = Math.hypot(dx, dy);
+          const ux = dx/len, uy = dy/len;
+          const R = 28;
+          const x1 = n1.x + ux*R, y1 = n1.y + uy*R;
+          const x2 = n2.x - ux*(R+4), y2 = n2.y - uy*(R+4);
+          // Slight curve
+          const mx = (x1+x2)/2 - uy*18, my = (y1+y2)/2 + ux*18;
+          const textX = mx + uy*(-14), textY = my + ux*14;
+
+          return (
+            <g key={i} onMouseEnter={() => setActiveEdge(i)} onMouseLeave={() => setActiveEdge(null)} style={{ cursor:"pointer" }}>
+              {/* Glow behind active */}
+              {isActive && <path d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`} fill="none" stroke={col} strokeWidth="8" opacity="0.18" strokeLinecap="round"/>}
+              {/* Main edge */}
+              <path
+                d={`M${x1},${y1} Q${mx},${my} ${x2},${y2}`}
+                fill="none"
+                stroke={col}
+                strokeWidth={isActive ? 2.5 : 1.5}
+                opacity={isActive ? 1 : 0.55}
+                strokeDasharray={isActive ? "none" : "5,3"}
+                markerEnd={`url(#arr_${e.type})`}
+                filter={isActive ? "url(#dirGlw)" : undefined}
+                style={{ transition:"stroke-width 0.2s,opacity 0.2s" }}
+              />
+              {/* Label bubble */}
+              <g opacity={isActive ? 1 : 0} style={{ transition:"opacity 0.2s",pointerEvents:"none" }}>
+                <rect x={textX-22} y={textY-9} width={44} height={16} rx={8} fill={col} fillOpacity="0.18" stroke={col} strokeOpacity="0.6" strokeWidth="1"/>
+                <text x={textX} y={textY+1} textAnchor="middle" dominantBaseline="middle" fill={col} fontSize="8" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{e.label}</text>
+              </g>
+            </g>
+          );
+        })}
+
+        {/* Particles along active edge */}
+        {particles.map(p => {
+          const e = edges[p.edge];
+          if (!e) return null;
+          const n1 = nodes[e.u], n2 = nodes[e.v];
+          const col = typeColors[e.type];
+          const dx = n2.x - n1.x, dy = n2.y - n1.y;
+          const len = Math.hypot(dx, dy);
+          const ux = dx/len, uy = dy/len;
+          const R = 28;
+          const x1 = n1.x + ux*R, y1 = n1.y + uy*R;
+          const x2 = n2.x - ux*(R+4), y2 = n2.y - uy*(R+4);
+          const mx = (x1+x2)/2 - uy*18, my = (y1+y2)/2 + ux*18;
+          const t = p.t;
+          const px = (1-t)*(1-t)*x1 + 2*(1-t)*t*mx + t*t*x2;
+          const py = (1-t)*(1-t)*y1 + 2*(1-t)*t*my + t*t*y2;
+          const alpha = Math.sin(t * Math.PI);
+          return (
+            <circle key={p.id} cx={px} cy={py} r={3} fill={col} opacity={alpha} filter="url(#dirGlw)"/>
+          );
+        })}
+
+        {/* Nodes */}
+        {nodes.map((n, i) => {
+          const isHov = hovNode === i;
+          const scale = isHov ? 1.18 : 1;
+          const isActive2 = activeEdge !== null && (edges[activeEdge]?.u === i || edges[activeEdge]?.v === i);
+          return (
+            <g key={n.id}
+              onMouseEnter={() => setHovNode(i)}
+              onMouseLeave={() => setHovNode(null)}
+              style={{ cursor:"pointer", transform:`scale(${scale})`, transformOrigin:`${n.x}px ${n.y}px`, transition:"transform 0.25s cubic-bezier(0.34,1.56,0.64,1)" }}
+            >
+              {/* Orbit ring */}
+              <circle cx={n.x} cy={n.y} r={36}
+                fill="none" stroke={n.col} strokeWidth="1"
+                strokeOpacity={isHov||isActive2 ? 0.35 : 0.08}
+                strokeDasharray={isHov ? "none" : "3,5"}
+                style={{ transition:"all 0.3s", animation: isHov ? `orbitSpin 4s linear infinite` : "none" }}
+              />
+              {/* Glow disc */}
+              <circle cx={n.x} cy={n.y} r={isHov||isActive2 ? 34 : 0}
+                fill={n.col} opacity={0.08}
+                filter="url(#dirGlwStrong)"
+                style={{ transition:"r 0.3s" }}
+              />
+              {/* Body */}
+              <circle cx={n.x} cy={n.y} r={26}
+                fill={`url(#ng_${n.id})`}
+                stroke={n.col}
+                strokeWidth={isHov||isActive2 ? 2.5 : 1.5}
+                filter={isHov||isActive2 ? "url(#dirGlw)" : undefined}
+                style={{ transition:"all 0.3s" }}
+              />
+              {/* Shine */}
+              <ellipse cx={n.x-6} cy={n.y-10} rx={8} ry={5} fill="white" opacity="0.12"/>
+              {/* Label */}
+              <text x={n.x} y={n.y-1} textAnchor="middle" dominantBaseline="middle"
+                fill={n.col} fontSize={isHov ? 16 : 13}
+                fontFamily="'JetBrains Mono',monospace" fontWeight="800"
+                style={{ transition:"font-size 0.25s" }}>
+                {n.lbl}
+              </text>
+              {/* Role tag on hover */}
+              {isHov && (
+                <g>
+                  <rect x={n.x-30} y={n.y+32} width={60} height={14} rx={7} fill={n.col} fillOpacity="0.2" stroke={n.col} strokeOpacity="0.5" strokeWidth="1"/>
+                  <text x={n.x} y={n.y+39} textAnchor="middle" dominantBaseline="middle" fill={n.col} fontSize="7" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.role}</text>
+                </g>
+              )}
+              {/* In-degree badge */}
+              {(() => {
+                const inDeg = edges.filter(e => e.v === i).length;
+                const outDeg = edges.filter(e => e.u === i).length;
+                return inDeg > 0 && (
+                  <g>
+                    <circle cx={n.x+20} cy={n.y-20} r={9} fill="#060810" stroke={n.col} strokeOpacity="0.6" strokeWidth="1"/>
+                    <text x={n.x+20} y={n.y-20} textAnchor="middle" dominantBaseline="middle" fill={n.col} fontSize="7" fontFamily="'JetBrains Mono',monospace" fontWeight="700">↓{inDeg}</text>
+                  </g>
+                );
+              })()}
+            </g>
+          );
+        })}
+
+        <style>{`
+          @keyframes orbitSpin{from{stroke-dashoffset:0}to{stroke-dashoffset:-62}}
+        `}</style>
+      </svg>
+
+      <div style={{ marginTop:8,textAlign:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"rgba(244,63,94,0.8)",letterSpacing:"0.06em" }}>
+        Hover nodes · edges reveal direction labels · badges show in-degree
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ★ CRAZY VISUAL: Undirected Graph — electric mesh with pulse waves
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisUndirected() {
+  const [activeEdge, setActiveEdge] = useState(null);
+  const [hovNode, setHovNode] = useState(null);
+  const [waveTick, setWaveTick] = useState(0);
+  const [ripples, setRipples] = useState([]);
+
+  useEffect(() => {
+    const t = setInterval(() => setWaveTick(x => x + 1), 40);
+    return () => clearInterval(t);
+  }, []);
+
+  // Spawn ripple on node hover
+  useEffect(() => {
+    if (hovNode === null) return;
+    const id = Date.now();
+    setRipples(r => [...r.slice(-6), { id, node: hovNode, birth: Date.now() }]);
+  }, [hovNode]);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setRipples(prev => prev.filter(r => Date.now() - r.birth < 1200));
+    }, 100);
+    return () => clearInterval(t);
+  }, []);
+
+  const nodes = [
+    { id: 0, x: 90,  y: 80,  lbl: "A", col: "#38bdf8" },
+    { id: 1, x: 230, y: 50,  lbl: "B", col: "#818cf8" },
+    { id: 2, x: 350, y: 100, lbl: "C", col: "#10b981" },
+    { id: 3, x: 60,  y: 185, lbl: "D", col: "#fbbf24" },
+    { id: 4, x: 190, y: 175, lbl: "E", col: "#f43f5e" },
+    { id: 5, x: 340, y: 200, lbl: "F", col: "#a78bfa" },
+  ];
+
+  const edges = [
+    { u: 0, v: 1, label: "friend",     w: 1 },
+    { u: 0, v: 3, label: "friend",     w: 1 },
+    { u: 1, v: 2, label: "colleague",  w: 1 },
+    { u: 1, v: 4, label: "friend",     w: 1 },
+    { u: 2, v: 5, label: "friend",     w: 1 },
+    { u: 3, v: 4, label: "neighbour",  w: 1 },
+    { u: 4, v: 5, label: "colleague",  w: 1 },
+  ];
+
+  return (
+    <div style={{ position:"relative" }}>
+      {/* Degree legend */}
+      <div style={{ display:"flex",justifyContent:"center",gap:6,marginBottom:8,flexWrap:"wrap" }}>
+        {nodes.map((n,i) => {
+          const deg = edges.filter(e => e.u===i || e.v===i).length;
+          return (
+            <div key={n.id} style={{ display:"flex",alignItems:"center",gap:3,padding:"2px 8px",borderRadius:16,background:`${n.col}10`,border:`1px solid ${n.col}30`,fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,color:n.col }}>
+              {n.lbl}<span style={{ opacity:0.6 }}>·{deg}</span>
+            </div>
+          );
+        })}
+        <div style={{ padding:"2px 8px",borderRadius:16,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#475569" }}>node·degree</div>
+      </div>
+
+      <svg viewBox="0 0 430 250" width="100%" style={{ maxHeight:250,overflow:"visible" }}>
+        <defs>
+          <filter id="undirGlw" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="6" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          {nodes.map(n => (
+            <radialGradient key={n.id} id={`ung_${n.id}`} cx="40%" cy="30%" r="70%">
+              <stop offset="0%" stopColor={n.col} stopOpacity="0.5"/>
+              <stop offset="100%" stopColor={n.col} stopOpacity="0.06"/>
+            </radialGradient>
+          ))}
+          {/* Animated gradient along edges */}
+          {edges.map((e, i) => {
+            const n1 = nodes[e.u], n2 = nodes[e.v];
+            return (
+              <linearGradient key={i} id={`eg_${i}`} x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor={nodes[e.u].col} stopOpacity="0.8"/>
+                <stop offset="100%" stopColor={nodes[e.v].col} stopOpacity="0.8"/>
+              </linearGradient>
+            );
+          })}
+        </defs>
+
+        {/* Background hexagonal mesh hint */}
+        <g opacity="0.04">
+          {[0,1,2,3,4,5,6].map(i => (
+            <circle key={i} cx={70+i*50} cy={220} r={30} fill="none" stroke="#38bdf8" strokeWidth="0.5"/>
+          ))}
+        </g>
+
+        {/* Edges */}
+        {edges.map((e, i) => {
+          const n1 = nodes[e.u], n2 = nodes[e.v];
+          const isActive = activeEdge === i;
+          const isHovEdge = isActive;
+          const nodeHovered = hovNode === e.u || hovNode === e.v;
+
+          // Animated dash offset for active
+          const dashOffset = isActive ? -(waveTick * 1.2) % 20 : 0;
+
+          return (
+            <g key={i}
+              onMouseEnter={() => setActiveEdge(i)}
+              onMouseLeave={() => setActiveEdge(null)}
+              style={{ cursor:"pointer" }}
+            >
+              {/* Fat glow layer */}
+              {(isActive || nodeHovered) && (
+                <line x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y}
+                  stroke={`url(#eg_${i})`} strokeWidth={12} opacity={0.1}
+                  strokeLinecap="round" filter="url(#undirGlw)"
+                />
+              )}
+              {/* Main line */}
+              <line x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y}
+                stroke={isActive ? `url(#eg_${i})` : "rgba(255,255,255,0.12)"}
+                strokeWidth={isActive ? 2.5 : nodeHovered ? 2 : 1.5}
+                strokeDasharray={isActive ? "8,4" : "none"}
+                strokeDashoffset={dashOffset}
+                strokeLinecap="round"
+                style={{ transition:"stroke-width 0.2s,stroke 0.2s" }}
+              />
+              {/* Mid dot */}
+              <circle
+                cx={(n1.x+n2.x)/2} cy={(n1.y+n2.y)/2} r={isActive?5:3}
+                fill={isActive ? nodes[e.u].col : "rgba(255,255,255,0.06)"}
+                opacity={isActive?1:0.5}
+                filter={isActive?"url(#undirGlw)":undefined}
+                style={{ transition:"all 0.2s" }}
+              />
+              {/* Label on active */}
+              {isActive && (
+                <text
+                  x={(n1.x+n2.x)/2+8} y={(n1.y+n2.y)/2-8}
+                  fill={nodes[e.u].col} fontSize="8"
+                  fontFamily="'JetBrains Mono',monospace" fontWeight="700"
+                  opacity="0.9"
+                >{e.label}</text>
+              )}
+            </g>
+          );
+        })}
+
+        {/* Ripple rings from hovNode */}
+        {ripples.map(r => {
+          const n = nodes[r.node];
+          const age = (Date.now() - r.birth) / 1200;
+          const radius = 28 + age * 55;
+          const opacity = Math.max(0, 0.5 - age * 0.5);
+          return (
+            <circle key={r.id} cx={n.x} cy={n.y} r={radius}
+              fill="none" stroke={n.col} strokeWidth="1.5"
+              opacity={opacity} style={{ pointerEvents:"none" }}
+            />
+          );
+        })}
+
+        {/* Nodes */}
+        {nodes.map((n, i) => {
+          const isHov = hovNode === i;
+          const deg = edges.filter(e => e.u===i || e.v===i).length;
+          const isPartOfActive = activeEdge !== null && (edges[activeEdge]?.u === i || edges[activeEdge]?.v === i);
+          return (
+            <g key={n.id}
+              onMouseEnter={() => setHovNode(i)}
+              onMouseLeave={() => setHovNode(null)}
+              style={{ cursor:"pointer" }}
+            >
+              {/* Outer halo */}
+              <circle cx={n.x} cy={n.y} r={isHov ? 44 : 32}
+                fill="none" stroke={n.col}
+                strokeWidth="1" strokeOpacity={isHov ? 0.25 : 0.07}
+                style={{ transition:"r 0.35s cubic-bezier(0.34,1.56,0.64,1),stroke-opacity 0.3s" }}
+              />
+              {/* Fill disc */}
+              <circle cx={n.x} cy={n.y} r={isHov ? 32 : 24}
+                fill={`url(#ung_${n.id})`}
+                stroke={n.col}
+                strokeWidth={isHov || isPartOfActive ? 2.5 : 1.5}
+                filter={isHov ? "url(#undirGlw)" : undefined}
+                style={{ transition:"all 0.3s cubic-bezier(0.34,1.56,0.64,1)" }}
+              />
+              {/* Shine */}
+              <ellipse cx={n.x-7} cy={n.y-11} rx={9} ry={5} fill="white" opacity="0.15"/>
+              {/* Label */}
+              <text x={n.x} y={n.y} textAnchor="middle" dominantBaseline="middle"
+                fill={n.col} fontSize={isHov ? 17 : 13}
+                fontFamily="'JetBrains Mono',monospace" fontWeight="800"
+                style={{ transition:"font-size 0.25s" }}
+              >{n.lbl}</text>
+              {/* Degree counter — animates on hover */}
+              <text x={n.x} y={n.y + (isHov ? 22 : 0)}
+                textAnchor="middle" dominantBaseline="middle"
+                fill={n.col} fontSize="8"
+                fontFamily="'JetBrains Mono',monospace" fontWeight="700"
+                opacity={isHov ? 0.8 : 0}
+                style={{ transition:"all 0.25s" }}
+              >deg={deg}</text>
+            </g>
+          );
+        })}
+      </svg>
+
+      <div style={{ marginTop:6,textAlign:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"rgba(16,185,129,0.8)",letterSpacing:"0.06em" }}>
+        Hover nodes for ripple waves · hover edges for animated flow
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ★ CRAZY VISUAL: Weighted Graph — holographic GPS map
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisWeighted() {
+  const [activeEdge, setActiveEdge] = useState(null);
+  const [hovNode, setHovNode] = useState(null);
+  const [highlight, setHighlight] = useState(null); // "cheapest" | "most-exp" | null
+  const [animPulse, setAnimPulse] = useState(0);
+
+  useEffect(() => {
+    const t = setInterval(() => setAnimPulse(x => x + 1), 60);
+    return () => clearInterval(t);
+  }, []);
+
+  const nodes = [
+    { id: 0, x: 60,  y: 125, lbl: "NYC",    col: "#38bdf8", icon: "🏙" },
+    { id: 1, x: 175, y: 45,  lbl: "CHI",    col: "#818cf8", icon: "🌆" },
+    { id: 2, x: 310, y: 65,  lbl: "DET",    col: "#f59e0b", icon: "🏭" },
+    { id: 3, x: 160, y: 175, lbl: "DC",     col: "#10b981", icon: "🏛" },
+    { id: 4, x: 300, y: 185, lbl: "ATL",    col: "#f43f5e", icon: "✈" },
+    { id: 5, x: 390, y: 130, lbl: "BOS",    col: "#a78bfa", icon: "🎓" },
+  ];
+
+  const edges = [
+    { u: 0, v: 1, w: 790 },
+    { u: 0, v: 3, w: 230 },
+    { u: 1, v: 2, w: 300 },
+    { u: 1, v: 3, w: 1150 },
+    { u: 2, v: 5, w: 960 },
+    { u: 3, v: 4, w: 660 },
+    { u: 4, v: 5, w: 1100 },
+    { u: 2, v: 4, w: 720 },
+  ];
+
+  const minW = Math.min(...edges.map(e => e.w));
+  const maxW = Math.max(...edges.map(e => e.w));
+  const cheapest = edges.findIndex(e => e.w === minW);
+  const mostExp  = edges.findIndex(e => e.w === maxW);
+
+  const edgeColor = (i) => {
+    const e = edges[i];
+    const t = (e.w - minW) / (maxW - minW); // 0=cheap, 1=expensive
+    // green → yellow → red
+    if (t < 0.5) {
+      const r = Math.round(t * 2 * 251);
+      return `rgb(${r}, 211, 61)`;
+    } else {
+      const g = Math.round((1 - (t - 0.5) * 2) * 211);
+      return `rgb(251, ${g}, 36)`;
+    }
+  };
+
+  const edgeWidth = (i) => {
+    const e = edges[i];
+    const t = (e.w - minW) / (maxW - minW);
+    return 1.5 + (1 - t) * 3; // cheaper = thicker
+  };
+
+  const costLabel = (w) => w >= 1000 ? `$${(w/1000).toFixed(1)}k` : `$${w}`;
+
+  return (
+    <div>
+      {/* Controls */}
+      <div style={{ display:"flex",gap:6,marginBottom:10,justifyContent:"center",flexWrap:"wrap" }}>
+        <button
+          onClick={() => setHighlight(highlight==="cheapest" ? null : "cheapest")}
+          style={{ padding:"4px 12px",borderRadius:20,cursor:"pointer",background:highlight==="cheapest"?"rgba(74,222,128,0.25)":"rgba(255,255,255,0.04)",border:`1px solid ${highlight==="cheapest"?"#4ade80":"rgba(255,255,255,0.1)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:highlight==="cheapest"?"#4ade80":"#475569",transition:"all 0.2s" }}>
+          💸 CHEAPEST
+        </button>
+        <button
+          onClick={() => setHighlight(highlight==="most-exp" ? null : "most-exp")}
+          style={{ padding:"4px 12px",borderRadius:20,cursor:"pointer",background:highlight==="most-exp"?"rgba(244,63,94,0.25)":"rgba(255,255,255,0.04)",border:`1px solid ${highlight==="most-exp"?"#f43f5e":"rgba(255,255,255,0.1)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:highlight==="most-exp"?"#f43f5e":"#475569",transition:"all 0.2s" }}>
+          💰 COSTLIEST
+        </button>
+        <div style={{ padding:"4px 12px",borderRadius:20,background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#475569",display:"flex",alignItems:"center",gap:5 }}>
+          <div style={{ width:24,height:4,borderRadius:2,background:"linear-gradient(90deg,#4ade80,#fbbf24,#f43f5e)" }}/>
+          low→high cost
+        </div>
+      </div>
+
+      <svg viewBox="0 0 450 240" width="100%" style={{ maxHeight:240,overflow:"visible" }}>
+        <defs>
+          <filter id="weightGlw" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          <filter id="weightGlwHard" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="10" result="b"/>
+            <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+          {nodes.map(n => (
+            <radialGradient key={n.id} id={`wng_${n.id}`} cx="40%" cy="30%" r="70%">
+              <stop offset="0%" stopColor={n.col} stopOpacity="0.55"/>
+              <stop offset="100%" stopColor={n.col} stopOpacity="0.07"/>
+            </radialGradient>
+          ))}
+        </defs>
+
+        {/* Map grid background */}
+        <g opacity="0.06">
+          {[40,80,120,160,200].map(y => <line key={y} x1={0} y1={y} x2={450} y2={y} stroke="#38bdf8" strokeWidth="0.5"/>)}
+          {[50,100,150,200,250,300,350,400].map(x => <line key={x} x1={x} y1={0} x2={x} y2={240} stroke="#38bdf8" strokeWidth="0.5"/>)}
+        </g>
+
+        {/* Edges */}
+        {edges.map((e, i) => {
+          const n1 = nodes[e.u], n2 = nodes[e.v];
+          const isActive = activeEdge === i;
+          const isCheapHL = highlight === "cheapest" && i === cheapest;
+          const isExpHL   = highlight === "most-exp"  && i === mostExp;
+          const isHL = isCheapHL || isExpHL;
+          const col = edgeColor(i);
+          const w   = edgeWidth(i);
+          const mx = (n1.x+n2.x)/2, my = (n1.y+n2.y)/2;
+
+          // Animated "signal" along cheapest edge when highlighted
+          const tAnim = isHL ? (animPulse * 0.02) % 1 : 0;
+          const px = isHL ? n1.x + (n2.x-n1.x)*tAnim : null;
+          const py = isHL ? n1.y + (n2.y-n1.y)*tAnim : null;
+
+          return (
+            <g key={i}
+              onMouseEnter={() => setActiveEdge(i)}
+              onMouseLeave={() => setActiveEdge(null)}
+              style={{ cursor:"pointer" }}
+            >
+              {/* Glow behind if active/highlighted */}
+              {(isActive || isHL) && (
+                <line x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y}
+                  stroke={isCheapHL?"#4ade80":isExpHL?"#f43f5e":col}
+                  strokeWidth={14} opacity={0.12} strokeLinecap="round"
+                  filter="url(#weightGlwHard)"
+                />
+              )}
+              {/* Main road */}
+              <line x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y}
+                stroke={isCheapHL?"#4ade80":isExpHL?"#f43f5e":col}
+                strokeWidth={isActive||isHL ? w+1.5 : w}
+                opacity={isActive||isHL ? 1 : 0.6}
+                strokeLinecap="round"
+                filter={isActive||isHL ? "url(#weightGlw)" : undefined}
+                style={{ transition:"stroke-width 0.2s,opacity 0.2s" }}
+              />
+              {/* Animated pulse dot */}
+              {isHL && px !== null && (
+                <circle cx={px} cy={py} r={5}
+                  fill={isCheapHL?"#4ade80":"#f43f5e"}
+                  filter="url(#weightGlw)" opacity="0.9"
+                />
+              )}
+              {/* Cost badge */}
+              <g>
+                <rect x={mx-18} y={my-9} width={36} height={16} rx={8}
+                  fill={isActive||isHL ? "rgba(6,8,16,0.9)" : "rgba(6,8,16,0.5)"}
+                  stroke={isCheapHL?"#4ade80":isExpHL?"#f43f5e":isActive?col:"rgba(255,255,255,0.12)"}
+                  strokeWidth={isActive||isHL?1.2:0.7}
+                  style={{ transition:"all 0.2s" }}
+                />
+                <text x={mx} y={my+1} textAnchor="middle" dominantBaseline="middle"
+                  fill={isCheapHL?"#4ade80":isExpHL?"#f43f5e":isActive?col:"#64748b"}
+                  fontSize={isActive||isHL?9:8}
+                  fontFamily="'JetBrains Mono',monospace" fontWeight="700"
+                  style={{ transition:"fill 0.2s,font-size 0.2s" }}
+                >{costLabel(e.w)}</text>
+              </g>
+            </g>
+          );
+        })}
+
+        {/* Nodes */}
+        {nodes.map((n, i) => {
+          const isHov = hovNode === i;
+          const isPartOfActive = activeEdge !== null && (edges[activeEdge]?.u === i || edges[activeEdge]?.v === i);
+          const totalCost = edges.filter(e => e.u===i||e.v===i).reduce((s,e) => s+e.w, 0);
+          return (
+            <g key={n.id}
+              onMouseEnter={() => setHovNode(i)}
+              onMouseLeave={() => setHovNode(null)}
+              style={{ cursor:"pointer" }}
+            >
+              {/* Glow ring */}
+              <circle cx={n.x} cy={n.y} r={isHov ? 42 : 28}
+                fill="none" stroke={n.col} strokeWidth="1.5"
+                strokeOpacity={isHov ? 0.3 : 0.08}
+                strokeDasharray={isHov ? "none" : "4,6"}
+                style={{ transition:"all 0.4s cubic-bezier(0.34,1.56,0.64,1)" }}
+              />
+              {/* Body */}
+              <circle cx={n.x} cy={n.y} r={isHov ? 30 : 22}
+                fill={`url(#wng_${n.id})`}
+                stroke={n.col}
+                strokeWidth={isHov||isPartOfActive ? 2.5 : 1.5}
+                filter={isHov ? "url(#weightGlw)" : undefined}
+                style={{ transition:"all 0.35s cubic-bezier(0.34,1.56,0.64,1)" }}
+              />
+              {/* Shine */}
+              <ellipse cx={n.x-7} cy={n.y-10} rx={8} ry={5} fill="white" opacity="0.12"/>
+              {/* City code */}
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle"
+                fill={n.col} fontSize={isHov ? 9 : 8}
+                fontFamily="'JetBrains Mono',monospace" fontWeight="800"
+                style={{ transition:"font-size 0.25s" }}
+              >{n.lbl}</text>
+              {/* Total cost on hover */}
+              {isHov && (
+                <g>
+                  <rect x={n.x-28} y={n.y+34} width={56} height={16} rx={8}
+                    fill="rgba(6,8,16,0.9)" stroke={n.col} strokeOpacity="0.4" strokeWidth="1"/>
+                  <text x={n.x} y={n.y+42} textAnchor="middle" dominantBaseline="middle"
+                    fill={n.col} fontSize="7"
+                    fontFamily="'JetBrains Mono',monospace" fontWeight="700">
+                    Σ {costLabel(totalCost)}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+
+      {/* Stats bar */}
+      <div style={{ display:"flex",gap:8,justifyContent:"center",marginTop:8,flexWrap:"wrap" }}>
+        <div style={{ padding:"3px 10px",borderRadius:16,background:"rgba(74,222,128,0.1)",border:"1px solid rgba(74,222,128,0.25)",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#4ade80" }}>
+          Min: {costLabel(minW)} ({nodes[edges[cheapest].u].lbl}↔{nodes[edges[cheapest].v].lbl})
+        </div>
+        <div style={{ padding:"3px 10px",borderRadius:16,background:"rgba(244,63,94,0.1)",border:"1px solid rgba(244,63,94,0.25)",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#f43f5e" }}>
+          Max: {costLabel(maxW)} ({nodes[edges[mostExp].u].lbl}↔{nodes[edges[mostExp].v].lbl})
+        </div>
+        <div style={{ padding:"3px 10px",borderRadius:16,background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.25)",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#fbbf24" }}>
+          Avg: {costLabel(Math.round(edges.reduce((s,e)=>s+e.w,0)/edges.length))}
+        </div>
+      </div>
+
+      <div style={{ marginTop:6,textAlign:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"rgba(245,158,11,0.8)",letterSpacing:"0.06em" }}>
+        Edge thickness = value · color = cost gradient · hover for city totals
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Representation — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisRepresentation() {
+  const [tab, setTab] = useState("list");
+  const nodes = ["A","B","C","D","E"];
+  const edges = [["A","B"],["A","C"],["B","D"],["B","E"],["C","E"],["D","E"]];
+  const adjList = {A:["B","C"],B:["A","D","E"],C:["A","E"],D:["B","E"],E:["B","C","D"]};
+  const adjMatrix = nodes.map(r => nodes.map(c => edges.some(([a,b])=>(a===r&&b===c)||(a===c&&b===r))?1:0));
+  const COL = {"A":"#38bdf8","B":"#818cf8","C":"#4ade80","D":"#fbbf24","E":"#fb7185"};
+
+  return (
+    <div>
+      <div style={{ display:"flex",gap:5,marginBottom:12,justifyContent:"center" }}>
+        {[["list","Adjacency List"],["matrix","Adjacency Matrix"]].map(([k,lbl]) => (
+          <button key={k} onClick={()=>setTab(k)} style={{ padding:"5px 14px",borderRadius:20,cursor:"pointer",background:tab===k?"rgba(56,189,248,0.2)":"rgba(255,255,255,0.04)",border:`1px solid ${tab===k?"#38bdf8":"rgba(255,255,255,0.1)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:tab===k?"#38bdf8":"#475569",transition:"all 0.2s" }}>{lbl}</button>
+        ))}
+      </div>
+      {tab === "list" ? (
+        <div style={{ padding:12,borderRadius:14,background:"rgba(56,189,248,0.06)",border:"1px solid rgba(56,189,248,0.15)" }}>
+          {nodes.map(n => (
+            <div key={n} style={{ display:"flex",alignItems:"center",gap:8,marginBottom:7,animation:"fadeIn 0.3s ease" }}>
+              <div style={{ width:32,height:32,borderRadius:8,background:`${COL[n]}20`,border:`1.5px solid ${COL[n]}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:700,color:COL[n],flexShrink:0 }}>{n}</div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#334155" }}>→</div>
+              <div style={{ display:"flex",gap:4,flexWrap:"wrap" }}>
+                {adjList[n].map(nb => (
+                  <div key={nb} style={{ width:28,height:28,borderRadius:7,background:`${COL[nb]}14`,border:`1px solid ${COL[nb]}60`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:700,color:COL[nb] }}>{nb}</div>
                 ))}
               </div>
-              <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
-              {step&&os&&(
-                <div className="alb" style={{borderColor:os.bd,background:os.bg}}>
-                  <span style={{color:os.c,fontSize:10}}>{os.icon}</span>
-                  <span className="alb-ln" style={{color:os.c}}>L{step.lineNum+1}</span>
-                  <code className="alb-code">{step.codeLine}</code>
-                </div>
-              )}
-              <div className="rr">
-                <button className={`btn-run${playing||validating?" running":""}`} onClick={handleRun} disabled={playing||validating}>
-                  {validating?"⟳ VisuoSlayer…":playing?"▶ Running…":"▶  Run & Visualize"}
-                </button>
-                {(steps.length>0||error||hasAiErrors)&&<button className="btn-rst" onClick={doReset}>↺ Reset</button>}
-                <span className="rr-hint">CTRL+ENTER</span>
-              </div>
             </div>
-
-            <div className={`tm-wrap${termOpen?" tm-open":" tm-closed"}`}>
-              <div className="term-body-wrap" key={termOpen?"open":"closed"}>
-                <div className="term-bar">
-                  <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 5px #ff5f57"}}/>
-                  <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 5px #ffbd2e"}}/>
-                  <span className="dot" style={{background:"#28c840",boxShadow:"0 0 5px #28c840"}}/>
-                  <span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"1.2px",userSelect:"none"}}>visualoslayer — bash</span>
-                  <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--text-muted)",marginLeft:8}}>pid:{mounted?sessionId:"------"}</span>
-                  <button className="term-toggle" onClick={()=>setTermOpen(false)} title="Collapse">▾</button>
-                </div>
-                <Terminal lines={termLines} sessionId={sessionId} validating={validating} currentStepIndex={idx}/>
-              </div>
-            </div>
-
-            {!termOpen&&(
-              <div className="term-bar-closed" onClick={()=>setTermOpen(true)}>
-                <span className="dot" style={{background:"#ff5f57",boxShadow:"0 0 4px #ff5f57"}}/>
-                <span className="dot" style={{background:"#ffbd2e",boxShadow:"0 0 4px #ffbd2e"}}/>
-                <span className="dot" style={{background:"#28c840",boxShadow:"0 0 4px #28c840"}}/>
-                <span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"var(--text-muted)",textTransform:"uppercase",letterSpacing:"1.2px"}}>visualoslayer — bash</span>
-                {termLines.some(l=>l.type==="error"||l.type==="stderr")&&<span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#f87171",background:"rgba(248,113,113,0.1)",border:"1px solid rgba(248,113,113,0.25)",padding:"1px 7px",borderRadius:10}}>errors</span>}
-                {termLines.some(l=>l.type==="success")&&<span style={{marginLeft:8,fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--green)",background:"var(--green-dim)",border:"1px solid rgba(74,222,128,0.25)",padding:"1px 7px",borderRadius:10}}>ok</span>}
-                <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"var(--cyan)",fontWeight:700}}>▴ open</span>
-              </div>
-            )}
+          ))}
+          <div style={{ marginTop:8,padding:"6px 10px",borderRadius:8,background:"rgba(56,189,248,0.06)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#38bdf8",textAlign:"center" }}>Space: O(V+E) · Edge check: O(degree) · ✓ Sparse graphs</div>
+        </div>
+      ) : (
+        <div style={{ padding:12,borderRadius:14,background:"rgba(129,140,248,0.06)",border:"1px solid rgba(129,140,248,0.15)" }}>
+          <div style={{ overflowX:"auto" }}>
+            <table style={{ borderCollapse:"collapse",fontFamily:"'JetBrains Mono',monospace",fontSize:10 }}>
+              <thead>
+                <tr>
+                  <td style={{ width:30 }}/>
+                  {nodes.map(n => <th key={n} style={{ width:36,textAlign:"center",color:COL[n],fontWeight:700,padding:"4px" }}>{n}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {nodes.map((r,ri) => (
+                  <tr key={r}>
+                    <td style={{ color:COL[r],fontWeight:700,padding:"3px 6px" }}>{r}</td>
+                    {nodes.map((c,ci) => (
+                      <td key={c} style={{ width:36,height:28,textAlign:"center",borderRadius:4,background:adjMatrix[ri][ci]?`${COL[r]}22`:"rgba(255,255,255,0.02)",border:`1px solid ${adjMatrix[ri][ci]?COL[r]+"40":"rgba(255,255,255,0.06)"}`,color:adjMatrix[ri][ci]?COL[r]:"#1e2a38",fontWeight:adjMatrix[ri][ci]?700:400,transition:"all 0.2s" }}>{adjMatrix[ri][ci]}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+          <div style={{ marginTop:8,padding:"6px 10px",borderRadius:8,background:"rgba(129,140,248,0.06)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#818cf8",textAlign:"center" }}>Space: O(V²) · Edge check: O(1) · ✓ Dense graphs</div>
+        </div>
+      )}
+    </div>
+  );
+}
 
-          {/* RIGHT */}
-          <div className="panel">
-            <div className="ph">
-              <span className="dot" style={{background:"#60a5fa",boxShadow:"0 0 6px #60a5fa"}}/>
-              <span className="dot" style={{background:"#f472b6",boxShadow:"0 0 6px #f472b6"}}/>
-              <span className="dot" style={{background:"#4ade80",boxShadow:"0 0 6px #4ade80"}}/>
-              <span className="ptl">Linked List Stack</span>
-              {steps.length>0&&(
-                <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"var(--cyan)",background:"var(--cyan-dim)",border:"1px solid rgba(96,165,250,0.25)",padding:"2px 9px",borderRadius:20,fontWeight:700}}>
-                  {idx+1} / {steps.length}
-                </span>
-              )}
-            </div>
-            <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden",justifyContent:"center",alignItems:"center"}}>
-              <StackViz step={step} animKey={animKey} idle={idle}/>
-            </div>
-          </div>
-        </main>
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: BFS — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisBFS() {
+  const [step, setStep] = useState(-1);
+  const [running, setRunning] = useState(false);
+  const tmr = useRef();
+  const nodes = [{id:0,x:180,y:50,col:"#60a5fa"},{id:1,x:80,y:135,col:"#60a5fa"},{id:2,x:280,y:135,col:"#60a5fa"},{id:3,x:40,y:230,col:"#60a5fa"},{id:4,x:145,y:230,col:"#60a5fa"},{id:5,x:235,y:230,col:"#60a5fa"},{id:6,x:320,y:230,col:"#60a5fa"}];
+  const edges = [[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]];
+  const BFS_STEPS = [
+    {visited:new Set([0]),queue:[0],current:0,msg:"Start: enqueue node 0"},
+    {visited:new Set([0,1,2]),queue:[1,2],current:0,msg:"Process 0: enqueue neighbors 1, 2"},
+    {visited:new Set([0,1,2,3,4]),queue:[2,3,4],current:1,msg:"Process 1: enqueue neighbors 3, 4"},
+    {visited:new Set([0,1,2,3,4,5,6]),queue:[3,4,5,6],current:2,msg:"Process 2: enqueue neighbors 5, 6"},
+    {visited:new Set([0,1,2,3,4,5,6]),queue:[4,5,6],current:3,msg:"Process 3: no unvisited neighbors"},
+    {visited:new Set([0,1,2,3,4,5,6]),queue:[5,6],current:4,msg:"Process 4: no unvisited neighbors"},
+    {visited:new Set([0,1,2,3,4,5,6]),queue:[6],current:5,msg:"Process 5: no unvisited neighbors"},
+    {visited:new Set([0,1,2,3,4,5,6]),queue:[],current:6,msg:"✓ BFS complete — all nodes visited level-by-level"},
+  ];
+  const cur = step >= 0 && step < BFS_STEPS.length ? BFS_STEPS[step] : null;
+  const run = () => {
+    if(running) return; setRunning(true); setStep(0);
+    let s=0;
+    tmr.current=setInterval(()=>{s++;setStep(s);if(s>=BFS_STEPS.length-1){clearInterval(tmr.current);setRunning(false);}},850);
+  };
+  const reset = () => { clearInterval(tmr.current); setStep(-1); setRunning(false); };
+  useEffect(() => () => clearInterval(tmr.current), []);
+  const levelColors = ["#60a5fa","#818cf8","#4ade80","#fbbf24"];
+  const nodeLevels = [0,1,1,2,2,2,2];
+  return (
+    <div>
+      <svg viewBox="0 0 360 268" width="100%" style={{ maxHeight:260 }}>
+        <defs><filter id="bfsGlw"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        {edges.map(([a,b],i) => {
+          const n1=nodes[a],n2=nodes[b];
+          const isVis = cur && cur.visited.has(a) && cur.visited.has(b);
+          return <line key={i} x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={isVis?"rgba(96,165,250,0.45)":"rgba(255,255,255,0.1)"} strokeWidth={isVis?2:1.5} style={{transition:"all 0.4s"}}/>;
+        })}
+        {nodes.map((n,i) => {
+          const isVisited = cur ? cur.visited.has(n.id) : false;
+          const isCurrent = cur && cur.current === n.id;
+          const isQueued = cur && cur.queue.includes(n.id) && !isCurrent;
+          const lc = levelColors[nodeLevels[i]];
+          return (
+            <g key={n.id}>
+              {isCurrent && <circle cx={n.x} cy={n.y} r={34} fill="none" stroke="#f59e0b" strokeWidth="2" strokeOpacity="0.4" style={{animation:"nodeRip 0.8s ease-out forwards"}}/>}
+              <circle cx={n.x} cy={n.y} r={20} fill={isCurrent?`${lc}38`:isQueued?`${lc}20`:isVisited?`${lc}14`:"rgba(255,255,255,0.04)"} stroke={isCurrent?"#f59e0b":isQueued?lc:isVisited?`${lc}70`:"rgba(255,255,255,0.12)"} strokeWidth={isCurrent?2.5:isQueued?2:1.5} filter={isCurrent?"url(#bfsGlw)":undefined} style={{transition:"all 0.4s"}}/>
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={isCurrent?"#f59e0b":isVisited?lc:"#475569"} fontSize="12" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.id}</text>
+              <text x={n.x} y={n.y+33} textAnchor="middle" fill={isVisited?lc:"#1a2030"} fontSize="8" fontFamily="'JetBrains Mono',monospace">L{nodeLevels[i]}</text>
+            </g>
+          );
+        })}
+        <style>{`@keyframes nodeRip{from{r:22;opacity:0.5}to{r:40;opacity:0}}`}</style>
+      </svg>
+      {cur && <div style={{ padding:"7px 12px",borderRadius:10,background:"rgba(96,165,250,0.08)",border:"1px solid rgba(96,165,250,0.2)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#60a5fa",marginBottom:6,animation:"fadeIn 0.3s ease" }}>
+        {cur.msg}{cur.queue.length > 0 && <span style={{ color:"#475569" }}> · Queue: [{cur.queue.join(",")}]</span>}
+      </div>}
+      <div style={{ display:"flex",gap:8,justifyContent:"center" }}>
+        <button onClick={reset} style={{ padding:"5px 14px",borderRadius:20,cursor:"pointer",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#475569" }}>↺ RESET</button>
+        <button onClick={running?reset:run} style={{ padding:"5px 18px",borderRadius:20,cursor:"pointer",background:"rgba(96,165,250,0.15)",border:"1px solid rgba(96,165,250,0.4)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#60a5fa" }}>{running?"⏹ STOP":step>=BFS_STEPS.length-1?"↺ REPLAY":"▶ RUN BFS"}</button>
       </div>
-      {toast&&<div className="toast">{toast}</div>}
-    </>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: DFS — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisDFS() {
+  const [step, setStep] = useState(-1);
+  const [running, setRunning] = useState(false);
+  const tmr = useRef();
+  const nodes = [{id:0,x:180,y:50},{id:1,x:80,y:145},{id:2,x:280,y:145},{id:3,x:40,y:240},{id:4,x:145,y:240},{id:5,x:235,y:240},{id:6,x:320,y:240}];
+  const edges = [[0,1],[0,2],[1,3],[1,4],[2,5],[2,6]];
+  const DFS_STEPS = [
+    {visited:new Set([0]),stack:[0],current:0,path:[0],msg:"Visit 0 → push to stack"},
+    {visited:new Set([0,1]),stack:[0,1],current:1,path:[0,1],msg:"Go deep: visit 1"},
+    {visited:new Set([0,1,3]),stack:[0,1,3],current:3,path:[0,1,3],msg:"Go deep: visit 3 (dead end)"},
+    {visited:new Set([0,1,3,4]),stack:[0,1,4],current:4,path:[0,1,4],msg:"Backtrack to 1 → visit 4 (dead end)"},
+    {visited:new Set([0,1,2,3,4]),stack:[0,2],current:2,path:[0,2],msg:"Backtrack to 0 → visit 2"},
+    {visited:new Set([0,1,2,3,4,5]),stack:[0,2,5],current:5,path:[0,2,5],msg:"Go deep: visit 5 (dead end)"},
+    {visited:new Set([0,1,2,3,4,5,6]),stack:[0,2,6],current:6,path:[0,2,6],msg:"✓ DFS complete — explored all nodes depth-first"},
+  ];
+  const cur = step >= 0 && step < DFS_STEPS.length ? DFS_STEPS[step] : null;
+  const run = () => {
+    if(running) return; setRunning(true); setStep(0);
+    let s=0;
+    tmr.current=setInterval(()=>{s++;setStep(s);if(s>=DFS_STEPS.length-1){clearInterval(tmr.current);setRunning(false);}},850);
+  };
+  const reset = () => { clearInterval(tmr.current); setStep(-1); setRunning(false); };
+  useEffect(() => () => clearInterval(tmr.current), []);
+  return (
+    <div>
+      <svg viewBox="0 0 360 265" width="100%" style={{ maxHeight:258 }}>
+        <defs><filter id="dfsGlw"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        {edges.map(([a,b],i) => {
+          const n1=nodes[a],n2=nodes[b];
+          const pathVis = cur && cur.path.includes(a) && cur.path.includes(b);
+          return <line key={i} x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={pathVis?"rgba(167,139,250,0.6)":"rgba(255,255,255,0.1)"} strokeWidth={pathVis?2.5:1.5} style={{transition:"all 0.4s"}}/>;
+        })}
+        {nodes.map((n) => {
+          const isVis = cur && cur.visited.has(n.id);
+          const isCur = cur && cur.current === n.id;
+          const isPath = cur && cur.path.includes(n.id);
+          return (
+            <g key={n.id}>
+              {isCur && <circle cx={n.x} cy={n.y} r={34} fill="none" stroke="#a78bfa" strokeWidth="2" strokeOpacity="0.4" style={{animation:"nodeRip 0.8s ease-out forwards"}}/>}
+              <circle cx={n.x} cy={n.y} r={20} fill={isCur?"rgba(167,139,250,0.35)":isPath?"rgba(167,139,250,0.18)":isVis?"rgba(167,139,250,0.09)":"rgba(255,255,255,0.04)"} stroke={isCur?"#a78bfa":isPath?"rgba(167,139,250,0.8)":isVis?"rgba(167,139,250,0.4)":"rgba(255,255,255,0.12)"} strokeWidth={isCur?2.5:isPath?2:1.5} filter={isCur?"url(#dfsGlw)":undefined} style={{transition:"all 0.4s"}}/>
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={isCur||isPath?"#a78bfa":isVis?"rgba(167,139,250,0.7)":"#475569"} fontSize="12" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.id}</text>
+            </g>
+          );
+        })}
+        {cur && cur.path.length > 1 && cur.path.map((nid,i) => {
+          if(i===0) return null;
+          const n1=nodes[cur.path[i-1]],n2=nodes[nid];
+          return <text key={i} x={(n1.x+n2.x)/2+8} y={(n1.y+n2.y)/2-5} fill="#a78bfa" fontSize="9" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{i}</text>;
+        })}
+      </svg>
+      {cur && <div style={{ padding:"7px 12px",borderRadius:10,background:"rgba(167,139,250,0.08)",border:"1px solid rgba(167,139,250,0.2)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#a78bfa",marginBottom:6,animation:"fadeIn 0.3s ease" }}>
+        {cur.msg}{cur.stack.length > 0 && <span style={{ color:"#475569" }}> · Stack: [{cur.stack.join(",")}]</span>}
+      </div>}
+      <div style={{ display:"flex",gap:8,justifyContent:"center" }}>
+        <button onClick={reset} style={{ padding:"5px 14px",borderRadius:20,cursor:"pointer",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#475569" }}>↺ RESET</button>
+        <button onClick={running?reset:run} style={{ padding:"5px 18px",borderRadius:20,cursor:"pointer",background:"rgba(167,139,250,0.15)",border:"1px solid rgba(167,139,250,0.4)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#a78bfa" }}>{running?"⏹ STOP":step>=DFS_STEPS.length-1?"↺ REPLAY":"▶ RUN DFS"}</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Dijkstra — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisDijkstra() {
+  const [step, setStep] = useState(-1);
+  const [running, setRunning] = useState(false);
+  const tmr = useRef();
+  const nodes = [{id:0,x:60,y:140,lbl:"S"},{id:1,x:165,y:60,lbl:"A"},{id:2,x:165,y:225,lbl:"B"},{id:3,x:290,y:60,lbl:"C"},{id:4,x:290,y:225,lbl:"D"},{id:5,x:360,y:140,lbl:"T"}];
+  const edges = [[0,1,4],[0,2,2],[1,2,1],[1,3,5],[2,4,8],[2,3,8],[3,5,2],[4,3,2],[4,5,3]];
+  const STEPS = [
+    {dist:{0:0,1:Infinity,2:Infinity,3:Infinity,4:Infinity,5:Infinity},done:new Set(),current:0,msg:"Initialize: S=0, all others=∞"},
+    {dist:{0:0,1:4,2:2,3:Infinity,4:Infinity,5:Infinity},done:new Set([0]),current:2,msg:"Process S(0): relax A→4, B→2. Pick B (min)"},
+    {dist:{0:0,1:3,2:2,3:10,4:10,5:Infinity},done:new Set([0,2]),current:1,msg:"Process B(2): relax A→3, C→10, D→10. Pick A"},
+    {dist:{0:0,1:3,2:2,3:8,4:10,5:Infinity},done:new Set([0,1,2]),current:3,msg:"Process A(3): relax C→8. Pick C"},
+    {dist:{0:0,1:3,2:2,3:8,4:10,5:10},done:new Set([0,1,2,3]),current:4,msg:"Process C(8): relax T→10. Pick D"},
+    {dist:{0:0,1:3,2:2,3:10,4:10,5:11},done:new Set([0,1,2,3,4]),current:5,msg:"Process D(10): check T→13 (no improvement)"},
+    {dist:{0:0,1:3,2:2,3:8,4:10,5:10},done:new Set([0,1,2,3,4,5]),current:5,msg:"✓ Shortest path S→T = 10 (S→B→A→C→T)"},
+  ];
+  const cur = step >= 0 && step < STEPS.length ? STEPS[step] : null;
+  const run = () => {
+    if(running) return; setRunning(true); setStep(0);
+    let s=0;
+    tmr.current=setInterval(()=>{s++;setStep(s);if(s>=STEPS.length-1){clearInterval(tmr.current);setRunning(false);}},950);
+  };
+  const reset = () => { clearInterval(tmr.current); setStep(-1); setRunning(false); };
+  useEffect(() => () => clearInterval(tmr.current), []);
+  const shortestPath = new Set([0,1,2,3,5]);
+  return (
+    <div>
+      <svg viewBox="0 0 420 298" width="100%" style={{ maxHeight:290 }}>
+        <defs><filter id="dijGlw"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        {edges.map(([a,b,w],i) => {
+          const n1=nodes[a],n2=nodes[b];
+          const isShortPath = cur && step===STEPS.length-1 && shortestPath.has(a) && shortestPath.has(b);
+          return (
+            <g key={i}>
+              <line x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={isShortPath?"#4ade80":"rgba(255,255,255,0.1)"} strokeWidth={isShortPath?2.5:1.5} style={{transition:"all 0.4s"}}/>
+              <text x={(n1.x+n2.x)/2+4} y={(n1.y+n2.y)/2-4} fill={isShortPath?"#4ade80":"#334155"} fontSize="9" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{w}</text>
+            </g>
+          );
+        })}
+        {nodes.map((n) => {
+          const isDone = cur && cur.done.has(n.id);
+          const isCur = cur && cur.current === n.id;
+          const dist = cur ? cur.dist[n.id] : null;
+          const col = isCur ? "#fbbf24" : isDone ? "#34d399" : "#38bdf8";
+          return (
+            <g key={n.id}>
+              {isCur && <circle cx={n.x} cy={n.y} r={34} fill="none" stroke="#fbbf24" strokeWidth="2" strokeOpacity="0.35" style={{animation:"nodeRip 0.8s ease-out forwards"}}/>}
+              <circle cx={n.x} cy={n.y} r={22} fill={isCur?"rgba(251,191,36,0.3)":isDone?"rgba(52,211,153,0.18)":"rgba(56,189,248,0.1)"} stroke={col} strokeWidth={isCur?2.5:1.5} filter={isCur?"url(#dijGlw)":undefined} style={{transition:"all 0.4s"}}/>
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={col} fontSize="12" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.lbl}</text>
+              {dist !== null && <text x={n.x} y={n.y-30} textAnchor="middle" fill={isDone?"#34d399":col} fontSize="10" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{dist === Infinity ? "∞" : dist}</text>}
+            </g>
+          );
+        })}
+      </svg>
+      {cur && <div style={{ padding:"7px 12px",borderRadius:10,background:"rgba(251,191,36,0.07)",border:"1px solid rgba(251,191,36,0.2)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#fbbf24",marginBottom:6,animation:"fadeIn 0.3s ease" }}>{cur.msg}</div>}
+      <div style={{ display:"flex",gap:8,justifyContent:"center" }}>
+        <button onClick={reset} style={{ padding:"5px 14px",borderRadius:20,cursor:"pointer",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#475569" }}>↺ RESET</button>
+        <button onClick={running?reset:run} style={{ padding:"5px 18px",borderRadius:20,cursor:"pointer",background:"rgba(251,191,36,0.15)",border:"1px solid rgba(251,191,36,0.4)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#fbbf24" }}>{running?"⏹ STOP":step>=STEPS.length-1?"↺ REPLAY":"▶ RUN DIJKSTRA"}</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Bellman-Ford — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisBellmanFord() {
+  const [step, setStep] = useState(-1);
+  const [running, setRunning] = useState(false);
+  const tmr = useRef();
+  const nodes = [{id:0,x:60,y:130,lbl:"S"},{id:1,x:180,y:55,lbl:"A"},{id:2,x:180,y:210,lbl:"B"},{id:3,x:310,y:130,lbl:"T"}];
+  const edges = [[0,1,6],[0,2,7],[1,2,8],[1,3,5],[2,3,-3],[1,0,-2]];
+  const STEPS = [
+    {dist:{0:0,1:Infinity,2:Infinity,3:Infinity},pass:0,edge:null,msg:"Initialize: S=0, all others=∞"},
+    {dist:{0:0,1:6,2:7,3:Infinity},pass:1,edge:[0,1],msg:"Pass 1: Relax S→A (6), S→B (7)"},
+    {dist:{0:0,1:4,2:7,3:11},pass:1,edge:[1,3],msg:"Pass 1: Relax A→T (11), B→T via neg: check"},
+    {dist:{0:0,1:4,2:7,3:4},pass:2,edge:[2,3],msg:"Pass 2: Relax B→T via -3 edge: 7+(-3)=4 ✓"},
+    {dist:{0:0,1:4,2:7,3:4},pass:3,edge:null,msg:"Pass 3: No improvement. Algorithm converges."},
+    {dist:{0:0,1:4,2:7,3:4},pass:"done",edge:null,msg:"✓ Shortest S→T = 4. Handles negative edges!"},
+  ];
+  const cur = step >= 0 && step < STEPS.length ? STEPS[step] : null;
+  const run = () => {
+    if(running) return; setRunning(true); setStep(0);
+    let s=0;
+    tmr.current=setInterval(()=>{s++;setStep(s);if(s>=STEPS.length-1){clearInterval(tmr.current);setRunning(false);}},1000);
+  };
+  const reset = () => { clearInterval(tmr.current); setStep(-1); setRunning(false); };
+  useEffect(() => () => clearInterval(tmr.current), []);
+  return (
+    <div>
+      <svg viewBox="0 0 370 278" width="100%" style={{ maxHeight:270 }}>
+        <defs>
+          <marker id="bfArr" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L7,3 z" fill="#fb7185"/></marker>
+          <filter id="bfGlw"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        {edges.map(([a,b,w],i) => {
+          const n1=nodes[a],n2=nodes[b];
+          const isNeg=w<0;
+          const isActive=cur&&cur.edge&&cur.edge[0]===a&&cur.edge[1]===b;
+          const dx=n2.x-n1.x,dy=n2.y-n1.y,dist=Math.sqrt(dx*dx+dy*dy);
+          const ex1=n1.x+(dx/dist)*24,ey1=n1.y+(dy/dist)*24;
+          const ex2=n2.x-(dx/dist)*24,ey2=n2.y-(dy/dist)*24;
+          const mx=(n1.x+n2.x)/2+5,my=(n1.y+n2.y)/2-6;
+          return (
+            <g key={i}>
+              <line x1={ex1} y1={ey1} x2={ex2} y2={ey2} stroke={isActive?"#fb7185":isNeg?"rgba(251,113,133,0.4)":"rgba(255,255,255,0.12)"} strokeWidth={isActive?2.5:1.5} markerEnd="url(#bfArr)" filter={isActive?"url(#bfGlw)":undefined} style={{transition:"all 0.4s"}}/>
+              <text x={mx} y={my} fill={isActive?"#fb7185":isNeg?"#fb7185":"#334155"} fontSize="11" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{w}</text>
+            </g>
+          );
+        })}
+        {nodes.map((n) => {
+          const dist = cur ? cur.dist[n.id] : null;
+          return (
+            <g key={n.id}>
+              <circle cx={n.x} cy={n.y} r={24} fill="rgba(251,113,133,0.1)" stroke="#fb7185" strokeWidth="1.5"/>
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill="#fb7185" fontSize="13" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.lbl}</text>
+              {dist !== null && <text x={n.x} y={n.y-32} textAnchor="middle" fill="#fb7185" fontSize="11" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{dist===Infinity?"∞":dist}</text>}
+            </g>
+          );
+        })}
+        <text x={260} y={192} fill="rgba(251,113,133,0.6)" fontSize="9" fontFamily="'JetBrains Mono',monospace">← NEGATIVE EDGE</text>
+      </svg>
+      {cur && <div style={{ padding:"7px 12px",borderRadius:10,background:"rgba(251,113,133,0.08)",border:"1px solid rgba(251,113,133,0.22)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#fb7185",marginBottom:6,animation:"fadeIn 0.3s ease" }}>
+        {`Pass ${cur.pass}: `}{cur.msg}
+      </div>}
+      <div style={{ display:"flex",gap:8,justifyContent:"center" }}>
+        <button onClick={reset} style={{ padding:"5px 14px",borderRadius:20,cursor:"pointer",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#475569" }}>↺ RESET</button>
+        <button onClick={running?reset:run} style={{ padding:"5px 18px",borderRadius:20,cursor:"pointer",background:"rgba(251,113,133,0.15)",border:"1px solid rgba(251,113,133,0.4)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#fb7185" }}>{running?"⏹ STOP":step>=STEPS.length-1?"↺ REPLAY":"▶ RUN BELLMAN-FORD"}</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: Topological Sort — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisTopoSort() {
+  const [step, setStep] = useState(-1);
+  const [running, setRunning] = useState(false);
+  const tmr = useRef();
+  const nodes = [{id:0,x:55,y:130,lbl:"A"},{id:1,x:160,y:60,lbl:"B"},{id:2,x:160,y:200,lbl:"C"},{id:3,x:265,y:130,lbl:"D"},{id:4,x:360,y:60,lbl:"E"},{id:5,x:360,y:200,lbl:"F"}];
+  const edges = [[0,1],[0,2],[1,3],[2,3],[3,4],[3,5]];
+  const STEPS = [
+    {order:[],visited:new Set(),current:0,inDeg:{0:0,1:1,2:1,3:2,4:1,5:1},msg:"In-degrees: A=0, B=1, C=1, D=2, E=1, F=1"},
+    {order:["A"],visited:new Set([0]),current:1,inDeg:{0:0,1:0,2:0,3:2,4:1,5:1},msg:"Enqueue zero-indegree: A. Process A → reduce B,C in-degree to 0"},
+    {order:["A","B"],visited:new Set([0,1]),current:2,inDeg:{0:0,1:0,2:0,3:1,4:1,5:1},msg:"Process B → reduce D in-degree to 1"},
+    {order:["A","B","C"],visited:new Set([0,1,2]),current:3,inDeg:{0:0,1:0,2:0,3:0,4:1,5:1},msg:"Process C → reduce D in-degree to 0. Enqueue D"},
+    {order:["A","B","C","D"],visited:new Set([0,1,2,3]),current:4,inDeg:{0:0,1:0,2:0,3:0,4:0,5:0},msg:"Process D → reduce E,F to 0. Enqueue E,F"},
+    {order:["A","B","C","D","E","F"],visited:new Set([0,1,2,3,4,5]),current:-1,inDeg:{0:0,1:0,2:0,3:0,4:0,5:0},msg:"✓ Topo order: A→B→C→D→E→F"},
+  ];
+  const cur = step >= 0 && step < STEPS.length ? STEPS[step] : null;
+  const run = () => {
+    if(running) return; setRunning(true); setStep(0);
+    let s=0;
+    tmr.current=setInterval(()=>{s++;setStep(s);if(s>=STEPS.length-1){clearInterval(tmr.current);setRunning(false);}},900);
+  };
+  const reset = () => { clearInterval(tmr.current); setStep(-1); setRunning(false); };
+  useEffect(() => () => clearInterval(tmr.current), []);
+  return (
+    <div>
+      <svg viewBox="0 0 420 268" width="100%" style={{ maxHeight:260 }}>
+        <defs>
+          <marker id="topoArr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill="#4ade80"/></marker>
+          <filter id="topoGlw"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        {edges.map(([a,b],i) => {
+          const n1=nodes[a],n2=nodes[b];
+          const isProc = cur && cur.visited.has(a);
+          const dx=n2.x-n1.x,dy=n2.y-n1.y,d=Math.sqrt(dx*dx+dy*dy);
+          return <line key={i} x1={n1.x+(dx/d)*22} y1={n1.y+(dy/d)*22} x2={n2.x-(dx/d)*22} y2={n2.y-(dy/d)*22} stroke={isProc?"rgba(74,222,128,0.5)":"rgba(255,255,255,0.12)"} strokeWidth={isProc?2:1.5} markerEnd="url(#topoArr)" style={{transition:"all 0.4s"}}/>;
+        })}
+        {nodes.map((n) => {
+          const isDone = cur && cur.visited.has(n.id);
+          const isCur = cur && cur.current === n.id;
+          const inDeg = cur ? cur.inDeg[n.id] : null;
+          return (
+            <g key={n.id}>
+              {isCur && <circle cx={n.x} cy={n.y} r={34} fill="none" stroke="#4ade80" strokeWidth="2" strokeOpacity="0.35" style={{animation:"nodeRip 0.8s ease-out forwards"}}/>}
+              <circle cx={n.x} cy={n.y} r={22} fill={isDone?"rgba(74,222,128,0.2)":"rgba(255,255,255,0.04)"} stroke={isCur?"#4ade80":isDone?"rgba(74,222,128,0.6)":"rgba(255,255,255,0.15)"} strokeWidth={isCur?2.5:1.5} filter={isCur?"url(#topoGlw)":undefined} style={{transition:"all 0.4s"}}/>
+              <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill={isDone?"#4ade80":"#94a3b8"} fontSize="13" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.lbl}</text>
+              {inDeg !== null && <text x={n.x} y={n.y-32} textAnchor="middle" fill={inDeg===0?"#4ade80":"#334155"} fontSize="9" fontFamily="'JetBrains Mono',monospace">in={inDeg}</text>}
+            </g>
+          );
+        })}
+      </svg>
+      {cur && <div style={{ padding:"7px 12px",borderRadius:10,background:"rgba(74,222,128,0.07)",border:"1px solid rgba(74,222,128,0.2)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#4ade80",marginBottom:6,animation:"fadeIn 0.3s ease" }}>{cur.msg}</div>}
+      {cur && cur.order.length > 0 && (
+        <div style={{ display:"flex",gap:4,justifyContent:"center",flexWrap:"wrap",marginBottom:8 }}>
+          {cur.order.map((lbl,i) => (
+            <div key={i} style={{ padding:"4px 12px",borderRadius:8,background:"rgba(74,222,128,0.15)",border:"1px solid rgba(74,222,128,0.35)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,fontWeight:700,color:"#4ade80" }}>{i+1}. {lbl}</div>
+          ))}
+        </div>
+      )}
+      <div style={{ display:"flex",gap:8,justifyContent:"center" }}>
+        <button onClick={reset} style={{ padding:"5px 14px",borderRadius:20,cursor:"pointer",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#475569" }}>↺ RESET</button>
+        <button onClick={running?reset:run} style={{ padding:"5px 18px",borderRadius:20,cursor:"pointer",background:"rgba(74,222,128,0.15)",border:"1px solid rgba(74,222,128,0.4)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#4ade80" }}>{running?"⏹ STOP":step>=STEPS.length-1?"↺ REPLAY":"▶ RUN TOPO SORT"}</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// VISUAL: MST (Kruskal's) — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function VisMST() {
+  const [step, setStep] = useState(-1);
+  const [running, setRunning] = useState(false);
+  const tmr = useRef();
+  const nodes = [{id:0,x:80,y:80,lbl:"A"},{id:1,x:220,y:50,lbl:"B"},{id:2,x:60,y:195,lbl:"C"},{id:3,x:200,y:175,lbl:"D"},{id:4,x:320,y:130,lbl:"E"}];
+  const allEdges = [[0,1,2],[0,2,3],[1,3,6],[1,4,5],[2,3,4],[3,4,1],[0,3,7],[2,4,8]];
+  const KRUSKAL = [
+    {mstEdges:[],msg:"Sort all edges by weight: (D,E)=1, (A,B)=2, (A,C)=3, (C,D)=4, (B,E)=5..."},
+    {mstEdges:[[3,4]],msg:"Add (D,E)=1 ✓ No cycle"},
+    {mstEdges:[[3,4],[0,1]],msg:"Add (A,B)=2 ✓ No cycle"},
+    {mstEdges:[[3,4],[0,1],[0,2]],msg:"Add (A,C)=3 ✓ No cycle"},
+    {mstEdges:[[3,4],[0,1],[0,2],[2,3]],msg:"Add (C,D)=4 ✓ No cycle. 4 edges = V-1. Done!"},
+    {mstEdges:[[3,4],[0,1],[0,2],[2,3]],msg:"✓ MST total weight: 1+2+3+4 = 10"},
+  ];
+  const cur = step >= 0 && step < KRUSKAL.length ? KRUSKAL[step] : null;
+  const mstSet = cur ? new Set(cur.mstEdges.map(([a,b])=>`${a}-${b}`)) : new Set();
+  const run = () => {
+    if(running) return; setRunning(true); setStep(0);
+    let s=0;
+    tmr.current=setInterval(()=>{s++;setStep(s);if(s>=KRUSKAL.length-1){clearInterval(tmr.current);setRunning(false);}},950);
+  };
+  const reset = () => { clearInterval(tmr.current); setStep(-1); setRunning(false); };
+  useEffect(() => () => clearInterval(tmr.current), []);
+  return (
+    <div>
+      <svg viewBox="0 0 390 252" width="100%" style={{ maxHeight:248 }}>
+        {allEdges.map(([a,b,w],i) => {
+          const n1=nodes[a],n2=nodes[b];
+          const isMST = mstSet.has(`${a}-${b}`) || mstSet.has(`${b}-${a}`);
+          const mx=(n1.x+n2.x)/2+4,my=(n1.y+n2.y)/2-5;
+          return (
+            <g key={i}>
+              <line x1={n1.x} y1={n1.y} x2={n2.x} y2={n2.y} stroke={isMST?"#f97316":"rgba(255,255,255,0.1)"} strokeWidth={isMST?3:1.5} style={{transition:"all 0.4s"}}/>
+              <text x={mx} y={my} fill={isMST?"#f97316":"#253046"} fontSize="10" fontFamily="'JetBrains Mono',monospace" fontWeight={isMST?"700":"400"}>{w}</text>
+            </g>
+          );
+        })}
+        {nodes.map(n => (
+          <g key={n.id}>
+            <circle cx={n.x} cy={n.y} r={22} fill="rgba(249,115,22,0.12)" stroke="#f97316" strokeWidth="1.5"/>
+            <text x={n.x} y={n.y+1} textAnchor="middle" dominantBaseline="middle" fill="#f97316" fontSize="13" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{n.lbl}</text>
+          </g>
+        ))}
+      </svg>
+      {cur && <div style={{ padding:"7px 12px",borderRadius:10,background:"rgba(249,115,22,0.08)",border:"1px solid rgba(249,115,22,0.22)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#f97316",marginBottom:6,animation:"fadeIn 0.3s ease" }}>{cur.msg}</div>}
+      <div style={{ display:"flex",gap:8,justifyContent:"center" }}>
+        <button onClick={reset} style={{ padding:"5px 14px",borderRadius:20,cursor:"pointer",background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#475569" }}>↺ RESET</button>
+        <button onClick={running?reset:run} style={{ padding:"5px 18px",borderRadius:20,cursor:"pointer",background:"rgba(249,115,22,0.15)",border:"1px solid rgba(249,115,22,0.4)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#f97316" }}>{running?"⏹ STOP":step>=KRUSKAL.length-1?"↺ REPLAY":"▶ KRUSKAL'S MST"}</button>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// GRAPH VISUALIZER — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+const VIZ_TEMPLATES = {
+  javascript: `// Graph Visualizer — JavaScript
+const g = new Graph();
+g.addEdge(0, 1, 4);
+g.addEdge(0, 2, 2);
+g.addEdge(1, 3, 5);
+g.addEdge(2, 3, 8);
+g.addEdge(2, 4, 6);
+g.addEdge(3, 4, 3);
+g.bfs(0);
+`,
+  python: `# Graph Visualizer — Python
+g = Graph()
+g.add_edge(0, 1, 4)
+g.add_edge(0, 2, 2)
+g.add_edge(1, 3, 5)
+g.add_edge(2, 3, 8)
+g.add_edge(2, 4, 6)
+g.add_edge(3, 4, 3)
+g.bfs(0)
+`,
+  java: `// Graph Visualizer — Java
+Graph g = new Graph();
+g.addEdge(0, 1, 4);
+g.addEdge(0, 2, 2);
+g.addEdge(1, 3, 5);
+g.addEdge(2, 3, 8);
+g.addEdge(2, 4, 6);
+g.addEdge(3, 4, 3);
+g.bfs(0);
+`,
+};
+
+function parseGraphCode(code) {
+  const steps = []; const errors = [];
+  try {
+    const edgeRe = /(?:addEdge|add_edge)\s*\(\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*(\d+))?\s*\)/g;
+    const bfsRe  = /(?:bfs)\s*\(\s*(\d+)\s*\)/g;
+    const dfsRe  = /(?:dfs)\s*\(\s*(\d+)\s*\)/g;
+    const edges = []; const nodeSet = new Set(); let m;
+    while ((m = edgeRe.exec(code)) !== null) {
+      const u=+m[1],v=+m[2],w=m[3]!==undefined?+m[3]:1;
+      edges.push([u,v,w]); nodeSet.add(u); nodeSet.add(v);
+      steps.push({ type:"addEdge", u, v, w, edges:[...edges], nodes:[...nodeSet], msg:`addEdge(${u}, ${v}${m[3]!==undefined?", "+w:""})` });
+    }
+    const adjList = {};
+    [...nodeSet].forEach(n => { adjList[n] = []; });
+    edges.forEach(([u,v,w]) => { adjList[u].push({to:v,w}); adjList[v].push({to:u,w}); });
+    while ((m = bfsRe.exec(code)) !== null) {
+      const start = +m[1];
+      const visited = new Set(); const queue = [start]; visited.add(start);
+      const bfsOrder = [];
+      while (queue.length) {
+        const cur = queue.shift(); bfsOrder.push(cur);
+        (adjList[cur]||[]).forEach(({to}) => { if(!visited.has(to)){visited.add(to);queue.push(to);} });
+        steps.push({ type:"bfs", current:cur, visited:new Set(visited), bfsOrder:[...bfsOrder], edges:[...edges], nodes:[...nodeSet], msg:`BFS visiting node ${cur}` });
+      }
+    }
+    while ((m = dfsRe.exec(code)) !== null) {
+      const start = +m[1];
+      const visited = new Set(); const dfsOrder = [];
+      const dfsRun = (node) => {
+        visited.add(node); dfsOrder.push(node);
+        steps.push({ type:"dfs", current:node, visited:new Set(visited), dfsOrder:[...dfsOrder], edges:[...edges], nodes:[...nodeSet], msg:`DFS visiting node ${node}` });
+        (adjList[node]||[]).sort((a,b)=>a.to-b.to).forEach(({to}) => { if(!visited.has(to)) dfsRun(to); });
+      };
+      dfsRun(start);
+    }
+    if (steps.length === 0) errors.push("No recognizable operations found.\nUse: addEdge(u, v, w), bfs(start), dfs(start)");
+  } catch(e) { errors.push(e.message); }
+  return { steps, errors };
+}
+
+function GraphCanvas({ nodes, edges, highlight, current, visited, type }) {
+  if (!nodes || nodes.length === 0) return (
+    <div style={{ display:"flex",alignItems:"center",justifyContent:"center",width:"100%",height:220,color:"#1e3050",fontFamily:"'JetBrains Mono',monospace",fontSize:13,border:"1px dashed #1a2744",borderRadius:12 }}>Graph will appear here</div>
+  );
+  const W=560, H=300;
+  const nodeList = [...nodes].sort((a,b)=>a-b);
+  const n = nodeList.length;
+  const cx=W/2, cy=H/2, r=Math.min(cx,cy)-52;
+  const pos = {};
+  nodeList.forEach((id,i) => {
+    const angle = (i/n)*2*Math.PI - Math.PI/2;
+    pos[id] = { x: cx+r*Math.cos(angle), y: cy+r*Math.sin(angle) };
+  });
+  const COLORS = ["#38bdf8","#818cf8","#4ade80","#fbbf24","#fb7185","#a78bfa","#34d399","#f97316","#60a5fa","#e879f9"];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width="100%" style={{ maxHeight:300 }}>
+      <defs><filter id="cvGlw"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+      {edges.map(([u,v,w],i) => {
+        if(!pos[u]||!pos[v]) return null;
+        const isPath = visited && visited.has(u) && visited.has(v);
+        const col = type==="bfs"?"#60a5fa":type==="dfs"?"#a78bfa":"rgba(255,255,255,0.18)";
+        return (
+          <g key={i}>
+            <line x1={pos[u].x} y1={pos[u].y} x2={pos[v].x} y2={pos[v].y} stroke={isPath?col:"rgba(255,255,255,0.1)"} strokeWidth={isPath?2.5:1.5} style={{transition:"all 0.4s"}}/>
+            <text x={(pos[u].x+pos[v].x)/2+4} y={(pos[u].y+pos[v].y)/2-5} fill="#253046" fontSize="9" fontFamily="'JetBrains Mono',monospace">{w>1?w:""}</text>
+          </g>
+        );
+      })}
+      {nodeList.map((id,i) => {
+        const p = pos[id];
+        if(!p) return null;
+        const isVis = visited && visited.has(id);
+        const isCur = current === id;
+        const col = COLORS[i % COLORS.length];
+        return (
+          <g key={id} style={{animation:`nodePp 0.4s cubic-bezier(0.22,1,0.36,1) ${i*0.06}s both`}}>
+            {isCur && <circle cx={p.x} cy={p.y} r={34} fill="none" stroke={col} strokeWidth="1.5" strokeOpacity="0.3" style={{animation:"nodeRip 0.8s ease-out forwards"}}/>}
+            <circle cx={p.x} cy={p.y} r={22} fill={isVis?`${col}2a`:isCur?`${col}30`:`${col}10`} stroke={col} strokeWidth={isCur?2.5:1.5} filter={isCur?"url(#cvGlw)":undefined} style={{transition:"all 0.35s"}}/>
+            <text x={p.x} y={p.y+1} textAnchor="middle" dominantBaseline="middle" fill={col} fontSize="13" fontFamily="'JetBrains Mono',monospace" fontWeight="700">{id}</text>
+          </g>
+        );
+      })}
+      <style>{`@keyframes nodePp{from{opacity:0;transform-origin:50% 50%;transform:scale(0)}to{opacity:1;transform:scale(1)}}@keyframes nodeRip{from{r:24;opacity:0.5}to{r:46;opacity:0}}`}</style>
+    </svg>
+  );
+}
+
+function GraphVisualizer() {
+  const [lang, setLang] = useState("javascript");
+  const [code, setCode] = useState(VIZ_TEMPLATES["javascript"]);
+  const [steps, setSteps] = useState([]);
+  const [curStep, setCurStep] = useState(-1);
+  const [error, setError] = useState("");
+  const [running, setRunning] = useState(false);
+  const [done, setDone] = useState(false);
+  const tmr = useRef();
+  const taRef = useRef();
+  const reset = () => { clearInterval(tmr.current); setSteps([]); setCurStep(-1); setError(""); setRunning(false); setDone(false); };
+  const handleLang = (l) => { setLang(l); setCode(VIZ_TEMPLATES[l]||""); reset(); };
+  const handleRun = () => {
+    reset();
+    const { steps:s, errors } = parseGraphCode(code);
+    if (errors.length) { setError(errors.join("\n")); return; }
+    setSteps(s); setRunning(true); setCurStep(0);
+  };
+  useEffect(() => {
+    if (!running || steps.length === 0) return;
+    tmr.current = setInterval(() => {
+      setCurStep(prev => {
+        const next = prev + 1;
+        if (next >= steps.length) { clearInterval(tmr.current); setRunning(false); setDone(true); return prev; }
+        return next;
+      });
+    }, 900);
+    return () => clearInterval(tmr.current);
+  }, [running, steps]);
+  const step = steps[curStep] || null;
+  const handleKeyDown = (e) => {
+    if (e.key === "Tab") {
+      e.preventDefault(); const s=e.target.selectionStart,end=e.target.selectionEnd;
+      const nv=code.substring(0,s)+"  "+code.substring(end); setCode(nv);
+      requestAnimationFrame(() => { if(taRef.current){taRef.current.selectionStart=s+2;taRef.current.selectionEnd=s+2;} });
+    }
+  };
+  const opColor = { addEdge:"#38bdf8", bfs:"#60a5fa", dfs:"#a78bfa" };
+  return (
+    <section id="visualizer" style={{ marginBottom:80 }}>
+      <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:22,flexWrap:"wrap" }}>
+        <div style={{ width:50,height:50,borderRadius:16,flexShrink:0,background:"rgba(232,121,249,0.12)",border:"1px solid rgba(232,121,249,0.32)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,boxShadow:"0 0 28px rgba(232,121,249,0.15)" }}>💻</div>
+        <div>
+          <h2 style={{ fontFamily:"'Syne',sans-serif",fontSize:"clamp(19px,3.8vw,30px)",fontWeight:800,color:"#f8fafc" }}>Interactive Graph Visualizer</h2>
+          <p style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",marginTop:3,letterSpacing:"0.08em" }}>WRITE CODE · WATCH IT ANIMATE · LEARN BY DOING</p>
+        </div>
+      </div>
+      <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:20 }} className="viz-grid">
+        <div style={{ background:"rgba(10,18,35,0.7)",border:"1px solid #1a2744",borderRadius:16,overflow:"hidden",display:"flex",flexDirection:"column" }}>
+          <div style={{ padding:"12px 18px",borderBottom:"1px solid #1a2744",display:"flex",alignItems:"center",gap:8,background:"rgba(15,25,50,0.6)" }}>
+            {["#ff5f57","#ffbd2e","#28c840"].map((c,i) => <span key={i} style={{ width:10,height:10,borderRadius:"50%",background:c,display:"inline-block" }}/>)}
+            <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#4a6080",letterSpacing:"1px",marginLeft:6,textTransform:"uppercase" }}>Code Editor</span>
+          </div>
+          <div style={{ display:"flex",gap:5,padding:"10px 16px",borderBottom:"1px solid #0f1e3a",flexWrap:"wrap" }}>
+            {Object.keys(VIZ_TEMPLATES).map(l => (
+              <button key={l} onClick={()=>handleLang(l)} style={{ padding:"4px 12px",borderRadius:6,fontFamily:"'JetBrains Mono',monospace",fontSize:11,cursor:"pointer",border:`1px solid ${lang===l?"#38bdf8":"#1a2744"}`,background:lang===l?"rgba(56,189,248,0.15)":"transparent",color:lang===l?"#7dd3fc":"#4a6080",transition:"all 0.18s" }}>{l.charAt(0).toUpperCase()+l.slice(1)}</button>
+            ))}
+          </div>
+          <textarea ref={taRef} value={code} onChange={e=>setCode(e.target.value)} onKeyDown={handleKeyDown} spellCheck={false} style={{ flex:1,minHeight:260,padding:"16px 18px",background:"transparent",border:"none",outline:"none",color:"#c5daf0",fontFamily:"'JetBrains Mono',monospace",fontSize:12,lineHeight:1.7,resize:"vertical",caretColor:"#38bdf8" }} placeholder="// Write your graph code here..."/>
+          {error && <div style={{ margin:"10px 16px",padding:"12px 14px",background:"rgba(255,80,80,0.08)",border:"1px solid rgba(255,100,100,0.25)",borderRadius:10,color:"#ff8888",fontFamily:"'JetBrains Mono',monospace",fontSize:11,lineHeight:1.6 }}><div style={{ fontWeight:700,marginBottom:4 }}>⚠ {error}</div></div>}
+          <div style={{ padding:"12px 16px",borderTop:"1px solid #0f1e3a",display:"flex",gap:10,alignItems:"center" }}>
+            <button onClick={handleRun} disabled={running} style={{ padding:"10px 24px",borderRadius:8,background:running?"rgba(26,108,247,0.3)":"linear-gradient(135deg,#0ea5e9,#38bdf8)",border:"none",color:"#fff",fontFamily:"'JetBrains Mono',monospace",fontSize:12,fontWeight:700,cursor:running?"default":"pointer",boxShadow:running?"none":"0 0 18px rgba(14,165,233,0.4)",transition:"all 0.2s" }}>{running?"▶ Running...":"▶ Run & Visualize"}</button>
+            {(steps.length>0||error) && <button onClick={reset} style={{ padding:"10px 16px",borderRadius:8,background:"transparent",border:"1px solid #1a2744",color:"#4a6080",fontFamily:"'JetBrains Mono',monospace",fontSize:11,cursor:"pointer",transition:"all 0.2s" }}>↺ Reset</button>}
+          </div>
+        </div>
+        <div style={{ background:"rgba(10,18,35,0.7)",border:"1px solid #1a2744",borderRadius:16,overflow:"hidden",display:"flex",flexDirection:"column" }}>
+          <div style={{ padding:"12px 18px",borderBottom:"1px solid #1a2744",display:"flex",alignItems:"center",gap:8,background:"rgba(15,25,50,0.6)" }}>
+            {["#38bdf8","#818cf8","#4ade80"].map((c,i) => <span key={i} style={{ width:10,height:10,borderRadius:"50%",background:c,display:"inline-block" }}/>)}
+            <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#4a6080",letterSpacing:"1px",marginLeft:6,textTransform:"uppercase" }}>Graph Visualization</span>
+          </div>
+          <div style={{ flex:1,padding:"16px",display:"flex",alignItems:"flex-start",justifyContent:"center",minHeight:260 }}>
+            <GraphCanvas nodes={step?.nodes||[]} edges={step?.edges||[]} current={step?.current} visited={step?.visited} type={step?.type}/>
+          </div>
+          {step && (
+            <div style={{ padding:"12px 18px",borderTop:"1px solid #0f1e3a",background:"rgba(8,15,30,0.5)" }}>
+              <div style={{ display:"inline-flex",alignItems:"center",gap:8,padding:"5px 12px",borderRadius:20,fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,marginBottom:6,background:`rgba(${step.type==="bfs"?"96,165,250":step.type==="dfs"?"167,139,250":"56,189,248"},0.15)`,border:`1px solid ${opColor[step.type]||"#38bdf8"}55`,color:opColor[step.type]||"#38bdf8",animation:"fadeIn 0.3s ease" }}>
+                {step.type==="bfs"?"🌊 BFS":step.type==="dfs"?"🌀 DFS":"➕ EDGE"} · {step.type==="addEdge"?`${step.u}↔${step.v}`:`node ${step.current}`}
+              </div>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#4a6080" }}>{step.msg}</div>
+              {(step.bfsOrder||step.dfsOrder) && <div style={{ marginTop:4,display:"flex",gap:3,flexWrap:"wrap" }}>
+                {(step.bfsOrder||step.dfsOrder||[]).map((n,i) => (
+                  <span key={i} style={{ padding:"2px 8px",borderRadius:6,background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.08)",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#64748b" }}>{n}</span>
+                ))}
+              </div>}
+            </div>
+          )}
+          {done && <div style={{ padding:"14px 18px",background:"rgba(74,200,100,0.08)",borderTop:"1px solid rgba(74,200,100,0.2)",display:"flex",alignItems:"center",gap:10,animation:"fadeIn 0.5s ease" }}><span style={{ fontSize:18 }}>🎉</span><span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:12,color:"#68d391" }}>All {steps.length} operations visualized!</span></div>}
+          {steps.length > 0 && (
+            <div style={{ padding:"8px 18px",borderTop:"1px solid #0f1e3a",display:"flex",alignItems:"center",gap:12 }}>
+              <div style={{ flex:1,height:4,background:"#0f1e3a",borderRadius:4,overflow:"hidden" }}>
+                <div style={{ height:"100%",background:"linear-gradient(90deg,#0ea5e9,#818cf8)",borderRadius:4,width:`${((curStep+1)/steps.length)*100}%`,transition:"width 0.4s",boxShadow:"0 0 8px rgba(14,165,233,0.5)" }}/>
+              </div>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#2a4060",whiteSpace:"nowrap" }}>{curStep+1}/{steps.length}</span>
+            </div>
+          )}
+          {steps.length > 0 && (
+            <div style={{ maxHeight:120,overflowY:"auto",padding:"8px 16px",borderTop:"1px solid #0f1e3a",display:"flex",flexDirection:"column",gap:3 }}>
+              {steps.map((s,i) => (
+                <div key={i} onClick={()=>setCurStep(i)} style={{ display:"flex",alignItems:"center",gap:8,padding:"4px 8px",borderRadius:6,cursor:"pointer",background:i===curStep?"rgba(56,189,248,0.1)":"transparent",fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:i===curStep?"#38bdf8":i<curStep?"#28c840":"#1a2744",transition:"all 0.15s" }}>
+                  <span style={{ width:7,height:7,borderRadius:"50%",background:i<curStep?"#28c840":i===curStep?(opColor[s.type]||"#38bdf8"):"#1a2744",flexShrink:0 }}/>
+                  {s.msg}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// COMPLEXITY TABLE — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function ComplexityTable() {
+  const [hov, setHov] = useState(null);
+  const rows = [
+    {nm:"BFS / DFS",        c:"#60a5fa",t:"O(V+E)",    s:"O(V)",  n:"Visit every vertex and edge exactly once"},
+    {nm:"Dijkstra (heap)",  c:"#fbbf24",t:"O(E log V)",s:"O(V)",  n:"Min-heap PQ · no negative weights"},
+    {nm:"Bellman-Ford",     c:"#fb7185",t:"O(V·E)",    s:"O(V)",  n:"Handles negatives · detects negative cycles"},
+    {nm:"Floyd-Warshall",   c:"#818cf8",t:"O(V³)",     s:"O(V²)", n:"All-pairs shortest paths · small graphs"},
+    {nm:"Topological Sort", c:"#4ade80",t:"O(V+E)",    s:"O(V)",  n:"DAG only · DFS finish-time or Kahn's"},
+    {nm:"Kruskal's MST",    c:"#f97316",t:"O(E log E)",s:"O(E)",  n:"Sort edges + Union-Find · sparse graphs"},
+    {nm:"Prim's MST",       c:"#34d399",t:"O(E log V)",s:"O(V)",  n:"Min-heap · dense graphs prefer adj matrix"},
+    {nm:"A* Search",        c:"#e879f9",t:"O(E log V)",s:"O(V)",  n:"Heuristic-guided Dijkstra · game pathfinding"},
+  ];
+  return (
+    <div style={{ overflowX:"auto",WebkitOverflowScrolling:"touch" }}>
+      <table style={{ width:"100%",borderCollapse:"collapse",minWidth:480 }}>
+        <thead>
+          <tr>{["Algorithm","Time","Space","Notes"].map(h => (
+            <th key={h} style={{ padding:"10px 14px",textAlign:"left",fontFamily:"'JetBrains Mono',monospace",fontSize:9,letterSpacing:"0.1em",color:"#2d3748",borderBottom:"1px solid rgba(255,255,255,0.06)",fontWeight:700,whiteSpace:"nowrap" }}>{h}</th>
+          ))}</tr>
+        </thead>
+        <tbody>
+          {rows.map((r,i) => (
+            <tr key={i} onMouseEnter={()=>setHov(i)} onMouseLeave={()=>setHov(null)} style={{ borderBottom:"1px solid rgba(255,255,255,0.04)",background:hov===i?"rgba(255,255,255,0.028)":"transparent",transition:"background 0.2s" }}>
+              <td style={{ padding:"10px 14px",whiteSpace:"nowrap" }}>
+                <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                  <span style={{ width:7,height:7,borderRadius:"50%",background:r.c,flexShrink:0,boxShadow:hov===i?`0 0 8px ${r.c}`:"none",transition:"box-shadow 0.2s" }}/>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:"#e2e8f0" }}>{r.nm}</span>
+                </div>
+              </td>
+              <td style={{ padding:"10px 14px",fontFamily:"'JetBrains Mono',monospace",fontSize:11,fontWeight:700,color:r.t.includes("V+E")||r.t.includes("log V")?"#4ade80":r.t.includes("V³")?"#ef4444":"#fbbf24",whiteSpace:"nowrap" }}>{r.t}</td>
+              <td style={{ padding:"10px 14px",fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#64748b",whiteSpace:"nowrap" }}>{r.s}</td>
+              <td style={{ padding:"10px 14px",fontFamily:"'DM Sans',sans-serif",fontSize:11,color:"#475569" }}>{r.n}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// QUIZ — unchanged
+// ═══════════════════════════════════════════════════════════════════════════════
+function Quiz({ onDone }) {
+  const QS = [
+    {q:"Which data structure does BFS use internally to track nodes to visit?",opts:["Stack","Queue","Priority Queue","Linked List"],ans:1,exp:"BFS uses a Queue (FIFO). This guarantees level-by-level traversal — all nodes at depth k are visited before any at depth k+1."},
+    {q:"Dijkstra's algorithm fails on graphs with:",opts:["Undirected edges","Weighted edges","Negative edge weights","Disconnected components"],ans:2,exp:"Dijkstra's greedy assumption breaks with negative weights — a shorter path via a negative edge discovered later can't correct already-settled distances."},
+    {q:"Topological sort is only valid on:",opts:["Any graph","Weighted graphs","Directed Acyclic Graphs (DAGs)","Undirected graphs"],ans:2,exp:"Topological sort requires a DAG. A cycle makes it impossible: in A→B→A, both need to come 'before' the other, a contradiction."},
+    {q:"An adjacency matrix uses O(V²) space. When is this justified?",opts:["Always","Never","Dense graphs where E ≈ V²","Sparse graphs where E << V²"],ans:2,exp:"For dense graphs approaching V² edges, the O(V²) waste is minimal and O(1) edge lookup is worth it. Sparse graphs should use adjacency lists."},
+    {q:"Which algorithm can detect negative weight cycles?",opts:["Dijkstra","BFS","Bellman-Ford","Prim's"],ans:2,exp:"Bellman-Ford: if any distance can still be reduced after V-1 relaxation passes, a negative cycle exists. Dijkstra can't handle this at all."},
+    {q:"Kruskal's algorithm builds an MST by:",opts:["Growing from one vertex","Sorting edges and adding the cheapest non-cycle edge","Running BFS and selecting edges","Using a priority queue on vertices"],ans:1,exp:"Kruskal's sorts all edges by weight, then greedily adds each one if it doesn't form a cycle (checked via Union-Find). Result: minimum spanning tree."},
+  ];
+  const [ans, setAns] = useState({});
+  const [rev, setRev] = useState({});
+  const score = Object.entries(ans).filter(([qi,ai])=>QS[+qi].ans===+ai).length;
+  useEffect(() => { if(Object.keys(rev).length===QS.length) onDone?.(score,QS.length); }, [rev]);
+  return (
+    <div>
+      <div style={{ marginBottom:20 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",letterSpacing:"0.08em" }}>PROGRESS</span>
+          <span style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#38bdf8",fontWeight:700 }}>{Object.keys(rev).length}/{QS.length}</span>
+        </div>
+        <div style={{ height:4,background:"rgba(255,255,255,0.06)",borderRadius:99,overflow:"hidden" }}>
+          <div style={{ height:"100%",width:`${(Object.keys(rev).length/QS.length)*100}%`,background:"linear-gradient(90deg,#0ea5e9,#818cf8)",borderRadius:99,transition:"width 0.5s cubic-bezier(0.22,1,0.36,1)" }}/>
+        </div>
+      </div>
+      <div style={{ display:"flex",flexDirection:"column",gap:16 }}>
+        {QS.map((q,qi) => {
+          const isR=rev[qi];
+          const bc=isR?(ans[qi]===q.ans?"rgba(74,222,128,0.35)":"rgba(239,68,68,0.35)"):"rgba(255,255,255,0.07)";
+          return (
+            <div key={qi} style={{ padding:"16px 18px",borderRadius:16,background:"rgba(255,255,255,0.02)",border:`1px solid ${bc}`,transition:"border-color 0.3s" }}>
+              <div style={{ display:"flex",gap:10,marginBottom:12,alignItems:"flex-start" }}>
+                <span style={{ width:24,height:24,borderRadius:8,flexShrink:0,marginTop:1,background:isR?(ans[qi]===q.ans?"rgba(74,222,128,0.2)":"rgba(239,68,68,0.2)"):"rgba(56,189,248,0.15)",border:`1px solid ${isR?(ans[qi]===q.ans?"rgba(74,222,128,0.42)":"rgba(239,68,68,0.42)"):"rgba(56,189,248,0.32)"}`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:isR?(ans[qi]===q.ans?"#4ade80":"#ef4444"):"#38bdf8" }}>{qi+1}</span>
+                <div style={{ fontFamily:"'DM Sans',sans-serif",fontSize:14,fontWeight:600,color:"#e2e8f0",lineHeight:1.52 }}>{q.q}</div>
+              </div>
+              <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:7 }}>
+                {q.opts.map((opt,oi) => {
+                  const isSel=ans[qi]===oi,isCorr=q.ans===oi;
+                  let bg="rgba(255,255,255,0.03)",brd="rgba(255,255,255,0.07)",col="#64748b";
+                  if(isR){if(isCorr){bg="rgba(74,222,128,0.12)";brd="rgba(74,222,128,0.38)";col="#4ade80";}else if(isSel){bg="rgba(239,68,68,0.12)";brd="rgba(239,68,68,0.38)";col="#f87171";}else col="#2d3748";}
+                  else if(isSel){bg="rgba(56,189,248,0.12)";brd="rgba(56,189,248,0.38)";col="#38bdf8";}
+                  return (
+                    <button key={oi} onClick={()=>!isR&&setAns(a=>({...a,[qi]:oi}))} style={{ padding:"9px 12px",borderRadius:10,cursor:isR?"default":"pointer",background:bg,border:`1px solid ${brd}`,fontFamily:"'DM Sans',sans-serif",fontSize:13,color:col,textAlign:"left",transition:"all 0.22s",display:"flex",alignItems:"center",gap:8 }}>
+                      <span style={{ width:19,height:19,borderRadius:"50%",flexShrink:0,background:isR?(isCorr?"rgba(74,222,128,0.26)":isSel?"rgba(239,68,68,0.26)":"rgba(255,255,255,0.04)"):(isSel?"rgba(56,189,248,0.26)":"rgba(255,255,255,0.04)"),border:`1px solid ${col}50`,display:"flex",alignItems:"center",justifyContent:"center",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:col }}>{isR&&isCorr?"✓":isR&&isSel&&!isCorr?"✗":String.fromCharCode(65+oi)}</span>
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+              {ans[qi]!==undefined&&!isR&&<button onClick={()=>setRev(r=>({...r,[qi]:true}))} style={{ marginTop:10,padding:"6px 18px",borderRadius:20,cursor:"pointer",background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.3)",fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:"#38bdf8" }}>CHECK →</button>}
+              {isR&&<div style={{ marginTop:10,padding:"9px 12px",borderRadius:10,background:ans[qi]===q.ans?"rgba(74,222,128,0.07)":"rgba(239,68,68,0.07)",border:`1px solid ${ans[qi]===q.ans?"rgba(74,222,128,0.2)":"rgba(239,68,68,0.2)"}`,fontFamily:"'DM Sans',sans-serif",fontSize:12.5,color:"#94a3b8",lineHeight:1.58,animation:"fUp 0.3s ease" }}>
+                <span style={{ fontWeight:700,color:ans[qi]===q.ans?"#4ade80":"#f87171" }}>{ans[qi]===q.ans?"✓ Correct! ":"✗ Not quite — "}</span>{q.exp}
+              </div>}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ShortcutsModal({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div style={{ position:"fixed",inset:0,zIndex:2000,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.72)",backdropFilter:"blur(10px)",animation:"fadeIn 0.2s ease" }} onClick={onClose}>
+      <div style={{ background:"rgba(8,12,24,0.98)",border:"1px solid rgba(56,189,248,0.35)",borderRadius:24,padding:"32px 36px",maxWidth:420,width:"calc(100% - 40px)",boxShadow:"0 24px 80px rgba(0,0,0,0.8)",animation:"popIn 0.25s cubic-bezier(0.22,1,0.36,1) both" }} onClick={e=>e.stopPropagation()}>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24 }}>
+          <h3 style={{ fontFamily:"'Syne',sans-serif",fontSize:20,fontWeight:800,color:"#f8fafc",margin:0 }}>⌨️ Shortcuts</h3>
+          <button onClick={onClose} style={{ background:"none",border:"1px solid rgba(255,255,255,0.1)",color:"#64748b",cursor:"pointer",borderRadius:8,padding:"4px 10px",fontFamily:"'JetBrains Mono',monospace",fontSize:10 }}>ESC</button>
+        </div>
+        {[["S","Stop current narration"],["↑ / ↓","Navigate sections"],["?","Toggle this panel"],["Esc","Close panels"]].map(([k,d]) => (
+          <div key={k} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:"1px solid rgba(255,255,255,0.05)" }}>
+            <span style={{ fontFamily:"'DM Sans',sans-serif",fontSize:14,color:"#94a3b8" }}>{d}</span>
+            <kbd style={{ background:"rgba(56,189,248,0.15)",border:"1px solid rgba(56,189,248,0.35)",borderRadius:6,padding:"3px 10px",fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#38bdf8",fontWeight:700 }}>{k}</kbd>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Confetti() {
+  const pieces = Array.from({ length: 32 }, (_, i) => ({
+    id: i, x: Math.random() * 100, delay: Math.random() * 0.8, dur: 1.8 + Math.random() * 1.2,
+    color: ["#60a5fa","#f472b6","#4ade80","#fbbf24","#a78bfa","#fb923c"][i % 6], size: 6 + Math.random() * 6,
+  }));
+  return (
+    <div style={{ position:"fixed",inset:0,pointerEvents:"none",zIndex:3000,overflow:"hidden" }}>
+      {pieces.map(p => (
+        <div key={p.id} style={{ position:"absolute",top:"-10%",left:`${p.x}%`,width:p.size,height:p.size,borderRadius:p.id%3===0?"50%":2,background:p.color,animation:`confettiFall ${p.dur}s ease-in ${p.delay}s both` }}/>
+      ))}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MAIN PAGE
+// ═══════════════════════════════════════════════════════════════════════════════
+export default function GraphPage() {
+  const router = useRouter();
+  const [speaking, setSpeaking] = useState(null);
+  const [active, setActive] = useState("intro");
+  const [qScore, setQScore] = useState(null);
+  const [qTotal, setQTotal] = useState(null);
+  const [speed, setSpeed] = useState(1.25);
+  const [seenSections, setSeenSections] = useState(new Set());
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [navOpen, setNavOpen] = useState(true);
+  const [showConfetti, setShowConfetti] = useState(false);
+  const currentNarr = useRef(null);
+
+  useEffect(() => {
+    const lk = document.createElement("link");
+    lk.rel = "stylesheet";
+    lk.href = "https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap";
+    document.head.appendChild(lk);
+    const warm = () => { window.speechSynthesis?.getVoices(); window.removeEventListener("click", warm); };
+    window.addEventListener("click", warm);
+    return () => { try { document.head.removeChild(lk); } catch {} };
+  }, []);
+
+  useEffect(() => {
+    const io = new IntersectionObserver(entries => entries.forEach(e => {
+      if (e.isIntersecting) { setActive(e.target.id); setSeenSections(s => new Set([...s, e.target.id])); }
+    }), { rootMargin:"-35% 0px -35% 0px" });
+    NAV_SECTIONS.forEach(s => { const el = document.getElementById(s.id); if (el) io.observe(el); });
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (e.key==="?"||e.key==="/") { e.preventDefault(); setShortcutsOpen(o=>!o); }
+      if (e.key==="Escape") setShortcutsOpen(false);
+      if (e.key==="s"||e.key==="S") { voiceStop(); setSpeaking(null); }
+      if (e.key==="ArrowDown") { e.preventDefault(); const idx=NAV_SECTIONS.findIndex(s=>s.id===active); document.getElementById(NAV_SECTIONS[Math.min(idx+1,NAV_SECTIONS.length-1)].id)?.scrollIntoView({behavior:"smooth"}); }
+      if (e.key==="ArrowUp") { e.preventDefault(); const idx=NAV_SECTIONS.findIndex(s=>s.id===active); document.getElementById(NAV_SECTIONS[Math.max(idx-1,0)].id)?.scrollIntoView({behavior:"smooth"}); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [active]);
+
+  const handleVoice = useCallback((id, text) => {
+    if (speaking===id) { voiceStop(); setSpeaking(null); currentNarr.current=null; }
+    else { currentNarr.current={id,text}; setSpeaking(id); voiceSpeak(text, () => { setSpeaking(null); currentNarr.current=null; }, currentRate); }
+  }, [speaking]);
+
+  const handleRestart = useCallback(() => {
+    if (currentNarr.current) { const{id,text}=currentNarr.current; voiceStop(); setTimeout(() => voiceSpeak(text,()=>{setSpeaking(null);currentNarr.current=null;},currentRate),80); }
+  }, []);
+
+  const handleStop = useCallback(() => { voiceStop(); setSpeaking(null); currentNarr.current=null; }, []);
+  const speakingLabel = speaking ? (NAV_SECTIONS.find(s=>s.id===speaking)?.label ?? (speaking==="__hero__"?"Introduction":speaking)) : null;
+
+  const SECTS = [
+    { id:"intro",          icon:"🕸️", title:"What is a Graph?",           color:"#38bdf8", voice:NARR.intro,          visual:<VisIntro/>,
+      cards:[
+        {lbl:"DEFINITION",      body:"A graph G = (V, E) consists of vertices (nodes) and edges (connections). Unlike trees, there is no root, no hierarchy — any node can connect to any other."},
+        {lbl:"EVERYWHERE",      body:"Social networks, Google Maps, the internet, airline routes, circuit boards, dependency trees — all graphs. The most general and powerful structure in CS."},
+        {lbl:"TYPES",           body:"Directed (one-way), Undirected (bidirectional), Weighted (costs on edges), Unweighted. A graph can be any combination of these properties."},
+        {lbl:"SPARSE vs DENSE", body:"Sparse: few edges relative to V². Dense: many edges, approaching V². This distinction drives every decision about representation and algorithm choice."},
+      ]},
+    { id:"terminology",    icon:"📐", title:"Graph Terminology",           color:"#818cf8", voice:NARR.terminology,    visual:<VisTerminology/>,
+      cards:[
+        {lbl:"VERTEX & EDGE",   body:"Vertex (node): a point. Edge: connection between two vertices. In a directed graph, edges have a source and destination. Hover labels to highlight."},
+        {lbl:"DEGREE",          body:"Degree = number of edges connected to a vertex. In directed graphs: in-degree (incoming) and out-degree (outgoing) are tracked separately."},
+        {lbl:"PATH & CYCLE",    body:"Path: a sequence of vertices connected by edges, no repeated vertices. Cycle: a path that starts and ends at the same vertex. Cyclic vs acyclic is crucial."},
+        {lbl:"CONNECTED",       body:"An undirected graph is connected if every vertex is reachable from every other. A directed graph is strongly connected if this holds for all directed paths."},
+      ]},
+    { id:"directed",       icon:"➡️", title:"Directed Graph (Digraph)",   color:"#f43f5e", voice:NARR.directed,       visual:<VisDirected/>,
+      cards:[
+        {lbl:"DEFINITION",      body:"Edges have a direction: they go from source to target. You can only traverse in the arrow's direction."},
+        {lbl:"IN & OUT DEGREE", body:"Each vertex has an in-degree (incoming edges) and out-degree (outgoing). In a social network, out-degree = who you follow, in-degree = your followers."},
+        {lbl:"REAL-WORLD",      body:"Web pages with hyperlinks, Twitter follows, prerequisite courses, and any system where relationships are one-way."},
+        {lbl:"ALGORITHMS",      body:"Topological sort (DAGs), strongly connected components (Kosaraju/Tarjan), and Bellman‑Ford are tailored for directed graphs."},
+      ]},
+    { id:"undirected",     icon:"🔁", title:"Undirected Graph",           color:"#10b981", voice:NARR.undirected,     visual:<VisUndirected/>,
+      cards:[
+        {lbl:"DEFINITION",      body:"Edges are bidirectional — a connection goes both ways. It's like a two-way street."},
+        {lbl:"DEGREE",          body:"Degree counts how many edges touch a vertex. In a friendship graph, your degree is the number of friends you have."},
+        {lbl:"REAL-WORLD",      body:"Facebook friendships, road networks without one-way streets, circuit connections, and molecule bonds."},
+        {lbl:"ALGORITHMS",      body:"Minimum spanning trees (Kruskal/Prim), BFS/DFS for connectivity, and simple pathfinding are classic on undirected graphs."},
+      ]},
+    { id:"weighted",       icon:"⚖️", title:"Weighted Graph",             color:"#f59e0b", voice:NARR.weighted,       visual:<VisWeighted/>,
+      cards:[
+        {lbl:"DEFINITION",      body:"Each edge has a numeric weight representing cost, distance, time, or priority."},
+        {lbl:"SHORTEST PATH",   body:"Dijkstra's algorithm finds the path with minimum total weight. Bellman-Ford handles negative weights."},
+        {lbl:"REAL-WORLD",      body:"GPS maps (distance/time), network routing (latency), airline routes (price), and machine learning (similarity)."},
+        {lbl:"WEIGHTS MATTER",  body:"Without weights, all edges are equal. With weights, we can optimize for real quantities — crucial for real-world applications."},
+      ]},
+    { id:"representation", icon:"🗄️", title:"Graph Representation",       color:"#34d399", voice:NARR.representation, visual:<VisRepresentation/>,
+      cards:[
+        {lbl:"ADJACENCY LIST",  body:"Each vertex stores a list of its neighbors. Space: O(V+E). Edge check: O(degree). Best for sparse graphs — most real-world graphs."},
+        {lbl:"ADJACENCY MATRIX",body:"V×V boolean grid. matrix[u][v]=1 if edge exists. Edge check: O(1). Space: O(V²). Best for dense graphs and Floyd-Warshall."},
+        {lbl:"EDGE LIST",       body:"Just a list of all edges [(u,v,w)...]. Simple storage. Used in Kruskal's algorithm where we need edges sorted by weight."},
+        {lbl:"CHOOSING WISELY", body:"|E| << |V|²? Use adjacency list. |E| ≈ |V|²? Consider matrix. Need O(1) edge queries on dense graph? Matrix wins. Default to list."},
+      ]},
+    { id:"bfs",            icon:"🌊", title:"Breadth-First Search",       color:"#60a5fa", voice:NARR.bfs,            visual:<VisBFS/>,
+      cards:[
+        {lbl:"ALGORITHM",       body:"Enqueue source, mark visited. Dequeue, visit all unvisited neighbors, enqueue them. Repeat. Explores level by level — all distance-1 nodes before distance-2."},
+        {lbl:"COMPLEXITY",      body:"Time: O(V+E). Space: O(V) for the queue. Visits every vertex once and every edge once. Cannot be improved for unweighted graphs."},
+        {lbl:"SHORTEST PATH",   body:"BFS on an unweighted graph finds the shortest path (minimum edges) from source to every reachable vertex. This is provably optimal."},
+        {lbl:"APPLICATIONS",    body:"Social network friend suggestions, GPS navigation (unweighted), web crawlers, peer-to-peer networks, solving puzzles like shortest maze path."},
+      ]},
+    { id:"dfs",            icon:"🌀", title:"Depth-First Search",         color:"#a78bfa", voice:NARR.dfs,            visual:<VisDFS/>,
+      cards:[
+        {lbl:"ALGORITHM",       body:"Mark current visited. Recursively visit each unvisited neighbor. Backtrack when no unvisited neighbors remain. Goes deep before going wide."},
+        {lbl:"COMPLEXITY",      body:"Time: O(V+E). Space: O(V) on the call stack (or explicit stack). Identical time to BFS but fundamentally different traversal order."},
+        {lbl:"CYCLE DETECTION", body:"If DFS encounters an already-visited node not its direct parent, a cycle exists. Essential for topological sort validity checking."},
+        {lbl:"APPLICATIONS",    body:"Topological sorting, finding strongly connected components (Tarjan's, Kosaraju's), solving mazes, generating spanning trees, scheduling problems."},
+      ]},
+    { id:"dijkstra",       icon:"🗺️", title:"Dijkstra's Algorithm",       color:"#fbbf24", voice:NARR.dijkstra,       visual:<VisDijkstra/>,
+      cards:[
+        {lbl:"ALGORITHM",       body:"Initialize source=0, others=∞. Use min-heap. Extract minimum, relax neighbors (update if shorter path found). Mark extracted nodes as done."},
+        {lbl:"COMPLEXITY",      body:"O(E log V) with binary heap. O((V+E) log V) overall. The log V factor comes from heap operations. With Fibonacci heap: O(E + V log V)."},
+        {lbl:"GREEDY PROOF",    body:"When a node is extracted from the heap, its distance is final. Proof: any other path would go through an unextracted node with distance ≥ current."},
+        {lbl:"LIMITATION",      body:"Fails with negative edge weights — the greedy assumption breaks. Use Bellman-Ford for graphs with negative weights."},
+      ]},
+    { id:"bellman",        icon:"⚖️", title:"Bellman-Ford Algorithm",     color:"#fb7185", voice:NARR.bellman,        visual:<VisBellmanFord/>,
+      cards:[
+        {lbl:"ALGORITHM",       body:"Relax ALL edges V-1 times. After iteration k, all shortest paths using ≤ k edges are found. V-1 iterations suffices for any acyclic shortest path."},
+        {lbl:"COMPLEXITY",      body:"O(V·E) time, O(V) space. Slower than Dijkstra (O(E log V)) but handles negative weights and detects negative cycles."},
+        {lbl:"NEGATIVE CYCLES", body:"Run one more (Vth) relaxation round. If any distance still decreases, a negative-weight cycle exists — shortest path is undefined (−∞)."},
+        {lbl:"APPLICATIONS",    body:"Financial arbitrage detection (negative cycles = profit loops), network routing with variable costs, currency exchange rate analysis."},
+      ]},
+    { id:"topo",           icon:"📋", title:"Topological Sort",           color:"#4ade80", voice:NARR.topo,           visual:<VisTopoSort/>,
+      cards:[
+        {lbl:"DEFINITION",      body:"For a DAG, produce a linear ordering of vertices such that for every edge u→v, u appears before v. Only possible on Directed Acyclic Graphs."},
+        {lbl:"KAHN'S ALGORITHM",body:"Track in-degrees. Enqueue all zero-in-degree vertices. Process each: reduce neighbors' in-degrees, enqueue newly zero-in-degree ones. O(V+E)."},
+        {lbl:"DFS APPROACH",    body:"Run DFS. When a vertex finishes (all descendants explored), push it to a stack. Reverse of stack pop order = topological order."},
+        {lbl:"APPLICATIONS",    body:"Build systems (Make, Gradle), package managers (npm install order), spreadsheet formula evaluation, course prerequisite scheduling, compiler phase ordering."},
+      ]},
+    { id:"mst",            icon:"🌲", title:"Minimum Spanning Tree",      color:"#f97316", voice:NARR.mst,            visual:<VisMST/>,
+      cards:[
+        {lbl:"DEFINITION",      body:"A spanning tree connecting all V vertices with exactly V-1 edges and no cycles. Minimum = lowest possible total edge weight."},
+        {lbl:"KRUSKAL'S",       body:"Sort edges by weight. For each edge, add it if it doesn't create a cycle (Union-Find for O(α(n)) cycle detection). O(E log E). Greedy on edges."},
+        {lbl:"PRIM'S",          body:"Grow MST from any start vertex. Always add the minimum-weight edge connecting the current tree to a new vertex. O(E log V) with heap."},
+        {lbl:"APPLICATIONS",    body:"Telecommunications network design, water pipe planning, cluster analysis in machine learning, image segmentation, circuit layout optimization."},
+      ]},
+  ];
+
+  return (
+    <div style={{ background:"#060810",color:"#f8fafc",minHeight:"100vh",overflowX:"hidden" }}>
+      <style>{`
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html{scroll-behavior:smooth}
+        ::selection{background:rgba(56,189,248,0.42)}
+        ::-webkit-scrollbar{width:4px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:rgba(56,189,248,0.38);border-radius:8px}
+        ::-webkit-scrollbar-thumb:hover{background:rgba(56,189,248,0.58)}
+
+        @keyframes hOrb1{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(22px,-16px) scale(1.06)}66%{transform:translate(-12px,9px) scale(0.96)}}
+        @keyframes hOrb2{0%,100%{transform:translate(0,0)}42%{transform:translate(-20px,14px)}84%{transform:translate(14px,-9px)}}
+        @keyframes sRight{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes fUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+        @keyframes popIn{from{opacity:0;transform:scale(0.88) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+        @keyframes panelPop{from{opacity:0;transform:translateY(-8px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
+        @keyframes slideUp{from{opacity:0;transform:translate(-50%,20px)}to{opacity:1;transform:translate(-50%,0)}}
+        @keyframes wave{0%,100%{transform:scaleY(0.4)}50%{transform:scaleY(1)}}
+        @keyframes confettiFall{0%{transform:translateY(0) rotate(0deg);opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:0}}
+        @keyframes nodeRip{from{r:22;opacity:0.5}to{r:40;opacity:0}}
+        @keyframes nodePp{from{opacity:0;transform-origin:50% 50%;transform:scale(0) rotate(-8deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+
+        /* Enhanced section hover */
+        section{will-change:transform}
+
+        @media(max-width:760px){
+          .sg{grid-template-columns:1fr !important}
+          .viz-grid{grid-template-columns:1fr !important}
+        }
+        @media(max-width:480px){.sg{gap:12px !important}}
+      `}</style>
+
+      <ProgressBar/>
+      <RightSidebar active={active} speaking={!!speaking} speed={speed} setSpeed={setSpeed} onRestart={handleRestart} seenCount={seenSections.size} open={navOpen} setOpen={setNavOpen}/>
+      <BackToTop/>
+      <ShortcutsModal open={shortcutsOpen} onClose={() => setShortcutsOpen(false)}/>
+      <MiniPlayer speaking={speaking} speakingLabel={speakingLabel} onStop={handleStop} speed={speed}/>
+      {showConfetti && <Confetti/>}
+
+      <Hero onStart={() => document.getElementById("intro")?.scrollIntoView({behavior:"smooth"})} onVoice={() => handleVoice("__hero__", NARR.intro)}/>
+
+      <div style={{ textAlign:"center",marginBottom:32,fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#1e2a38",letterSpacing:"0.1em" }}>
+        PRESS <kbd style={{ background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:5,padding:"1px 7px",color:"#2d3748" }}>?</kbd> FOR KEYBOARD SHORTCUTS
+      </div>
+
+      <main style={{ maxWidth:1000,margin:"0 auto",padding:"0 20px 100px" }}>
+        {SECTS.map(s => (
+          <Sect key={s.id} id={s.id} icon={s.icon} title={s.title} color={s.color} visual={s.visual} cards={s.cards} voice={s.voice} speaking={speaking} onVoice={handleVoice} seen={seenSections.has(s.id)}/>
+        ))}
+
+        {/* Complexity */}
+        <section id="complexity" style={{ marginBottom:80 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:22,flexWrap:"wrap" }}>
+            <div style={{ width:50,height:50,borderRadius:16,flexShrink:0,background:"rgba(56,189,248,0.12)",border:"1px solid rgba(56,189,248,0.32)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,boxShadow:"0 0 28px rgba(56,189,248,0.15)" }}>⚡</div>
+            <div>
+              <h2 style={{ fontFamily:"'Syne',sans-serif",fontSize:"clamp(19px,3.8vw,30px)",fontWeight:800,color:"#f8fafc" }}>Algorithm Complexity Reference</h2>
+              <p style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",marginTop:3,letterSpacing:"0.08em" }}>GREEN = FAST · YELLOW = MODERATE · RED = SLOW · HOVER TO HIGHLIGHT</p>
+            </div>
+          </div>
+          <div style={{ borderRadius:22,overflow:"hidden",background:"rgba(255,255,255,0.02)",border:"1px solid rgba(255,255,255,0.06)" }}>
+            <ComplexityTable/>
+          </div>
+        </section>
+
+        <GraphVisualizer/>
+
+        {/* Quiz */}
+        <section id="quiz" style={{ marginBottom:80 }}>
+          <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:8,flexWrap:"wrap" }}>
+            <div style={{ width:50,height:50,borderRadius:16,flexShrink:0,background:"rgba(236,72,153,0.12)",border:"1px solid rgba(236,72,153,0.32)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,boxShadow:"0 0 28px rgba(236,72,153,0.15)" }}>🧠</div>
+            <div style={{ flex:1,minWidth:0 }}>
+              <h2 style={{ fontFamily:"'Syne',sans-serif",fontSize:"clamp(19px,3.8vw,30px)",fontWeight:800,color:"#f8fafc" }}>Test Your Knowledge</h2>
+              <p style={{ fontFamily:"'DM Sans',sans-serif",fontSize:13,color:"#475569",marginTop:3 }}>6 questions · covers every section · some are tricky</p>
+            </div>
+            <button onClick={()=>handleVoice("quiz",NARR.quiz)} style={{ display:"flex",alignItems:"center",gap:7,padding:"7px 14px",borderRadius:28,cursor:"pointer",flexShrink:0,background:speaking==="quiz"?"rgba(236,72,153,0.2)":"rgba(255,255,255,0.04)",border:`1.5px solid ${speaking==="quiz"?"#ec4899":"rgba(255,255,255,0.1)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:speaking==="quiz"?"#ec4899":"#475569",transition:"all 0.22s" }}>
+              {speaking==="quiz"?<SpeakingWave color="#ec4899" size={12}/>:<span style={{fontSize:12}}>🔊</span>}
+              {speaking==="quiz"?"STOP":"LISTEN"}
+            </button>
+          </div>
+          <div style={{ marginBottom:22 }}/>
+          <Quiz onDone={(sc,tot) => { setQScore(sc); setQTotal(tot); if(sc>=5) setShowConfetti(true); }}/>
+          {qScore !== null && (
+            <div style={{ marginTop:30,padding:"36px 24px",borderRadius:24,textAlign:"center",background:`linear-gradient(138deg,${qScore>=5?"rgba(74,222,128,0.1)":qScore>=3?"rgba(251,191,36,0.1)":"rgba(239,68,68,0.1)"} 0%,rgba(0,0,0,0) 100%)`,border:`1px solid ${qScore>=5?"rgba(74,222,128,0.32)":qScore>=3?"rgba(251,191,36,0.32)":"rgba(239,68,68,0.32)"}`,animation:"fUp 0.5s ease" }}>
+              <div style={{ fontSize:52,marginBottom:12 }}>{qScore>=5?"🏆":qScore>=3?"🌟":"💪"}</div>
+              <div style={{ fontFamily:"'Syne',sans-serif",fontSize:40,fontWeight:800,color:qScore>=5?"#4ade80":qScore>=3?"#fbbf24":"#f87171" }}>{qScore} / {qTotal}</div>
+              <p style={{ fontFamily:"'DM Sans',sans-serif",fontSize:15,color:"#94a3b8",margin:"10px 0 24px",lineHeight:1.55 }}>
+                {qScore>=5?"Outstanding! You have genuinely mastered graph algorithms.":qScore>=3?"Solid work. Review the sections you missed, then retry.":"Keep going — re-read the sections above and come back stronger."}
+              </p>
+              <button onClick={() => router.push("/tree")} style={{ padding:"14px 34px",borderRadius:16,cursor:"pointer",background:"linear-gradient(135deg,#0ea5e9 0%,#818cf8 100%)",border:"none",fontFamily:"'Syne',sans-serif",fontSize:16,fontWeight:700,color:"#fff",boxShadow:"0 8px 32px rgba(14,165,233,0.42)",transition:"all 0.25s",display:"inline-flex",alignItems:"center",gap:11 }}
+                onMouseEnter={e=>{e.currentTarget.style.transform="translateY(-2px)";}} onMouseLeave={e=>{e.currentTarget.style.transform="none";}}>
+                <span>Review: Tree Data Structure</span><span style={{ fontSize:20 }}>→</span>
+              </button>
+            </div>
+          )}
+        </section>
+
+        {/* Footer */}
+        <div style={{ textAlign:"center",padding:"48px 24px",borderRadius:26,background:"linear-gradient(140deg,rgba(56,189,248,0.09) 0%,rgba(129,140,248,0.07) 50%,rgba(74,222,128,0.06) 100%)",border:"1px solid rgba(56,189,248,0.18)",position:"relative",overflow:"hidden" }}>
+          <div style={{ position:"absolute",inset:0,backgroundImage:"radial-gradient(circle,rgba(56,189,248,0.04) 1px,transparent 1px)",backgroundSize:"30px 30px",pointerEvents:"none" }}/>
+          <div style={{ fontSize:48,marginBottom:14 }}>🕸️</div>
+          <h3 style={{ fontFamily:"'Syne',sans-serif",fontSize:"clamp(17px,3.2vw,26px)",fontWeight:800,color:"#f8fafc",marginBottom:12 }}>You've completed the Graph guide!</h3>
+          <p style={{ fontFamily:"'DM Sans',sans-serif",fontSize:14,color:"#64748b",maxWidth:440,margin:"0 auto 28px",lineHeight:1.72 }}>
+            Now implement them. Code BFS and DFS first, then Dijkstra. Writing the code makes the algorithms yours permanently.
+          </p>
+          <div style={{ display:"flex",gap:6,justifyContent:"center",flexWrap:"wrap",marginBottom:24 }}>
+            {NAV_SECTIONS.map(s => (
+              <div key={s.id} style={{ padding:"4px 12px",borderRadius:20,background:seenSections.has(s.id)?`${s.col}18`:"rgba(255,255,255,0.03)",border:`1px solid ${seenSections.has(s.id)?`${s.col}38`:"rgba(255,255,255,0.06)"}`,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,color:seenSections.has(s.id)?s.col:"#1a2030",transition:"all 0.3s" }}>
+                {s.icon} {s.label} {seenSections.has(s.id)?"✓":""}
+              </div>
+            ))}
+          </div>
+          <div style={{ fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:"#2d3748",marginBottom:22 }}>{seenSections.size} / {NAV_SECTIONS.length} sections visited</div>
+          <button onClick={() => router.push('/graph-vis')} style={{ padding:"12px 28px",borderRadius:22,cursor:"pointer",background:"rgba(56,189,248,0.1)",border:"1px solid rgba(56,189,248,0.24)",fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"#38bdf8",letterSpacing:"0.04em",transition:"all 0.22s",marginBottom:16 }}>💻 Open Graph Visualizer</button>
+          <br/>
+          <button onClick={() => setShortcutsOpen(true)} style={{ background:"none",border:"1px solid rgba(255,255,255,0.08)",borderRadius:20,cursor:"pointer",padding:"6px 16px",fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2d3748",transition:"all 0.2s" }}>⌨️ VIEW KEYBOARD SHORTCUTS</button>
+        </div>
+      </main>
+    </div>
   );
 }

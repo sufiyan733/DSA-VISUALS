@@ -37,557 +37,791 @@ const LANGS = {
 };
 
 const LINE_H = 21;
+const MAX_CAPACITY = 8; // fixed array capacity
 
+// ─────────────────────────────────────────────────────────────
+// CODE TEMPLATES — Array-based implementations
+// ─────────────────────────────────────────────────────────────
 const TPL = {
-c: `// Queue implementation — C (circular buffer)
+c: `// Queue — C (circular array, capacity ${MAX_CAPACITY})
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdbool.h>
 
-#define MAX 100
+#define MAX ${MAX_CAPACITY}
 
 typedef struct {
-    int items[MAX];
-    int front;
-    int rear;
+    int data[MAX];
+    int head;
+    int tail;
+    int count;
 } Queue;
 
-void initQueue(Queue* q) {
-    q->front = 0;
-    q->rear = -1;
+void init(Queue* q) {
+    q->head = 0;
+    q->tail = 0;
+    q->count = 0;
 }
 
-void enqueue(Queue* q, int value) {
-    if (q->rear >= MAX - 1) return; // overflow
-    q->items[++(q->rear)] = value;
+bool enqueue(Queue* q, int val) {
+    if (q->count == MAX) return false;
+    q->data[q->tail] = val;
+    q->tail = (q->tail + 1) % MAX;
+    q->count++;
+    return true;
 }
 
 int dequeue(Queue* q) {
-    if (q->front > q->rear) return -1; // underflow
-    return q->items[(q->front)++];
+    if (q->count == 0) return -1;
+    int val = q->data[q->head];
+    q->head = (q->head + 1) % MAX;
+    q->count--;
+    return val;
 }
 
 int front(Queue* q) {
-    if (q->front > q->rear) return -1;
-    return q->items[q->front];
+    if (q->count == 0) return -1;
+    return q->data[q->head];
 }
 
-bool isEmpty(Queue* q) {
-    return q->front > q->rear;
-}
-
-int size(Queue* q) {
-    return q->rear - q->front + 1;
-}
+bool isEmpty(Queue* q) { return q->count == 0; }
+int  size(Queue* q)    { return q->count; }
 
 int main() {
     Queue q;
-    initQueue(&q);
-    enqueue(&q, 10);
-    enqueue(&q, 25);
-    enqueue(&q, 37);
+    init(&q);
+    enqueue(&q, 42);
+    enqueue(&q, 17);
+    enqueue(&q, 88);
     front(&q);
+    enqueue(&q, 5);
+    dequeue(&q);
+    enqueue(&q, 63);
+    isEmpty(&q);
+    size(&q);
     dequeue(&q);
     enqueue(&q, 99);
-    enqueue(&q, 4);
-    isEmpty(&q);
-    dequeue(&q);
-    dequeue(&q);
     return 0;
 }`,
 
-cpp: `// Queue implementation — C++ (using std::queue, but we implement our own for clarity)
+cpp: `// Queue — C++ (circular array, capacity ${MAX_CAPACITY})
 #include <iostream>
-#include <vector>
 using namespace std;
 
 class Queue {
-private:
-    vector<int> items;
+    int data[${MAX_CAPACITY}];
+    int head, tail, count;
 public:
-    void enqueue(int value) {
-        items.push_back(value);
+    Queue() : head(0), tail(0), count(0) {}
+
+    bool enqueue(int val) {
+        if (count == ${MAX_CAPACITY}) return false;
+        data[tail] = val;
+        tail = (tail + 1) % ${MAX_CAPACITY};
+        count++;
+        return true;
     }
 
     int dequeue() {
-        if (isEmpty()) return -1;
-        int frontVal = items[0];
-        items.erase(items.begin());
-        return frontVal;
+        if (count == 0) return -1;
+        int val = data[head];
+        head = (head + 1) % ${MAX_CAPACITY};
+        count--;
+        return val;
     }
 
     int front() {
-        if (isEmpty()) return -1;
-        return items[0];
+        if (count == 0) return -1;
+        return data[head];
     }
 
-    bool isEmpty() {
-        return items.empty();
-    }
-
-    int size() {
-        return items.size();
-    }
+    bool isEmpty() { return count == 0; }
+    int  size()    { return count; }
 };
 
 int main() {
     Queue q;
-    q.enqueue(10);
-    q.enqueue(25);
-    q.enqueue(37);
+    q.enqueue(42);
+    q.enqueue(17);
+    q.enqueue(88);
     q.front();
+    q.enqueue(5);
+    q.dequeue();
+    q.enqueue(63);
+    q.isEmpty();
+    q.size();
     q.dequeue();
     q.enqueue(99);
-    q.enqueue(42);
-    q.isEmpty();
     return 0;
 }`,
 
-java: `// Queue implementation — Java (using ArrayList)
-import java.util.ArrayList;
-
+java: `// Queue — Java (circular array, capacity ${MAX_CAPACITY})
 public class Main {
-    static class Queue<T> {
-        private ArrayList<T> items = new ArrayList<>();
+    static class Queue {
+        private int[] data = new int[${MAX_CAPACITY}];
+        private int head = 0, tail = 0, count = 0;
 
-        public void enqueue(T element) {
-            items.add(element);
+        public boolean enqueue(int val) {
+            if (count == ${MAX_CAPACITY}) return false;
+            data[tail] = val;
+            tail = (tail + 1) % ${MAX_CAPACITY};
+            count++;
+            return true;
         }
 
-        public T dequeue() {
-            if (isEmpty()) return null;
-            return items.remove(0);
+        public int dequeue() {
+            if (count == 0) return -1;
+            int val = data[head];
+            head = (head + 1) % ${MAX_CAPACITY};
+            count--;
+            return val;
         }
 
-        public T front() {
-            if (isEmpty()) return null;
-            return items.get(0);
+        public int front() {
+            if (count == 0) return -1;
+            return data[head];
         }
 
-        public boolean isEmpty() {
-            return items.isEmpty();
-        }
-
-        public int size() {
-            return items.size();
-        }
+        public boolean isEmpty() { return count == 0; }
+        public int     size()    { return count; }
     }
 
     public static void main(String[] args) {
-        Queue<Integer> q = new Queue<>();
-        q.enqueue(10);
-        q.enqueue(25);
-        q.enqueue(37);
+        Queue q = new Queue();
+        q.enqueue(42);
+        q.enqueue(17);
+        q.enqueue(88);
         q.front();
+        q.enqueue(5);
+        q.dequeue();
+        q.enqueue(63);
+        q.isEmpty();
+        q.size();
         q.dequeue();
         q.enqueue(99);
-        q.enqueue(42);
-        q.isEmpty();
     }
 }`,
 
-go: `// Queue implementation — Go (slice-based)
+go: `// Queue — Go (circular array, capacity ${MAX_CAPACITY})
 package main
 
 import "fmt"
 
+const MAX = ${MAX_CAPACITY}
+
 type Queue struct {
-    items []int
+    data        [MAX]int
+    head, tail  int
+    count       int
 }
 
-func (q *Queue) Enqueue(value int) {
-    q.items = append(q.items, value)
+func (q *Queue) Enqueue(val int) bool {
+    if q.count == MAX { return false }
+    q.data[q.tail] = val
+    q.tail = (q.tail + 1) % MAX
+    q.count++
+    return true
 }
 
 func (q *Queue) Dequeue() (int, bool) {
-    if q.IsEmpty() {
-        return 0, false
-    }
-    front := q.items[0]
-    q.items = q.items[1:]
-    return front, true
+    if q.count == 0 { return 0, false }
+    val := q.data[q.head]
+    q.head = (q.head + 1) % MAX
+    q.count--
+    return val, true
 }
 
 func (q *Queue) Front() (int, bool) {
-    if q.IsEmpty() {
-        return 0, false
-    }
-    return q.items[0], true
+    if q.count == 0 { return 0, false }
+    return q.data[q.head], true
 }
 
-func (q *Queue) IsEmpty() bool {
-    return len(q.items) == 0
-}
-
-func (q *Queue) Size() int {
-    return len(q.items)
-}
+func (q *Queue) IsEmpty() bool { return q.count == 0 }
+func (q *Queue) Size()    int  { return q.count }
 
 func main() {
     q := &Queue{}
-    q.Enqueue(10)
-    q.Enqueue(25)
-    q.Enqueue(37)
+    q.Enqueue(42)
+    q.Enqueue(17)
+    q.Enqueue(88)
     q.Front()
+    q.Enqueue(5)
+    q.Dequeue()
+    q.Enqueue(63)
+    q.IsEmpty()
+    q.Size()
     q.Dequeue()
     q.Enqueue(99)
-    q.Enqueue(42)
-    q.IsEmpty()
-    fmt.Println("Done")
+    fmt.Println("done")
 }`,
 
-python: `# Queue implementation — Python
+python: `# Queue — Python (circular array, capacity ${MAX_CAPACITY})
 class Queue:
-    def __init__(self):
-        self.items = []
+    MAX = ${MAX_CAPACITY}
 
-    def enqueue(self, element):
-        self.items.append(element)
+    def __init__(self):
+        self.data  = [None] * self.MAX
+        self.head  = 0
+        self.tail  = 0
+        self.count = 0
+
+    def enqueue(self, val):
+        if self.count == self.MAX:
+            return False
+        self.data[self.tail] = val
+        self.tail = (self.tail + 1) % self.MAX
+        self.count += 1
+        return True
 
     def dequeue(self):
-        if self.is_empty():
+        if self.count == 0:
             return None
-        return self.items.pop(0)
+        val = self.data[self.head]
+        self.head = (self.head + 1) % self.MAX
+        self.count -= 1
+        return val
 
     def front(self):
-        if self.is_empty():
+        if self.count == 0:
             return None
-        return self.items[0]
+        return self.data[self.head]
 
     def is_empty(self):
-        return len(self.items) == 0
+        return self.count == 0
 
     def size(self):
-        return len(self.items)
+        return self.count
 
 q = Queue()
-q.enqueue(10)
-q.enqueue(25)
-q.enqueue(37)
-q.front()
-q.dequeue()
-q.enqueue(99)
 q.enqueue(42)
-q.is_empty()`,
+q.enqueue(17)
+q.enqueue(88)
+q.front()
+q.enqueue(5)
+q.dequeue()
+q.enqueue(63)
+q.is_empty()
+q.size()
+q.dequeue()
+q.enqueue(99)`,
 
-javascript: `// Queue implementation — JavaScript
+javascript: `// Queue — JavaScript (circular array, capacity ${MAX_CAPACITY})
 class Queue {
-    constructor() {
-        this.items = [];
-    }
+    #MAX = ${MAX_CAPACITY};
+    #data = new Array(this.#MAX).fill(null);
+    #head = 0;
+    #tail = 0;
+    #count = 0;
 
-    enqueue(element) {
-        this.items.push(element);
+    enqueue(val) {
+        if (this.#count === this.#MAX) return false;
+        this.#data[this.#tail] = val;
+        this.#tail = (this.#tail + 1) % this.#MAX;
+        this.#count++;
+        return true;
     }
 
     dequeue() {
-        if (this.isEmpty()) return undefined;
-        return this.items.shift();
+        if (this.#count === 0) return undefined;
+        const val = this.#data[this.#head];
+        this.#head = (this.#head + 1) % this.#MAX;
+        this.#count--;
+        return val;
     }
 
     front() {
-        if (this.isEmpty()) return undefined;
-        return this.items[0];
+        if (this.#count === 0) return undefined;
+        return this.#data[this.#head];
     }
 
-    isEmpty() {
-        return this.items.length === 0;
-    }
-
-    get size() {
-        return this.items.length;
-    }
+    isEmpty()  { return this.#count === 0; }
+    size()     { return this.#count; }
 }
 
 const q = new Queue();
-q.enqueue(10);
-q.enqueue(25);
-q.enqueue(37);
+q.enqueue(42);
+q.enqueue(17);
+q.enqueue(88);
 q.front();
+q.enqueue(5);
 q.dequeue();
-q.enqueue(99);
-q.enqueue(4);
+q.enqueue(63);
 q.isEmpty();
+q.size();
 q.dequeue();
-q.dequeue();`,
+q.enqueue(99);`,
 };
 
 // ══════════════════════════════════════════════════════════════════════════════
-// C PARSER (Queue version)
+// BRACE UTILITIES & PARSERS (array-based simulation with capacity)
 // ══════════════════════════════════════════════════════════════════════════════
-function parseCQueue(code) {
-  const steps = [];
-  const queue = [];
-  const lines = code.split("\n");
-
-  const mainMatch = code.match(/int\s+main\s*\([^)]*\)\s*\{([\s\S]*)/);
-  if (!mainMatch) {
-    return { steps: [], errors: ["No main() function found. Add a main() that calls enqueue/dequeue/front/isEmpty/size."] };
-  }
-
-  let depth = 0;
-  let started = false;
-  const mainStart = code.indexOf(mainMatch[0]);
-  const bodyStart = code.indexOf("{", mainStart + mainMatch[0].indexOf("main"));
-  for (let ci = bodyStart; ci < code.length; ci++) {
-    if (code[ci] === "{") { depth++; started = true; }
-    else if (code[ci] === "}") { depth--; }
-    if (started && depth === 0) break;
-  }
-
-  const mainBody = code.slice(bodyStart);
-  const mainLines = mainBody.split("\n");
-  const mainBodyStartLine = code.slice(0, bodyStart).split("\n").length - 1;
-
-  const enqueueRe = /\b(enqueue|Enqueue|add|push)\s*\(\s*&?\w+\s*,\s*(-?[\d.]+)\s*\)/;
-  const dequeueRe = /\b(dequeue|Dequeue|pop|remove)\s*\(\s*&?\w+\s*\)/;
-  const frontRe   = /\b(front|Front|peek|top|first|head)\s*\(\s*&?\w+\s*\)/;
-  const isEmptyRe = /\b(isEmpty|IsEmpty|empty)\s*\(\s*&?\w+\s*\)/;
-  const sizeRe    = /\b(size|Size|length)\s*\(\s*&?\w+\s*\)/;
-
-  for (let li = 0; li < mainLines.length; li++) {
-    const line = mainLines[li].trim();
-    if (!line || line.startsWith("//") || line.startsWith("*") || line.startsWith("#")) continue;
-
-    const originalLineNum = mainBodyStartLine + li;
-    const codeLine = lines[originalLineNum] ?? mainLines[li];
-
-    const enqMatch = line.match(enqueueRe);
-    if (enqMatch) {
-      const v = parseFloat(enqMatch[2]);
-      queue.push(v);
-      steps.push({ type:"enqueue", value:v, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"enqueue",value:v,queue:[...queue]}) });
-      continue;
-    }
-    if (dequeueRe.test(line)) {
-      if (queue.length === 0) {
-        steps.push({ type:"dequeue_error", value:null, queue:[], lineNum:originalLineNum, codeLine, message:buildMessage({type:"dequeue_error"}) });
-      } else {
-        const v = queue.shift();
-        steps.push({ type:"dequeue", value:v, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"dequeue",value:v,queue:[...queue]}) });
-      }
-      continue;
-    }
-    if (frontRe.test(line)) {
-      if (queue.length === 0) {
-        steps.push({ type:"front_error", value:null, queue:[], lineNum:originalLineNum, codeLine, message:buildMessage({type:"front_error"}) });
-      } else {
-        const v = queue[0];
-        steps.push({ type:"front", value:v, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"front",value:v,queue:[...queue]}) });
-      }
-      continue;
-    }
-    if (isEmptyRe.test(line)) {
-      const e = queue.length === 0;
-      steps.push({ type:"isEmpty", result:e, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"isEmpty",result:e,queue:[...queue]}) });
-      continue;
-    }
-    if (sizeRe.test(line)) {
-      steps.push({ type:"size", result:queue.length, queue:[...queue], lineNum:originalLineNum, codeLine, message:buildMessage({type:"size",result:queue.length,queue:[...queue]}) });
-      continue;
-    }
-  }
-
-  if (!steps.length) {
-    return { steps:[], errors:["No queue operations detected in main().\nCall enqueue(&q,N), dequeue(&q), front(&q), isEmpty(&q), or size(&q)."] };
-  }
-  return { steps, errors:[] };
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// JAVASCRIPT REAL EXECUTION ENGINE
-// ══════════════════════════════════════════════════════════════════════════════
-function runJavaScript(code) {
-  const classMatch = /\bclass\s+(\w+)/.exec(code);
-  if (!classMatch) {
-    return { steps:[], errors:["No class definition found.\nWrite a Queue class with enqueue / dequeue / front / isEmpty methods, then use it below."] };
-  }
-  const className = classMatch[1];
-  const fieldMatch = /this\.(\w+)\s*=\s*(?:\[\s*\]|new\s+Array\s*\(\s*\))/.exec(code);
-  const field = fieldMatch?.[1] ?? "items";
-  const classBlock = extractClassBlock(code, className);
-  if (!classBlock) return { steps:[], errors:[`Could not parse class '${className}'.`] };
-  const execCode = code.slice(0, classBlock.start) + "\n" + code.slice(classBlock.end);
-
-  const instrumented = `
-"use strict";
-const __Q = [];
-class ${className} {
-  constructor() { this.${field} = []; }
-  enqueue(v) { this.${field}.push(v); __Q.push({ type:"enqueue", value:v, queue:[...this.${field}] }); }
-  dequeue() {
-    if (this.${field}.length === 0) { __Q.push({ type:"dequeue_error", value:null, queue:[] }); return undefined; }
-    const v = this.${field}.shift(); __Q.push({ type:"dequeue", value:v, queue:[...this.${field}] }); return v;
-  }
-  front() {
-    if (this.${field}.length === 0) { __Q.push({ type:"front_error", value:null, queue:[] }); return undefined; }
-    const v = this.${field}[0]; __Q.push({ type:"front", value:v, queue:[...this.${field}] }); return v;
-  }
-  peek() { return this.front(); }
-  top()  { return this.front(); }
-  isEmpty() { const e = this.${field}.length === 0; __Q.push({ type:"isEmpty", result:e, queue:[...this.${field}] }); return e; }
-  get size()   { return this.${field}.length; }
-  get length() { return this.${field}.length; }
-  toString()   { return "[Queue: " + this.${field}.join(", ") + "]"; }
-}
-${execCode}
-return __Q;`.trim();
-
-  let rawSteps;
-  try {
-    const fn = new Function("console", instrumented);
-    rawSteps = fn({ log:()=>{}, warn:()=>{}, error:()=>{}, info:()=>{} });
-  } catch (e) { return { steps:[], errors:[e.message] }; }
-
-  if (!rawSteps?.length) return { steps:[], errors:["No queue operations were executed.\nCall enqueue(), dequeue(), front(), or isEmpty() on your queue instance after the class definition."] };
-
-  const lines = code.split("\n");
-  const callLineNums = [];
-  let charCursor = 0, classEndLine = 0;
-  for (let i = 0; i < lines.length; i++) {
-    if (charCursor >= classBlock.end) { classEndLine = i; break; }
-    charCursor += lines[i].length + 1;
-  }
-  for (let i = classEndLine; i < lines.length; i++) {
-    const t = lines[i].trim();
-    if (t.startsWith("//") || t.startsWith("*") || t.startsWith("/*")) continue;
-    if (/\.(enqueue|dequeue|front|peek|top|isEmpty|is_empty|empty|size)\s*\(/.test(t)) callLineNums.push(i);
-  }
-  const steps = rawSteps.map((s, idx) => ({
-    ...s, lineNum:callLineNums[idx]??classEndLine, codeLine:lines[callLineNums[idx]??classEndLine]?.trim()??"", message:buildMessage(s),
-  }));
-  return { steps, errors:[] };
-}
-
 function countBraces(line) {
-  let opens = 0, closes = 0, inStr = false, strChar = "";
-  const commentIdx = line.indexOf("//");
-  const cleaned = commentIdx >= 0 ? line.slice(0, commentIdx) : line;
-  for (let i = 0; i < cleaned.length; i++) {
-    const ch = cleaned[i];
-    if (!inStr && (ch==='"'||ch==="'"||ch==="`")) { inStr=true; strChar=ch; continue; }
-    if (inStr && ch===strChar && cleaned[i-1]!=="\\") { inStr=false; continue; }
-    if (!inStr) { if(ch==="{") opens++; else if(ch==="}") closes++; }
+  let o = 0, c = 0, inStr = false, sc = "";
+  const ci = line.indexOf("//");
+  const cl = ci >= 0 ? line.slice(0, ci) : line;
+  for (let i = 0; i < cl.length; i++) {
+    const ch = cl[i];
+    if (!inStr && (ch==='"'||ch==="'"||ch==="`")) { inStr=true; sc=ch; continue; }
+    if (inStr && ch===sc && cl[i-1]!=="\\") { inStr=false; continue; }
+    if (!inStr) { if(ch==="{") o++; else if(ch==="}") c++; }
   }
-  return { opens, closes };
+  return { opens:o, closes:c };
 }
-
 function extractClassBlock(code, className) {
   const re = new RegExp(`\\bclass\\s+${className}(?:\\s+[^{]*)?\\{`);
-  const match = re.exec(code);
-  if (!match) return null;
-  let depth = 1, i = match.index + match[0].length;
-  while (i < code.length && depth > 0) { if(code[i]==="{") depth++; else if(code[i]==="}") depth--; i++; }
-  return { text:code.slice(match.index,i), start:match.index, end:i };
+  const m = re.exec(code);
+  if (!m) return null;
+  let d=1, i=m.index+m[0].length;
+  while(i<code.length&&d>0){if(code[i]==="{")d++;else if(code[i]==="}") d--;i++;}
+  return {text:code.slice(m.index,i),start:m.index,end:i};
 }
 
-function parseScoped(code, lang) {
-  if (lang === "python") return parsePython(code);
-  return parseBraced(code, lang);
+// ─────────────────────────────────────────────────────────────
+// JAVASCRIPT REAL EXECUTION (instrumented)
+// ─────────────────────────────────────────────────────────────
+function runJavaScript(code) {
+  const cm = /\bclass\s+(\w+)/.exec(code);
+  if (!cm) return {steps:[],errors:["No class found. Define a Queue class first."]};
+  const className = cm[1];
+  const fm = /this\.#?(\w+)\s*=\s*(?:new\s+Array|(?:\[\s*\]))/i.exec(code);
+  const field = fm?.[1] ?? "data";
+  const cb = extractClassBlock(code, className);
+  if (!cb) return {steps:[],errors:[`Could not parse class '${className}'.`]};
+  const rest = code.slice(0,cb.start)+"\n"+code.slice(cb.end);
+
+  const instr = `
+"use strict";
+const __Q=[];
+class ${className}{
+  constructor(){this._d=new Array(${MAX_CAPACITY}).fill(null);this._h=0;this._t=0;this._n=0;}
+  enqueue(v){
+    if(this._n===${MAX_CAPACITY}){__Q.push({type:"enqueue_error",value:v,queue:this._snap()});return false;}
+    this._d[this._t]=v;this._t=(this._t+1)%${MAX_CAPACITY};this._n++;
+    __Q.push({type:"enqueue",value:v,queue:this._snap(),head:this._h,tail:this._t,count:this._n});return true;
+  }
+  dequeue(){
+    if(this._n===0){__Q.push({type:"dequeue_error",value:null,queue:[]});return undefined;}
+    const v=this._d[this._h];this._h=(this._h+1)%${MAX_CAPACITY};this._n--;
+    __Q.push({type:"dequeue",value:v,queue:this._snap(),head:this._h,tail:this._t,count:this._n});return v;
+  }
+  front(){
+    if(this._n===0){__Q.push({type:"front_error",value:null,queue:[]});return undefined;}
+    const v=this._d[this._h];
+    __Q.push({type:"front",value:v,queue:this._snap()});return v;
+  }
+  peek(){return this.front();}
+  isEmpty(){const e=this._n===0;__Q.push({type:"isEmpty",result:e,queue:this._snap()});return e;}
+  size(){__Q.push({type:"size",result:this._n,queue:this._snap()});return this._n;}
+  _snap(){const a=[];for(let i=0;i<this._n;i++)a.push(this._d[(this._h+i)%${MAX_CAPACITY}]);return a;}
+}
+${rest}
+return __Q;`.trim();
+
+  let raw;
+  try { raw = new Function("console",instr)({log:()=>{},warn:()=>{},error:()=>{},info:()=>{}}); }
+  catch(e){return {steps:[],errors:[e.message]};}
+
+  if(!raw?.length) return {steps:[],errors:["No operations recorded. Call enqueue(), dequeue(), front(), isEmpty(), size()."]};
+
+  const lines = code.split("\n");
+  const callLines = [];
+  let cur=0, endClass=0;
+  for(let i=0;i<lines.length;i++){if(cur>=cb.end){endClass=i;break;}cur+=lines[i].length+1;}
+  for(let i=endClass;i<lines.length;i++){
+    const t=lines[i].trim();
+    if(t.startsWith("//")||t.startsWith("*")) continue;
+    if(/\.(enqueue|dequeue|front|peek|isEmpty|is_empty|size)\s*\(/.test(t)) callLines.push(i);
+  }
+  const steps=raw.map((s,i)=>({...s,lineNum:callLines[i]??endClass,codeLine:lines[callLines[i]??endClass]?.trim()??"",message:buildMessage(s)}));
+  return {steps,errors:[]};
+}
+
+// ─────────────────────────────────────────────────────────────
+// PARSER for other langs (C, C++, Java, Go, Python)
+// ─────────────────────────────────────────────────────────────
+function parseCode(code, lang) {
+  if(lang==="python") return parsePython(code);
+  return parseBraced(code,lang);
 }
 
 function parsePython(code) {
-  const lines = code.split("\n");
-  const execLines = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i], trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const indent = line.match(/^(\s*)/)?.[1]?.length ?? 0;
-    if (indent===0 && !trimmed.startsWith("class ") && !trimmed.startsWith("def ") && !trimmed.startsWith("import ") && !trimmed.startsWith("from ") && !trimmed.startsWith("if __name__")) {
-      execLines.push({ lineIdx:i, line:trimmed });
-    }
-    if (i>0 && lines[i-1].trim().includes("__main__") && indent===4) execLines.push({ lineIdx:i, line:trimmed });
+  const lines=code.split("\n"), exec=[];
+  for(let i=0;i<lines.length;i++){
+    const l=lines[i], t=l.trim();
+    if(!t||t.startsWith("#")) continue;
+    const ind=l.match(/^(\s*)/)?.[1]?.length??0;
+    if(ind===0&&!t.startsWith("class ")&&!t.startsWith("def ")&&!t.startsWith("import ")&&!t.startsWith("from ")) exec.push({li:i,line:t});
   }
-  return simulateOps(execLines, code.split("\n"), lang);
+  return simulate(exec,lines,"python");
 }
 
-function parseBraced(code, lang) {
-  const lines = code.split("\n");
-  const execLines = [];
-  let depth=0, inClass=false, classDepth=-1, inMain=false, mainDepth=-1, mlComment=false;
-  const needsMain = ["java","cpp","csharp","go","rust"];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i], trimmed = line.trim();
-    if (mlComment) { if(trimmed.includes("*/")) mlComment=false; continue; }
-    if (trimmed.startsWith("/*")) { mlComment=true; continue; }
-    if (trimmed.startsWith("//")||trimmed.startsWith("*")||trimmed.startsWith("#")||!trimmed) continue;
-    const { opens, closes } = countBraces(line);
-    const depthBefore = depth;
-    depth += opens - closes;
-    if (/\bclass\s+\w+/.test(trimmed)) { inClass=true; classDepth=depthBefore; }
-    if (needsMain.includes(lang)) {
-      if (/\bmain\s*\(/.test(trimmed)||/\bfunc\s+main\s*\(/.test(trimmed)) { inMain=true; mainDepth=depthBefore; }
+function parseBraced(code,lang) {
+  const lines=code.split("\n"),exec=[];
+  let depth=0,inClass=false,cd=-1,inMain=false,md=-1,ml=false;
+  const needsMain=["c","cpp","java","go"];
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i],t=line.trim();
+    if(ml){if(t.includes("*/"))ml=false;continue;}
+    if(t.startsWith("/*")){ml=true;continue;}
+    if(t.startsWith("//")||t.startsWith("*")||!t) continue;
+    const {opens:o,closes:c}=countBraces(line);
+    const db=depth; depth+=o-c;
+    if(/\bclass\s+\w+/.test(t)){inClass=true;cd=db;}
+    if(needsMain.includes(lang)){
+      if(/\bmain\s*\(/.test(t)||/\bfunc\s+main\s*\(/.test(t)){inMain=true;md=db;}
     }
-    if (inClass&&depth<=classDepth) { inClass=false; classDepth=-1; }
-    if (inMain&&depth<=mainDepth)   { inMain=false;  mainDepth=-1;  }
-    const isExec = needsMain.includes(lang)
-      ? (inMain&&depth===mainDepth+1&&!inClass)
-      : (lang==="javascript"||lang==="typescript") ? (depth===0&&!inClass) : true;
-    if (isExec) execLines.push({ lineIdx:i, line:trimmed });
+    if(inClass&&depth<=cd){inClass=false;cd=-1;}
+    if(inMain&&depth<=md){inMain=false;md=-1;}
+    const isExec=needsMain.includes(lang)?(inMain&&depth===md+1&&!inClass):(depth===0&&!inClass);
+    if(isExec) exec.push({li:i,line:t});
   }
-  return simulateOps(execLines, lines, lang);
+  return simulate(exec,lines,lang);
 }
 
-function simulateOps(execLines, allLines, lang) {
-  const steps=[], errors=[], queue=[];
-  const ENQUEUE_RE = [
-    /\.(?:enqueue|Enqueue|add|append|push_back)\s*\(\s*(-?[\d.]+)\s*\)/,
-    /\bappend\s*\(\s*\w+\s*,\s*(-?[\d.]+)\s*\)/,
-  ];
-  const DEQUEUE_RE = /\.(?:dequeue|Dequeue|pop_front|remove_first|poll|shift)\s*\(\s*\)/;
-  const FRONT_RE   = /\.(?:front|Front|peek|Peek|first|First|head|Head)\s*\(\s*\)/;
-  const EMPTY_RE   = /\.(?:isEmpty|IsEmpty|is_empty|empty|Empty)\s*\(\s*\)/;
-  const SIZE_RE    = /\.(?:size|Size|length|Length|count|Count)\s*\(\s*\)/;
+function simulate(execLines,allLines,lang) {
+  const steps=[],errors=[],queue=[];
 
-  for (const { lineIdx, line } of execLines) {
-    const origLine = allLines[lineIdx]?.trim() ?? line;
-    let enqVal = null;
-    for (const re of ENQUEUE_RE) { const m=line.match(re); if(m){enqVal=parseFloat(m[1]);break;} }
-    if (enqVal!==null&&!isNaN(enqVal)) {
-      queue.push(enqVal);
-      steps.push({ type:"enqueue", value:enqVal, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"enqueue",value:enqVal,queue:[...queue]}) });
+  // Dot-notation (OOP: Java, C++, Python, JS, Go)
+  const ENQ_DOT=/\.(?:enqueue|Enqueue|add|push)\s*\(\s*(-?[\d.]+)\s*\)/;
+  const DEQ_DOT=/\.(?:dequeue|Dequeue|poll|pop_front|shift)\s*\(\s*\)/;
+  const FRT_DOT=/\.(?:front|Front|peek|Peek|first|First)\s*\(\s*\)/;
+  const EMP_DOT=/\.(?:isEmpty|IsEmpty|is_empty|empty|Empty)\s*\(\s*\)/;
+  const SIZ_DOT=/\.(?:size|Size|length|Length|count|Count)\s*\(\s*\)/;
+
+  // C-style free-function calls: enqueue(&q, 42) / enqueue(q, 42)
+  const ENQ_C=/\benqueue\s*\(\s*(?:&?\w+)\s*,\s*(-?[\d.]+)\s*\)/;
+  const DEQ_C=/\bdequeue\s*\(\s*&?\w+\s*\)/;
+  const FRT_C=/\bfront\s*\(\s*&?\w+\s*\)/;
+  const EMP_C=/\bisEmpty\s*\(\s*&?\w+\s*\)|isEmpty\s*\(&?\w+\)/;
+  const SIZ_C=/\bsize\s*\(\s*&?\w+\s*\)/;
+
+  // Go-style method calls: q.Enqueue(42)
+  const ENQ_GO=/\.(?:Enqueue|Enq)\s*\(\s*(-?[\d.]+)\s*\)/;
+  const DEQ_GO=/\.(?:Dequeue|Deq)\s*\(\s*\)/;
+  const FRT_GO=/\.(?:Front|Peek)\s*\(\s*\)/;
+  const EMP_GO=/\.(?:IsEmpty|Empty)\s*\(\s*\)/;
+  const SIZ_GO=/\.(?:Size|Len)\s*\(\s*\)/;
+
+  for(const {li,line} of execLines){
+    const orig=allLines[li]?.trim()??line;
+
+    // --- ENQUEUE ---
+    let enqVal=null;
+    const em_dot=line.match(ENQ_DOT)||line.match(ENQ_GO);
+    const em_c=line.match(ENQ_C);
+    if(em_dot) enqVal=parseFloat(em_dot[1]);
+    else if(em_c) enqVal=parseFloat(em_c[1]);
+
+    if(enqVal!==null&&!isNaN(enqVal)){
+      if(queue.length>=MAX_CAPACITY){
+        steps.push({type:"enqueue_error",value:enqVal,queue:[...queue],lineNum:li,codeLine:orig,message:buildMessage({type:"enqueue_error",value:enqVal})});
+      } else {
+        queue.push(enqVal);
+        steps.push({type:"enqueue",value:enqVal,queue:[...queue],lineNum:li,codeLine:orig,message:buildMessage({type:"enqueue",value:enqVal,queue:[...queue]})});
+      }
       continue;
     }
-    if (DEQUEUE_RE.test(line)) {
-      if (queue.length===0) steps.push({ type:"dequeue_error", value:null, queue:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"dequeue_error"}) });
-      else { const v=queue.shift(); steps.push({ type:"dequeue", value:v, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"dequeue",value:v,queue:[...queue]}) }); }
+
+    // --- DEQUEUE ---
+    if(DEQ_DOT.test(line)||DEQ_GO.test(line)||DEQ_C.test(line)){
+      if(!queue.length){
+        steps.push({type:"dequeue_error",value:null,queue:[],lineNum:li,codeLine:orig,message:buildMessage({type:"dequeue_error"})});
+      } else {
+        const v=queue.shift();
+        steps.push({type:"dequeue",value:v,queue:[...queue],lineNum:li,codeLine:orig,message:buildMessage({type:"dequeue",value:v,queue:[...queue]})});
+      }
       continue;
     }
-    if (FRONT_RE.test(line)) {
-      if (queue.length===0) steps.push({ type:"front_error", value:null, queue:[], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"front_error"}) });
-      else { const v=queue[0]; steps.push({ type:"front", value:v, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"front",value:v,queue:[...queue]}) }); }
+
+    // --- FRONT / PEEK ---
+    if(FRT_DOT.test(line)||FRT_GO.test(line)||FRT_C.test(line)){
+      if(!queue.length)
+        steps.push({type:"front_error",value:null,queue:[],lineNum:li,codeLine:orig,message:buildMessage({type:"front_error"})});
+      else
+        steps.push({type:"front",value:queue[0],queue:[...queue],lineNum:li,codeLine:orig,message:buildMessage({type:"front",value:queue[0],queue:[...queue]})});
       continue;
     }
-    if (EMPTY_RE.test(line)) {
-      const e=queue.length===0;
-      steps.push({ type:"isEmpty", result:e, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"isEmpty",result:e,queue:[...queue]}) });
+
+    // --- IS EMPTY ---
+    if(EMP_DOT.test(line)||EMP_GO.test(line)||EMP_C.test(line)){
+      steps.push({type:"isEmpty",result:queue.length===0,queue:[...queue],lineNum:li,codeLine:orig,message:buildMessage({type:"isEmpty",result:queue.length===0,queue:[...queue]})});
       continue;
     }
-    if (SIZE_RE.test(line)) {
-      steps.push({ type:"size", result:queue.length, queue:[...queue], lineNum:lineIdx, codeLine:origLine, message:buildMessage({type:"size",result:queue.length,queue:[...queue]}) });
+
+    // --- SIZE ---
+    if(SIZ_DOT.test(line)||SIZ_GO.test(line)||SIZ_C.test(line)){
+      steps.push({type:"size",result:queue.length,queue:[...queue],lineNum:li,codeLine:orig,message:buildMessage({type:"size",result:queue.length,queue:[...queue]})});
       continue;
     }
   }
-  if (steps.length===0) errors.push("No queue operations detected in the execution body.\nMake sure you call enqueue(N), dequeue(), front(), isEmpty() or size() on your queue instance.\nValues must be numeric literals, e.g. enqueue(42).");
-  return { steps, errors };
+
+  if(!steps.length) errors.push("No operations detected.\nFor C: call enqueue(&q, 42), dequeue(&q), front(&q), isEmpty(&q)\nFor OOP: call q.enqueue(42), q.dequeue(), q.front(), q.isEmpty()");
+  return {steps,errors};
+}
+
+function runCode(code,lang) {
+  if(!code.trim()) return {steps:[],errors:["Write some code first."]};
+  if(lang==="javascript") return runJavaScript(code);
+  return parseCode(code,lang);
 }
 
 function buildMessage(s) {
-  switch (s.type) {
-    case "enqueue":       return `enqueue(${s.value})  →  added ${s.value} to back · queue size: ${s.queue?.length}`;
-    case "dequeue":       return `dequeue()  →  removed ${s.value} from front · queue size: ${s.queue?.length}`;
-    case "dequeue_error": return `dequeue()  →  ⚠ Queue Underflow! Cannot dequeue from an empty queue.`;
-    case "front":         return `front()  →  front element is ${s.value}  ·  queue unchanged`;
-    case "front_error":   return `front()  →  ⚠ Queue is empty! Nothing to see at the front.`;
-    case "isEmpty":       return `isEmpty()  →  ${s.result}  ·  queue has ${s.queue?.length ?? 0} element${s.queue?.length !== 1 ? "s" : ""}`;
-    case "size":          return `size()  →  ${s.result}  ·  queue has ${s.result} element${s.result !== 1 ? "s" : ""}`;
-    default:              return "";
+  switch(s.type){
+    case"enqueue":       return `enqueue(${s.value}) → added to back  ·  size: ${s.queue?.length}`;
+    case"enqueue_error": return `enqueue(${s.value}) → ⚡ OVERFLOW! Array is full (capacity ${MAX_CAPACITY})`;
+    case"dequeue":       return `dequeue() → removed ${s.value} from front  ·  size: ${s.queue?.length}`;
+    case"dequeue_error": return `dequeue() → ⚡ UNDERFLOW! Cannot dequeue from empty queue`;
+    case"front":         return `front() → peeking at ${s.value}  ·  queue unchanged`;
+    case"front_error":   return `front() → ⚡ Queue is empty — nothing to peek`;
+    case"isEmpty":       return `isEmpty() → ${s.result}  ·  ${s.queue?.length??0} element${s.queue?.length!==1?"s":""}`;
+    case"size":          return `size() → ${s.result}  ·  ${s.result} element${s.result!==1?"s":""}`;
+    default: return "";
   }
 }
 
+// ══════════════════════════════════════════════════════════════════════════════
+// ARRAY SLOTS VISUALIZATION (from second code)
+// ══════════════════════════════════════════════════════════════════════════════
+function MetricsBar({ step }) {
+  const queue = step?.queue ?? [];
+  const metrics = [
+    { label:"SIZE",     value: queue.length,                                       color:"#60a5fa" },
+    { label:"FRONT",    value: queue.length ? queue[0] : "—",                      color:"#fbbf24" },
+    { label:"BACK",     value: queue.length ? queue[queue.length-1] : "—",         color:"#4ade80" },
+    { label:"EMPTY",    value: queue.length === 0 ? "YES" : "NO",                  color: queue.length===0?"#f472b6":"#4ade80" },
+    { label:"AVAIL",    value: MAX_CAPACITY - queue.length,                        color:"#a78bfa" },
+    { label:"POLICY",   value: "FIFO",                                             color:"rgba(255,255,255,0.3)" },
+  ];
+  return (
+    <div style={{
+      display:"flex", borderBottom:"1px solid rgba(255,255,255,0.06)",
+      background:"rgba(0,0,0,0.3)", flexShrink:0,
+    }}>
+      {metrics.map((m,i)=>(
+        <div key={m.label} style={{
+          flex:1, padding:"6px 4px", textAlign:"center",
+          borderRight: i<metrics.length-1 ? "1px solid rgba(255,255,255,0.05)" : "none",
+          display:"flex", flexDirection:"column", gap:2,
+        }}>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6,color:"rgba(255,255,255,0.25)",letterSpacing:"0.15em"}}>{m.label}</div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"clamp(10px,1.5vw,13px)",fontWeight:700,color:m.color,transition:"color 0.3s"}}>{String(m.value)}</div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ArrayViz({ step, animKey, idle }) {
+  const queue = step?.queue ?? [];
+  const cap = MAX_CAPACITY;
+  const isEnq = step?.type === "enqueue";
+  const isDq  = step?.type === "dequeue";
+  const isFrt = step?.type === "front";
+  const isErr = step?.type === "dequeue_error" || step?.type === "front_error" || step?.type === "enqueue_error";
+  const fill  = queue.length / cap;
+
+  return (
+    <div style={{
+      display:"flex", flexDirection:"column", flex:1, minHeight:0,
+      padding:"12px 16px 8px",
+      position:"relative",
+    }}>
+      {/* Capacity Bar */}
+      <div style={{
+        display:"flex", alignItems:"center", gap:10, marginBottom:12,
+        padding:"6px 12px",
+        background:"rgba(255,255,255,0.03)",
+        borderRadius:8,
+        border:"1px solid rgba(255,255,255,0.07)",
+      }}>
+        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:"0.12em",whiteSpace:"nowrap"}}>CAPACITY</span>
+        <div style={{flex:1,height:4,background:"rgba(255,255,255,0.06)",borderRadius:99,overflow:"hidden"}}>
+          <div style={{
+            height:"100%", borderRadius:99,
+            width:`${fill*100}%`,
+            background: fill===1
+              ? "linear-gradient(90deg,#ef4444,#f87171)"
+              : "linear-gradient(90deg,#1d4ed8,#60a5fa,#a78bfa)",
+            transition:"width 0.5s cubic-bezier(0.34,1.56,0.64,1)",
+            boxShadow: fill===1 ? "0 0 8px rgba(239,68,68,0.6)" : "0 0 8px rgba(96,165,250,0.5)",
+          }}/>
+        </div>
+        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:fill===1?"#ef4444":"#60a5fa",minWidth:36,textAlign:"right"}}>
+          {queue.length}/{cap}
+        </span>
+      </div>
+
+      {/* Array Slots */}
+      <div style={{
+        display:"grid",
+        gridTemplateColumns:`repeat(${cap}, 1fr)`,
+        gap:6,
+        flex:1,
+        alignContent:"center",
+      }}>
+        {Array.from({length:cap}).map((_,i)=>{
+          const val = queue[i] ?? null;
+          const occupied = val !== null;
+          const isFront = i === 0 && occupied;
+          const isBack  = i === queue.length-1 && occupied && queue.length>0;
+          const isNew   = isEnq && i === queue.length-1 && occupied;
+          const isPeeked= isFrt && i === 0;
+          const isDqd   = isDq && i === 0 && !occupied && step?.value != null;
+          const sc = occupied ? col(val) : null;
+
+          return (
+            <div key={`slot-${i}-${animKey}-${val}`} style={{
+              display:"flex", flexDirection:"column", gap:3,
+            }}>
+              {/* Slot index */}
+              <div style={{
+                textAlign:"center",
+                fontFamily:"'JetBrains Mono',monospace",
+                fontSize:8,
+                color: isFront ? "#fbbf24" : isBack ? "#4ade80" : "rgba(255,255,255,0.18)",
+                letterSpacing:"0.05em",
+                transition:"color 0.3s",
+              }}>[{i}]</div>
+
+              {/* Slot cell */}
+              <div style={{
+                position:"relative",
+                aspectRatio:"1",
+                borderRadius:10,
+                border: isPeeked
+                  ? `2px solid ${sc?.border??'#fbbf24'}`
+                  : isFront && occupied
+                    ? `1.5px solid ${sc?.border??'#4facfe'}`
+                    : occupied
+                      ? `1.5px solid rgba(255,255,255,0.12)`
+                      : "1.5px solid rgba(255,255,255,0.06)",
+                background: occupied
+                  ? `linear-gradient(135deg, ${sc.g1}22, ${sc.g2}11)`
+                  : "rgba(255,255,255,0.02)",
+                boxShadow: isPeeked
+                  ? `0 0 20px ${sc?.glow??'rgba(251,191,36,0.5)'}, inset 0 0 14px ${sc?.glow??'rgba(251,191,36,0.15)'}`
+                  : isFront && occupied
+                    ? `0 0 18px ${sc.glow}, 0 4px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.15)`
+                    : occupied
+                      ? `0 4px 14px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.08)`
+                      : "none",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                flexDirection:"column",
+                overflow:"hidden",
+                transition:"all 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+                animation: isNew ? `slotFill 0.55s cubic-bezier(0.34,1.56,0.64,1) both`
+                           : isDqd ? `slotEmpty 0.45s ease forwards`
+                           : isPeeked ? `slotPeek 0.5s ease 2 both` : "none",
+                cursor:"default",
+              }}>
+                {/* Shine */}
+                {occupied && <div style={{
+                  position:"absolute", top:0, left:0, right:0, height:"40%",
+                  background:"linear-gradient(180deg,rgba(255,255,255,0.12),transparent)",
+                  borderRadius:"10px 10px 0 0",
+                  pointerEvents:"none",
+                }}/>}
+
+                {/* Value */}
+                {occupied ? (
+                  <span style={{
+                    fontFamily:"'JetBrains Mono',monospace",
+                    fontSize:"clamp(10px,1.8vw,16px)",
+                    fontWeight:700,
+                    color: sc.g1,
+                    textShadow:`0 0 14px ${sc.glow}`,
+                    position:"relative",
+                    zIndex:1,
+                  }}>{val}</span>
+                ) : (
+                  <span style={{fontSize:10,color:"rgba(255,255,255,0.1)"}}>—</span>
+                )}
+
+                {/* FRONT / BACK tag */}
+                {isFront && !isBack && (
+                  <span style={{
+                    position:"absolute", bottom:2, left:0, right:0, textAlign:"center",
+                    fontFamily:"'JetBrains Mono',monospace", fontSize:6, fontWeight:700,
+                    color:"#fbbf24", letterSpacing:"0.08em",
+                  }}>FRONT</span>
+                )}
+                {isBack && !isFront && (
+                  <span style={{
+                    position:"absolute", bottom:2, left:0, right:0, textAlign:"center",
+                    fontFamily:"'JetBrains Mono',monospace", fontSize:6, fontWeight:700,
+                    color:"#4ade80", letterSpacing:"0.08em",
+                  }}>BACK</span>
+                )}
+                {isFront && isBack && (
+                  <span style={{
+                    position:"absolute", bottom:2, left:0, right:0, textAlign:"center",
+                    fontFamily:"'JetBrains Mono',monospace", fontSize:5.5, fontWeight:700,
+                    color:"#a78bfa", letterSpacing:"0.06em",
+                  }}>F+B</span>
+                )}
+
+                {/* Error flash */}
+                {isErr && i===0 && (
+                  <div style={{
+                    position:"absolute", inset:0, borderRadius:10,
+                    background:"rgba(255,68,68,0.15)",
+                    animation:"errFlash 0.4s ease 3",
+                  }}/>
+                )}
+              </div>
+
+              {/* Arrow indicators */}
+              <div style={{
+                textAlign:"center", fontFamily:"'JetBrains Mono',monospace", fontSize:8,
+                height:10,
+                color: isFront ? "#fbbf24" : "transparent",
+                transition:"color 0.3s",
+              }}>↑</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* FIFO flow diagram */}
+      <div style={{
+        display:"flex", alignItems:"center", justifyContent:"center",
+        gap:8, marginTop:6, padding:"5px 12px",
+        background:"rgba(255,255,255,0.025)",
+        borderRadius:8, border:"1px solid rgba(255,255,255,0.06)",
+      }}>
+        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#f472b6",letterSpacing:"0.1em"}}>DEQUEUE ↑</span>
+        <div style={{flex:1,height:1,background:"linear-gradient(90deg,rgba(244,114,182,0.4),rgba(96,165,250,0.4))"}}>
+          <div style={{
+            height:1,
+            background:"linear-gradient(90deg,rgba(244,114,182,0.5),rgba(96,165,250,0.5))",
+            animation:"flowLine 2.5s linear infinite",
+          }}/>
+        </div>
+        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#4ade80",letterSpacing:"0.1em"}}>↓ ENQUEUE</span>
+      </div>
+
+      {idle && (
+        <div style={{
+          position:"absolute", inset:0, display:"flex", flexDirection:"column",
+          alignItems:"center", justifyContent:"center", gap:12,
+          background:"rgba(8,10,24,0.7)", backdropFilter:"blur(2px)",
+          borderRadius:12,
+        }}>
+          <div style={{fontSize:40,opacity:0.3,animation:"float 3s ease-in-out infinite"}}>📚</div>
+          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:"rgba(255,255,255,0.25)",letterSpacing:"0.08em"}}>
+            WRITE CODE · RUN · VISUALIZE
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// AI VALIDATION (keep from first code)
+// ══════════════════════════════════════════════════════════════════════════════
 async function validateWithAI(code, lang) {
   if (code.trim().length < 10) return { valid:false, reason:"Code is empty.", errors:[{line:1,message:"Write a Queue implementation first."}], apiError:null };
-  const prompt = `You are a strict code reviewer for a Queue data-structure visualizer.
+  const prompt = `You are a strict code reviewer for a Queue data-structure visualizer (array-based circular buffer).
 The user has written a Queue implementation in ${lang}. Your job:
 1. Check if it is a CORRECT and COMPLETE Queue implementation with at least enqueue and dequeue.
 2. Look for logic bugs: wrong FIFO order, dequeue not removing from front, front returning wrong element, isEmpty wrong condition, etc.
@@ -607,99 +841,9 @@ Here is the code:\n\`\`\`${lang}\n${code}\n\`\`\``;
   } catch (e) { return { valid:true, reason:"", errors:[], apiError:e.message }; }
 }
 
-function runCode(code, lang) {
-  const trimmed = code.trim();
-  if (!trimmed) return { steps:[], errors:["Please write some code first."] };
-  if (lang==="c") return parseCQueue(code);
-  if (lang==="javascript") return runJavaScript(code);
-  return parseScoped(code, lang);
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
-// QUEUE VISUALIZATION COMPONENT
+// UI COMPONENTS (from first code, adapted)
 // ══════════════════════════════════════════════════════════════════════════════
-function QueueViz({ step, animKey, idle, compact }) {
-  const [flyItem, setFlyItem] = useState(null);
-  useEffect(() => {
-    if (step?.type==="dequeue" && step.value!==null && step.value!==undefined) {
-      setFlyItem({ v:step.value, key:animKey });
-      const t = setTimeout(() => setFlyItem(null), 800);
-      return () => clearTimeout(t);
-    }
-    if (step?.type!=="dequeue") setFlyItem(null);
-  }, [animKey, step?.type]);
-
-  const queue   = step?.queue ?? [];
-  const isEnq   = step?.type === "enqueue";
-  const isFront = step?.type === "front";
-  const isErr   = step?.type === "dequeue_error" || step?.type === "front_error";
-  const frontVal = queue.length ? queue[0] : null;
-
-  const metrics = [
-    { lbl:"SIZE",   val:queue.length,                              c:"#60a5fa" },
-    { lbl:"FRONT",  val:frontVal ?? "—",                          c:"#fbbf24" },
-    { lbl:"BACK",   val:queue.length ? queue[queue.length-1] : "—", c:"#4ade80" },
-    { lbl:"POLICY", val:"FIFO",                                    c:"#a78bfa" },
-  ];
-
-  const blockHeight   = compact ? 44 : 58;
-  const blockMinWidth = compact ? 70 : 90;
-  const fontSizeVal   = compact ? 16 : 18;
-  const fontSizeIdx   = compact ? 7  : 8.5;
-  const fontSizeTag   = compact ? 6.5: 8;
-
-  return (
-    <div className={`qv${isErr?" qv-err":""}`} key={isErr?`e${animKey}`:"qv"}>
-      <div className="qv-metrics">
-        {metrics.map((m) => (
-          <div className="qv-m" key={m.lbl}>
-            <span className="qv-ml">{m.lbl}</span>
-            <span className="qv-mv" style={{ color:m.c, fontSize:compact?"12px":"15px" }}>{String(m.val)}</span>
-          </div>
-        ))}
-      </div>
-      <div className="qv-row">
-        <div className="qv-front-tag">FRONT →</div>
-        <div className="qv-items">
-          {queue.length===0 && !flyItem ? (
-            <div className={`qv-empty${isErr?" qv-empty-err":""}`}>
-              <div className="qv-ei">{idle?"📚":isErr?"⚠":"∅"}</div>
-              <div className="qv-et">{idle?"Run code to start":isErr?"Queue underflow!":"Queue is empty"}</div>
-            </div>
-          ) : queue.map((v, idx) => {
-            const isFirst=idx===0, isLast=idx===queue.length-1;
-            const isNew=isLast&&isEnq, pk=isFirst&&isFront;
-            const c=col(v);
-            return (
-              <div key={`${v}-${idx}-${isNew?animKey:"s"}`}
-                className={["qv-block",isNew?"qv-enq":"",pk?"qv-front":"",isFirst?"qv-first":"",isLast?"qv-last":""].filter(Boolean).join(" ")}
-                style={{ height:`${blockHeight}px`, minWidth:`${blockMinWidth}px`, background:`linear-gradient(135deg,${c.g1},${c.g2})`, boxShadow:isFirst?`0 0 36px ${c.glow}, 0 6px 20px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.22)`:`0 4px 14px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.12)`, borderColor:isFirst?c.border:"rgba(255,255,255,0.08)" }}
-              >
-                {pk&&<div className="qv-pk-ring"  key={`r1-${animKey}`} style={{borderColor:c.border}}/>}
-                {pk&&<div className="qv-pk-ring2" key={`r2-${animKey}`} style={{borderColor:c.border}}/>}
-                <span className="qv-bidx" style={{fontSize:fontSizeIdx}}>[{idx}]</span>
-                <span className="qv-bval" style={{fontSize:fontSizeVal}}>{v}</span>
-                {isFirst&&<span className="qv-btag" style={{fontSize:fontSizeTag}}>← FRONT</span>}
-                {isLast&&!isFirst&&<span className="qv-btag back" style={{fontSize:fontSizeTag}}>BACK →</span>}
-              </div>
-            );
-          })}
-          {flyItem&&(
-            <div key={flyItem.key} className="qv-fly"
-              style={{ height:`${blockHeight}px`, minWidth:`${blockMinWidth}px`, background:`linear-gradient(135deg,${col(flyItem.v).g1},${col(flyItem.v).g2})`, boxShadow:`0 0 40px ${col(flyItem.v).glow}` }}>
-              <span className="qv-fly-v" style={{fontSize:fontSizeVal}}>{flyItem.v}</span>
-              <span className="qv-fly-tag">← DEQUEUE</span>
-            </div>
-          )}
-        </div>
-        <div className="qv-back-tag">← BACK</div>
-      </div>
-      <div className="qv-plat"><div className="qv-plat-shine"/></div>
-      <p className="qv-base">▲ FIFO QUEUE</p>
-    </div>
-  );
-}
-
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -754,8 +898,8 @@ function TermLine({ line, isLast, stepIndex, currentStepIndex, lineRef }) {
       <span style={{ color:"#3a6090", fontSize:10, wordBreak:"break-all" }}>{line.text}</span>
     </div>
   );
-  const cm = { enqueue:"#4ade80", dequeue:"#f472b6", front:"#fbbf24", isEmpty:"#60a5fa", size:"#a78bfa", dequeue_error:"#f87171", front_error:"#f87171", error:"#f87171", stderr:"#f87171", success:"#4ade80", warn:"#fbbf24", info:"#60a5fa", output:"#3a4e6a", stdout:"#4a607a" };
-  const pm = { error:"✗", stderr:"✗", dequeue_error:"✗", front_error:"✗", success:"✓", warn:"⚠", info:"·", enqueue:"⬇", dequeue:"⬆", front:"👁", isEmpty:"∅", size:"#", output:"", stdout:"" };
+  const cm = { enqueue:"#4ade80", dequeue:"#f472b6", front:"#fbbf24", isEmpty:"#60a5fa", size:"#a78bfa", dequeue_error:"#f87171", front_error:"#f87171", enqueue_error:"#f87171", error:"#f87171", stderr:"#f87171", success:"#4ade80", warn:"#fbbf24", info:"#60a5fa", output:"#3a4e6a", stdout:"#4a607a" };
+  const pm = { error:"✗", stderr:"✗", dequeue_error:"⚠", front_error:"⚠", enqueue_error:"⚠", success:"✓", warn:"⚠", info:"·", enqueue:"⬇", dequeue:"⬆", front:"👁", isEmpty:"∅", size:"#", output:"", stdout:"" };
   const c = cm[line.type] ?? "#3a5070";
   const pfx = pm[line.type] ?? "";
   return (
@@ -814,100 +958,7 @@ function CodeEditor({ code, setCode, step, errorLineSet, onKeyDown, taRef }) {
   );
 }
 
-// ══════════════════════════════════════════════════════════════════════════════
-// SIDEBAR NAV (new — desktop left rail + mobile bottom bar)
-// ══════════════════════════════════════════════════════════════════════════════
-function SidebarNav({ activeSection, onNav, hasSteps, hasErrors, termLines, onRun, onReset, playing, validating }) {
-  const hasTermErr = termLines.some(l => l.type==="error"||l.type==="stderr");
-  const hasTermOk  = termLines.some(l => l.type==="success");
-  const items = [
-    { id:"code",     icon:"⌨", label:"Code",  dot:null },
-    { id:"terminal", icon:"⬛", label:"Term",  dot:hasTermErr?"#f87171":hasTermOk?"#4ade80":null },
-    { id:"viz",      icon:"🔁", label:"Queue", dot:hasSteps?"#60a5fa":hasErrors?"#f87171":null },
-  ];
-  return (
-    <div style={{
-      position:"fixed", left:0, top:0, bottom:0,
-      width:62, zIndex:9000,
-      display:"flex", flexDirection:"column", alignItems:"center",
-      background:"rgba(4,6,20,0.98)",
-      borderRight:"1px solid rgba(96,165,250,0.1)",
-      padding:"10px 0 16px",
-      boxShadow:"2px 0 32px rgba(0,0,0,0.6),inset -1px 0 0 rgba(96,165,250,0.05)",
-      overflow:"hidden",
-    }}>
-      {/* top rainbow line */}
-      <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#60a5fa,#a78bfa,#f472b6,transparent)", opacity:0.7, pointerEvents:"none" }}/>
-      {/* bottom line */}
-      <div style={{ position:"absolute", bottom:0, left:0, right:0, height:1, background:"linear-gradient(90deg,transparent,rgba(96,165,250,0.4),transparent)", pointerEvents:"none" }}/>
-
-      {/* Logo */}
-      <div style={{ width:36, height:36, borderRadius:10, background:"linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, boxShadow:"0 0 20px rgba(96,165,250,0.5),0 0 40px rgba(96,165,250,0.1)", animation:"rPulse 3s ease-in-out infinite", flexShrink:0, marginBottom:6, cursor:"pointer" }}
-        onClick={onReset} title="Reset">🔁</div>
-
-      {/* Divider */}
-      <div style={{ width:32, height:1, background:"linear-gradient(90deg,transparent,rgba(96,165,250,0.25),transparent)", margin:"6px 0", flexShrink:0 }}/>
-
-      {/* Nav items */}
-      <div style={{ display:"flex", flexDirection:"column", gap:2, flex:1, width:"100%", padding:"0 7px" }}>
-        {items.map((item, i) => {
-          const isActive = activeSection === item.id;
-          return (
-            <button key={item.id} onClick={() => onNav(item.id)} style={{
-              position:"relative", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
-              gap:3, width:"100%", padding:"9px 4px", borderRadius:10, cursor:"pointer",
-              border:`1px solid ${isActive?"rgba(96,165,250,0.32)":"transparent"}`,
-              background:isActive?"linear-gradient(180deg,rgba(96,165,250,0.16),rgba(167,139,250,0.1))":"transparent",
-              boxShadow:isActive?"0 0 16px rgba(96,165,250,0.15),inset 0 1px 0 rgba(255,255,255,0.06)":"none",
-              fontFamily:"'JetBrains Mono',monospace",
-              WebkitTapHighlightColor:"transparent",
-              transition:"all 0.18s",
-              animation:`navItemIn 0.3s ease ${i*0.06}s both`,
-            }}>
-              {/* active left bar */}
-              {isActive&&<div style={{ position:"absolute", left:-7, top:"50%", transform:"translateY(-50%)", width:3, height:"60%", borderRadius:"0 3px 3px 0", background:"linear-gradient(180deg,#60a5fa,#a78bfa)", boxShadow:"0 0 8px rgba(96,165,250,0.6)" }}/>}
-              {/* status dot */}
-              {item.dot&&(
-                <span style={{ position:"absolute", top:7, right:7, width:5, height:5, borderRadius:"50%", background:item.dot, boxShadow:`0 0 6px ${item.dot}`, zIndex:2 }}>
-                  <span style={{ position:"absolute", inset:0, borderRadius:"50%", background:item.dot, opacity:0.5, animation:"dotPing 1.5s ease-out infinite" }}/>
-                </span>
-              )}
-              {isActive&&<span style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center,rgba(96,165,250,0.08),transparent 70%)", pointerEvents:"none", borderRadius:10 }}/>}
-              <span style={{ fontSize:17, opacity:isActive?1:0.4, transition:"opacity 0.15s,transform 0.15s", transform:isActive?"scale(1.12)":"scale(1)", lineHeight:1, position:"relative" }}>{item.icon}</span>
-              <span style={{ fontSize:6.5, fontWeight:700, letterSpacing:"0.1em", textTransform:"uppercase", color:isActive?"#60a5fa":"#3d5470", transition:"color 0.18s", lineHeight:1 }}>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Divider */}
-      <div style={{ width:32, height:1, background:"linear-gradient(90deg,transparent,rgba(96,165,250,0.25),transparent)", margin:"6px 0", flexShrink:0 }}/>
-
-      {/* Run + Reset mini buttons */}
-      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6, padding:"0 7px", width:"100%" }}>
-        <button onClick={onRun} disabled={playing||validating} title="Run (Ctrl+Enter)" style={{
-          width:"100%", padding:"6px 4px", borderRadius:8,
-          background:playing||validating?"linear-gradient(135deg,rgba(29,78,216,0.4),rgba(96,165,250,0.3))":"linear-gradient(135deg,rgba(29,78,216,0.4),rgba(96,165,250,0.3))",
-          border:"1px solid rgba(96,165,250,0.35)", color:"#60a5fa", fontSize:14,
-          cursor:playing||validating?"not-allowed":"pointer",
-          display:"flex", alignItems:"center", justifyContent:"center",
-          boxShadow:"0 0 12px rgba(96,165,250,0.2)",
-          transition:"all 0.15s", opacity:playing||validating?0.6:1,
-          animation:playing||validating?"progressPulse 1.2s ease-in-out infinite":"none",
-          fontFamily:"'JetBrains Mono',monospace",
-        }}>{validating?"◌":playing?"⏸":"▶"}</button>
-        <button onClick={onReset} title="Reset" style={{
-          width:"100%", padding:"6px 4px", borderRadius:8,
-          background:"transparent", border:"1px solid rgba(255,255,255,0.07)", color:"#3d5470", fontSize:13,
-          cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center",
-          transition:"all 0.15s", fontFamily:"'JetBrains Mono',monospace",
-        }}>↺</button>
-      </div>
-    </div>
-  );
-}
-
-// Mobile sticky right nav — same as before, unchanged
+// Mobile sticky right nav (unchanged)
 function StickyNav({ activeSection, onNav, hasSteps, hasErrors, termLines }) {
   const hasTermErr = termLines.some(l => l.type==="error"||l.type==="stderr");
   const hasTermOk  = termLines.some(l => l.type==="success");
@@ -933,6 +984,93 @@ function StickyNav({ activeSection, onNav, hasSteps, hasErrors, termLines }) {
       <div style={{ position:"absolute", bottom:0, left:0, right:0, height:2, background:"linear-gradient(90deg,transparent,#f472b6,#60a5fa,transparent)", opacity:0.4 }}/>
     </div>
   );
+}
+
+function StepList({ steps, idx, goTo }) {
+  const ref=useRef(null);
+  useEffect(()=>{ref.current?.querySelector(".sl-active")?.scrollIntoView({block:"nearest",behavior:"smooth"});},[idx]);
+  return(
+    <div ref={ref} style={{display:"flex",flexDirection:"column",gap:1.5,overflowY:"auto",
+      padding:"4px 8px 6px",maxHeight:100,
+      scrollbarWidth:"thin",scrollbarColor:"rgba(96,165,250,0.2) transparent",
+    }}>
+      {steps.map((s,i)=>{
+        const op=OP[s.type]??OP.enqueue;
+        const past=i<idx,active=i===idx;
+        return(
+          <div key={i} onClick={()=>goTo(i)} className={active?"sl-active":""} style={{
+            display:"flex",alignItems:"center",gap:6,
+            padding:"2.5px 8px",borderRadius:5,cursor:"pointer",
+            fontFamily:"'JetBrains Mono',monospace",fontSize:8,
+            color:active?op.c:past?"rgba(255,255,255,0.5)":"rgba(255,255,255,0.2)",
+            background:active?op.bg:"transparent",
+            border:`1px solid ${active?op.bd:"transparent"}`,
+            boxShadow:active?`inset 3px 0 0 ${op.c}`:past?"inset 3px 0 0 #4ade80":"none",
+            transition:"all 0.15s",
+          }}>
+            <span style={{flexShrink:0,fontSize:9}}>{op.icon}</span>
+            <span style={{flex:1}}>
+              {op.label}
+              {s.type==="enqueue"&&<span style={{opacity:0.55}}>({s.value})</span>}
+              {(s.type==="dequeue"||s.type==="front")&&s.value!=null&&<span style={{opacity:0.55}}> → {s.value}</span>}
+              {s.type==="isEmpty"&&<span style={{opacity:0.55}}> = {String(s.result)}</span>}
+              {s.type==="size"&&<span style={{opacity:0.55}}> = {s.result}</span>}
+            </span>
+            <span style={{color:"rgba(255,255,255,0.2)",fontSize:7,flexShrink:0}}>L{s.lineNum+1}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// TERMINAL LINES BUILDER
+// ─────────────────────────────────────────────────────────────
+function buildTerm(steps, errors, aiErrs, aiReason, lang, sid) {
+  const ls = [];
+  const ts = new Date().toTimeString().slice(0,8);
+  ls.push({ type:"output", text:`queue-visualizer v3.0  ·  ${lang}  ·  ${ts}  ·  ${sid}` });
+  ls.push({ type:"separator" });
+  if(aiErrs.length>0){
+    ls.push({ type:"prompt", text:`validate --lang=${lang} --ds=queue` });
+    ls.push({ type:"blank" });
+    if(aiReason) ls.push({ type:"stderr", text:aiReason });
+    aiErrs.forEach(e=>ls.push({ type:"error", text:`  L${e.line??"?"}  ${e.message}`, lineNum:e.line }));
+    ls.push({ type:"blank" });
+    ls.push({ type:"error", text:"exit 1" });
+    return ls;
+  }
+  if(errors.length>0){
+    ls.push({ type:"prompt", text:`run --lang=${lang}` });
+    ls.push({ type:"blank" });
+    errors.forEach(e=>ls.push({ type:"stderr", text:e }));
+    ls.push({ type:"blank" });
+    ls.push({ type:"error", text:"exit 1" });
+    return ls;
+  }
+  if(steps.length>0){
+    ls.push({ type:"prompt", text:`run --lang=${lang} --ds=queue-array` });
+    ls.push({ type:"blank" });
+    steps.forEach((s,si)=>{
+      const isE=s.type==="dequeue_error"||s.type==="front_error"||s.type==="enqueue_error";
+      let t="";
+      switch(s.type){
+        case"enqueue":       t=`enqueue(${s.value}) → [${s.queue.join(", ")}]  size:${s.queue.length}`; break;
+        case"enqueue_error": t=`enqueue(${s.value}) → OVERFLOW (capacity ${MAX_CAPACITY})`; break;
+        case"dequeue":       t=`dequeue() → ${s.value}  remaining:[${s.queue.join(", ")}]`; break;
+        case"dequeue_error": t="dequeue() → UNDERFLOW: empty queue"; break;
+        case"front":         t=`front() → ${s.value}  (unchanged)`; break;
+        case"front_error":   t="front() → ERROR: empty queue"; break;
+        case"isEmpty":       t=`isEmpty() → ${s.result}  (${s.queue.length} items)`; break;
+        case"size":          t=`size() → ${s.result}`; break;
+      }
+      ls.push({ type:isE?"error":s.type, text:t, lineNum:s.lineNum+1, stepIndex:si });
+    });
+    ls.push({ type:"blank" });
+    ls.push({ type:"success", text:`${steps.length} operation${steps.length!==1?"s":""} · exit 0` });
+  }
+  return ls;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
@@ -985,51 +1123,6 @@ export default function QueueDSPage() {
 
   const handleChangeLang = (l) => { setLang(l); setCode(TPL[l]??""); doReset(); };
 
-  const buildTerm = (stps, errs, aiErrs, aiReason) => {
-    const ls = [];
-    const ts = new Date().toTimeString().slice(0,8);
-    ls.push({ type:"output", text:`VisuoSlayer v2.1  ·  Queue  ·  ${ts}  ·  pid:${sessionId}` });
-    ls.push({ type:"separator" });
-    if (aiErrs.length>0) {
-      ls.push({ type:"prompt", text:`validate --lang=${lang} --ds=queue` });
-      ls.push({ type:"blank" });
-      if (aiReason) ls.push({ type:"stderr", text:aiReason });
-      aiErrs.forEach(e => ls.push({ type:"error", text:`  L${e.line??"?"}  ${e.message}`, lineNum:e.line }));
-      ls.push({ type:"blank" });
-      ls.push({ type:"error", text:"Process exited with code 1" });
-      return ls;
-    }
-    if (errs.length>0) {
-      ls.push({ type:"prompt", text:`run --lang=${lang}` });
-      ls.push({ type:"blank" });
-      errs.forEach(e => ls.push({ type:"stderr", text:e }));
-      ls.push({ type:"blank" });
-      ls.push({ type:"error", text:"Process exited with code 1" });
-      return ls;
-    }
-    if (stps.length>0) {
-      ls.push({ type:"prompt", text:`run --lang=${lang} --ds=queue` });
-      ls.push({ type:"blank" });
-      stps.forEach((s, stepIdx) => {
-        const ie = s.type==="dequeue_error"||s.type==="front_error";
-        let out = "";
-        switch (s.type) {
-          case "enqueue":       out=`enqueue(${s.value})  →  [${s.queue.join(", ")}]  size:${s.queue.length}`; break;
-          case "dequeue":       out=`dequeue()  →  ${s.value}  ·  [${s.queue.join(", ")}]  size:${s.queue.length}`; break;
-          case "dequeue_error": out="dequeue()  →  Error: Queue Underflow"; break;
-          case "front":         out=`front()  →  ${s.value}  ·  unchanged  size:${s.queue.length}`; break;
-          case "front_error":   out="front()  →  Error: Queue is empty"; break;
-          case "isEmpty":       out=`isEmpty()  →  ${s.result}  ·  ${s.queue.length} item${s.queue.length!==1?"s":""}`; break;
-          case "size":          out=`size()  →  ${s.result}  ·  queue has ${s.result} element${s.result!==1?"s":""}`; break;
-        }
-        ls.push({ type:ie?"error":s.type, text:out, lineNum:s.lineNum+1, stepIndex:stepIdx });
-      });
-      ls.push({ type:"blank" });
-      ls.push({ type:"success", text:`${stps.length} op${stps.length!==1?"s":""} completed  ·  exit code 0` });
-    }
-    return ls;
-  };
-
   const handleRun = async () => {
     doReset();
     setValidating(true);
@@ -1037,7 +1130,7 @@ export default function QueueDSPage() {
     setValidating(false);
     if (!v.valid) {
       setAiErrors(v.errors??[]); setAiReason(v.reason??"");
-      setTermLines(buildTerm([],[],v.errors??[],v.reason??""));
+      setTermLines(buildTerm([],[],v.errors??[],v.reason??"",lang,sessionId));
       if (isMobile) scrollToSection("terminal");
       return;
     }
@@ -1049,7 +1142,7 @@ export default function QueueDSPage() {
       return;
     }
     setSteps(s); setIdx(0); bump(); setPlaying(true);
-    setTermLines(buildTerm(s,[],[],[]));
+    setTermLines(buildTerm(s,[],[],[],lang,sessionId));
   };
 
   const goTo = useCallback((i) => {
@@ -1140,6 +1233,11 @@ export default function QueueDSPage() {
           @keyframes frontPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45) saturate(1.4)}}
           @keyframes dotPing{0%{transform:scale(1);opacity:1}100%{transform:scale(2.2);opacity:0}}
           @keyframes navItemIn{from{opacity:0;transform:translateX(-8px) scale(0.94)}to{opacity:1;transform:none}}
+          @keyframes slotFill{0%{transform:scale(0.5) rotateY(90deg) translateX(20px);opacity:0}55%{transform:scale(1.1) rotateY(-6deg) translateX(-2px)}80%{transform:scale(0.97) rotateY(1deg)}100%{transform:scale(1) rotateY(0) translateX(0);opacity:1}}
+          @keyframes slotEmpty{0%{opacity:1;transform:scale(1) translateY(0)}40%{opacity:0.5;transform:scale(0.9) translateY(-8px)}100%{opacity:0;transform:scale(0.65) translateY(-20px) rotate(5deg)}}
+          @keyframes slotPeek{0%,100%{filter:brightness(1) saturate(1)}50%{filter:brightness(1.7) saturate(1.6)}}
+          @keyframes errFlash{0%,100%{background:rgba(239,68,68,0.1)}50%{background:rgba(239,68,68,0.42)}}
+          @keyframes flowLine{0%{background-position:-200% 0}100%{background-position:300% 0}}
           .mob-pg{height:100vh;height:100dvh;display:flex;flex-direction:column;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(59,130,246,0.12) 0%,transparent 60%),#050818;padding-top:env(safe-area-inset-top,0);}
           .mob-hd{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);border-bottom:1px solid rgba(96,165,250,0.12);z-index:100;position:sticky;top:0;}
           .mob-logo{width:30px;height:30px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 16px rgba(96,165,250,0.5);animation:rPulse 3s ease-in-out infinite;}
@@ -1169,39 +1267,6 @@ export default function QueueDSPage() {
           .mob-alb-ln{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;white-space:nowrap;}
           .mob-alb-code{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
           .mob-term-wrap{background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);display:flex;flex-direction:column;height:220px;}
-          .qv{display:flex;flex-direction:column;flex:1;min-height:0;position:relative;}
-          .qv.qv-err{animation:svSh 0.4s ease;}
-          .qv-metrics{display:flex;border-bottom:1px solid var(--border-subtle);background:rgba(4,8,26,0.75);flex-shrink:0;}
-          .qv-m{flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:2px;transition:background 0.2s;}
-          .qv-m:last-child{border-right:none;}
-          .qv-m.sv-m-active{background:rgba(96,165,250,0.05);animation:metricPop 0.3s ease;}
-          .qv-ml{font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--text-muted);letter-spacing:0.15em;text-transform:uppercase;font-weight:600;}
-          .qv-mv{font-family:'JetBrains Mono',monospace;font-weight:700;line-height:1.1;transition:color 0.3s;}
-          .qv-row{flex:1;display:flex;align-items:center;justify-content:center;gap:12px;padding:12px 12px 0;position:relative;min-height:200px;flex-wrap:wrap;}
-          .qv-front-tag,.qv-back-tag{font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e3050;letter-spacing:0.08em;}
-          .qv-front-tag{color:#fbbf24;}
-          .qv-back-tag{color:#4ade80;}
-          .qv-items{display:flex;flex-direction:row;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;overflow-x:auto;padding-bottom:4px;max-width:100%;}
-          .qv-block{border-radius:13px;border:1.5px solid transparent;display:flex;align-items:center;justify-content:center;padding:0 8px;gap:6px;position:relative;transition:all 0.28s ease;flex-shrink:0;}
-          .qv-block::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 58%);border-radius:inherit;pointer-events:none;}
-          .qv-enq{animation:blkDrop 0.52s cubic-bezier(0.34,1.56,0.64,1) both;}
-          .qv-front{animation:frontPulse 0.6s ease 2 both;}
-          .qv-pk-ring,.qv-pk-ring2{position:absolute;inset:-4px;border-radius:19px;border:2.5px solid;animation:pkRing 0.78s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none;}
-          .qv-pk-ring2{animation-delay:0.16s;}
-          .qv-bidx{font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.42);}
-          .qv-bval{font-family:'JetBrains Mono',monospace;font-weight:700;color:#fff;text-shadow:0 2px 9px rgba(0,0,0,0.35);}
-          .qv-btag{font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.68);white-space:nowrap;}
-          .qv-btag.back{color:rgba(74,222,128,0.9);}
-          .qv-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:120px;height:72px;border:1px dashed rgba(255,255,255,0.07);border-radius:13px;gap:5px;}
-          .qv-empty.sv-empty-err{border-color:rgba(239,68,68,0.35);animation:svSh 0.38s ease;}
-          .qv-ei{font-size:18px;opacity:0.45;}
-          .qv-et{font-family:'JetBrains Mono',monospace;font-size:8px;color:#1e3050;letter-spacing:0.07em;}
-          .qv-fly{position:absolute;top:18px;left:50%;transform:translateX(-50%);border-radius:13px;display:flex;align-items:center;justify-content:center;gap:6px;z-index:20;pointer-events:none;border:1.5px solid rgba(255,255,255,0.28);animation:flyAway 0.76s cubic-bezier(0.22,1,0.36,1) forwards;white-space:nowrap;}
-          .qv-fly-v{font-family:'JetBrains Mono',monospace;font-weight:700;color:#fff;}
-          .qv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.7);letter-spacing:0.06em;}
-          .qv-plat{margin-top:5px;width:280px;height:11px;border-radius:7px;background:linear-gradient(90deg,rgba(96,165,250,0.28),rgba(96,165,250,0.14),rgba(96,165,250,0.28));position:relative;overflow:hidden;align-self:center;}
-          .qv-plat-shine{position:absolute;top:0;left:-100%;width:55%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent);animation:pShine 3.2s ease-in-out infinite;}
-          .qv-base{font-family:'JetBrains Mono',monospace;font-size:8px;color:#1e3050;letter-spacing:0.1em;margin-top:4px;margin-bottom:14px;text-align:center;}
           .mob-viz-wrap{background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);display:flex;flex-direction:column;min-height:360px;}
           .mob-oi{padding:8px 14px;border-top:1px solid var(--border-subtle);background:rgba(4,8,24,0.6);flex-shrink:0;}
           .mob-oi-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:16px;margin-bottom:4px;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;animation:stepPop 0.22s ease;border:1px solid;letter-spacing:0.04em;}
@@ -1238,7 +1303,7 @@ export default function QueueDSPage() {
             <div className="mob-logo">🔁</div>
             <div style={{ flex:1, minWidth:0 }}>
               <div className="mob-brand">VisuoSlayer</div>
-              <div className="mob-sub">Queue DS · Write · Run · Visualize</div>
+              <div className="mob-sub">ARRAY QUEUE · CIRCULAR · FIFO</div>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
               <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28`, padding:"2px 8px", borderRadius:20, fontWeight:700 }}>{lm.ext}</span>
@@ -1305,17 +1370,20 @@ export default function QueueDSPage() {
                   <span className="dot" style={{ background:"#60a5fa", boxShadow:"0 0 5px #60a5fa" }}/>
                   <span className="dot" style={{ background:"#f472b6", boxShadow:"0 0 5px #f472b6" }}/>
                   <span className="dot" style={{ background:"#4ade80", boxShadow:"0 0 5px #4ade80" }}/>
-                  <span className="ptl">Queue Visualization</span>
+                  <span className="ptl">Array Queue · Circular Buffer</span>
                   {steps.length>0&&<span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(96,165,250,0.25)", padding:"2px 8px", borderRadius:16, fontWeight:700 }}>{idx+1} / {steps.length}</span>}
                 </div>
-                <QueueViz step={step} animKey={animKey} idle={idle} compact={true}/>
+                <MetricsBar step={step}/>
+                <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, position:"relative" }}>
+                  <ArrayViz step={step} animKey={animKey} idle={idle}/>
+                </div>
                 <div className="mob-oi">
                   {step&&os ? (
                     <>
                       <div className="mob-oi-badge" style={{ color:os.c, background:os.bg, borderColor:os.bd }}>
                         <span>{os.icon}</span><span>{os.label}</span>
                         {step.type==="enqueue"&&<span style={{opacity:0.55}}>({step.value})</span>}
-                        {(step.type==="dequeue"||step.type==="front")&&step.valid!==false&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
+                        {(step.type==="dequeue"||step.type==="front")&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
                         {step.type==="isEmpty"&&<span style={{opacity:0.55}}>→ {String(step.result)}</span>}
                         {step.type==="size"&&<span style={{opacity:0.55}}>→ {step.result}</span>}
                       </div>
@@ -1366,11 +1434,10 @@ export default function QueueDSPage() {
                             <span style={{ color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)" }}>
                               {sm.label}
                               {s.type==="enqueue"&&<span className="mob-si-v">({s.value})</span>}
-                              {s.type==="dequeue"&&s.valid!==false&&<span className="mob-si-v"> → {s.value}</span>}
-                              {s.type==="front"&&s.valid!==false&&<span className="mob-si-v"> = {s.value}</span>}
+                              {(s.type==="dequeue"||s.type==="front")&&s.value!=null&&<span className="mob-si-v"> → {s.value}</span>}
                               {s.type==="isEmpty"&&<span className="mob-si-v"> = {String(s.result)}</span>}
                               {s.type==="size"&&<span className="mob-si-v"> = {s.result}</span>}
-                              {(s.type==="dequeue_error"||s.type==="front_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
+                              {(s.type==="dequeue_error"||s.type==="front_error"||s.type==="enqueue_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
                             </span>
                             <span className="mob-si-ln">L{s.lineNum+1}</span>
                           </div>
@@ -1392,7 +1459,7 @@ export default function QueueDSPage() {
     );
   }
 
-  // ── DESKTOP LAYOUT ──────────────────────────────────────────────────────────
+  // ── DESKTOP LAYOUT (sidebar removed) ──────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -1401,7 +1468,6 @@ export default function QueueDSPage() {
         html,body{height:100%;overflow:hidden}
         body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
         :root{--cyan:#60a5fa;--cyan-dim:rgba(96,165,250,0.15);--cyan-glow:rgba(96,165,250,0.45);--pink:#f472b6;--pink-dim:rgba(244,114,182,0.15);--green:#4ade80;--green-dim:rgba(74,222,128,0.15);--green-glow:rgba(74,222,128,0.4);--purple:#a78bfa;--yellow:#fbbf24;--text-primary:#d4e4f7;--text-secondary:#6b8aaa;--text-muted:#3d5470;--border-subtle:rgba(255,255,255,0.07);--border-medium:rgba(255,255,255,0.13);--surface-0:#050818;--surface-1:rgba(8,14,36,0.95);--surface-2:rgba(12,20,48,0.8);--surface-3:rgba(16,26,58,0.7);}
-
         @keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
         @keyframes spin{to{transform:rotate(360deg)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
@@ -1422,9 +1488,14 @@ export default function QueueDSPage() {
         @keyframes dotPing{0%{transform:scale(1);opacity:1}100%{transform:scale(2.2);opacity:0}}
         @keyframes navItemIn{from{opacity:0;transform:translateX(-8px) scale(0.94)}to{opacity:1;transform:none}}
         @keyframes progressPulse{0%,100%{opacity:1}50%{opacity:0.5}}
+        @keyframes slotFill{0%{transform:scale(0.5) rotateY(90deg) translateX(20px);opacity:0}55%{transform:scale(1.1) rotateY(-6deg) translateX(-2px)}80%{transform:scale(0.97) rotateY(1deg)}100%{transform:scale(1) rotateY(0) translateX(0);opacity:1}}
+        @keyframes slotEmpty{0%{opacity:1;transform:scale(1) translateY(0)}40%{opacity:0.5;transform:scale(0.9) translateY(-8px)}100%{opacity:0;transform:scale(0.65) translateY(-20px) rotate(5deg)}}
+        @keyframes slotPeek{0%,100%{filter:brightness(1) saturate(1)}50%{filter:brightness(1.7) saturate(1.6)}}
+        @keyframes errFlash{0%,100%{background:rgba(239,68,68,0.1)}50%{background:rgba(239,68,68,0.42)}}
+        @keyframes flowLine{0%{background-position:-200% 0}100%{background-position:300% 0}}
 
-        .pg{height:100vh;display:flex;flex-direction:row;overflow:hidden;background:radial-gradient(ellipse 60% 45% at 5% 0%,rgba(59,130,246,0.10) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 95% 100%,rgba(244,114,182,0.08) 0%,transparent 52%),radial-gradient(ellipse 40% 35% at 50% 50%,rgba(167,139,250,0.04) 0%,transparent 60%),#050818}
-        .pg-body{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;padding-left:62px;}
+        .pg{height:100vh;display:flex;flex-direction:column;overflow:hidden;background:radial-gradient(ellipse 60% 45% at 5% 0%,rgba(59,130,246,0.10) 0%,transparent 55%),radial-gradient(ellipse 50% 40% at 95% 100%,rgba(244,114,182,0.08) 0%,transparent 52%),radial-gradient(ellipse 40% 35% at 50% 50%,rgba(167,139,250,0.04) 0%,transparent 60%),#050818}
+        .pg-body{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
         .hd{flex-shrink:0;display:flex;align-items:center;gap:12px;padding:9px 24px;background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);border-bottom:1px solid rgba(96,165,250,0.12);box-shadow:0 1px 0 rgba(96,165,250,0.06),0 4px 24px rgba(0,0,0,0.4)}
         .hd-logo{width:34px;height:34px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 0 20px rgba(96,165,250,0.5),0 0 40px rgba(96,165,250,0.15);animation:rPulse 3s ease-in-out infinite}
         .hd-brand{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.4px;background:linear-gradient(90deg,#93c5fd 0%,#a78bfa 50%,#f472b6 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite}
@@ -1452,7 +1523,7 @@ export default function QueueDSPage() {
         .btn-run::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.15) 0%,transparent 60%);border-radius:inherit;pointer-events:none}
         .btn-run:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 36px rgba(96,165,250,0.55),0 6px 20px rgba(0,0,0,0.5)}
         .btn-run:active:not(:disabled){transform:translateY(0)}
-        .btn-run.running{animation:rPulse 1.2s ease-in-out infinite;background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#3b82f6)}
+        .btn-run.running{animation:progressPulse 1.2s ease-in-out infinite;background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#3b82f6)}
         .btn-run:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none}
         .btn-rst{padding:7px 11px;border-radius:8px;background:transparent;border:1px solid rgba(248,113,113,0.28);color:#f87171;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;cursor:pointer;transition:all 0.16s}
         .btn-rst:hover{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.5)}
@@ -1466,43 +1537,6 @@ export default function QueueDSPage() {
         .term-toggle:hover{background:var(--cyan-dim);color:var(--cyan);border-color:rgba(96,165,250,0.4)}
         .term-bar-closed{display:flex;align-items:center;gap:6px;padding:6px 13px;background:rgba(4,7,18,0.95);border-top:1px solid var(--border-subtle);flex-shrink:0;cursor:pointer;transition:background 0.15s}
         .term-bar-closed:hover{background:rgba(8,14,32,0.95)}
-        .qv-metrics{display:flex;border-bottom:1px solid var(--border-subtle);background:rgba(4,8,26,0.75);flex-shrink:0}
-        .qv-m{flex:1;padding:7px 8px;text-align:center;border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:3px;transition:background 0.2s}
-        .qv-m:last-child{border-right:none}
-        .qv-m.sv-m-active{background:rgba(96,165,250,0.05);animation:metricPop 0.3s ease}
-        .qv-ml{font-family:'JetBrains Mono',monospace;font-size:6.5px;color:var(--text-muted);letter-spacing:0.2em;text-transform:uppercase;font-weight:600}
-        .qv-mv{font-family:'JetBrains Mono',monospace;font-weight:700;line-height:1.1;transition:color 0.3s}
-        .qv{display:flex;flex-direction:column;flex:1;min-height:0;position:relative}
-        .qv.qv-err{animation:svSh 0.4s ease}
-        .qv-row{flex:1;display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 14px 0;position:relative;flex-wrap:wrap}
-        .qv-front-tag,.qv-back-tag{font-family:'JetBrains Mono',monospace;font-size:9px;color:#1e3050;letter-spacing:0.08em}
-        .qv-front-tag{color:#fbbf24}
-        .qv-back-tag{color:#4ade80}
-        .qv-items{display:flex;flex-direction:row;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;overflow-x:auto;padding-bottom:4px;max-width:100%;}
-        .qv-block{height:58px;min-width:90px;border-radius:13px;border:1.5px solid transparent;display:flex;align-items:center;justify-content:center;padding:0 12px;gap:8px;position:relative;transition:all 0.28s ease;flex-shrink:0;}
-        .qv-block::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.18) 0%,transparent 58%);border-radius:inherit;pointer-events:none;}
-        .qv-enq{animation:blkDrop 0.52s cubic-bezier(0.34,1.56,0.64,1) both;}
-        .qv-front{animation:frontPulse 0.6s ease 2 both;}
-        .qv-pk-ring,.qv-pk-ring2{position:absolute;inset:-4px;border-radius:19px;border:2.5px solid;animation:pkRing 0.78s cubic-bezier(0.22,1,0.36,1) forwards;pointer-events:none}
-        .qv-pk-ring2{animation-delay:0.16s}
-        .qv-bidx{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(255,255,255,0.42);}
-        .qv-bval{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#fff;text-shadow:0 2px 9px rgba(0,0,0,0.35);}
-        .qv-btag{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,0.68);white-space:nowrap;}
-        .qv-btag.back{color:rgba(74,222,128,0.9);}
-        .qv-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:140px;height:88px;border:1px dashed rgba(255,255,255,0.07);border-radius:13px;gap:7px;}
-        .qv-empty.sv-empty-err{border-color:rgba(239,68,68,0.35);animation:svSh 0.38s ease;}
-        .qv-ei{font-size:22px;opacity:0.45;}
-        .qv-et{font-family:'JetBrains Mono',monospace;font-size:9.5px;color:#1e3050;letter-spacing:0.07em;}
-        .qv-fly{position:absolute;top:18px;left:50%;transform:translateX(-50%);height:58px;min-width:90px;border-radius:13px;display:flex;align-items:center;justify-content:center;gap:9px;z-index:20;pointer-events:none;border:1.5px solid rgba(255,255,255,0.28);animation:flyAway 0.76s cubic-bezier(0.22,1,0.36,1) forwards;}
-        .qv-fly-v{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:#fff;}
-        .qv-fly-tag{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:rgba(255,255,255,0.7);letter-spacing:0.06em;}
-        .qv-plat{margin-top:5px;width:280px;height:11px;border-radius:7px;background:linear-gradient(90deg,rgba(96,165,250,0.28),rgba(96,165,250,0.14),rgba(96,165,250,0.28));position:relative;overflow:hidden;align-self:center;}
-        .qv-plat-shine{position:absolute;top:0;left:-100%;width:55%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.28),transparent);animation:pShine 3.2s ease-in-out infinite;}
-        .qv-base{font-family:'JetBrains Mono',monospace;font-size:8px;color:#1e3050;letter-spacing:0.1em;margin-top:4px;margin-bottom:14px;text-align:center;}
-        .oi{padding:8px 14px;border-top:1px solid var(--border-subtle);background:rgba(4,8,24,0.6);min-height:54px;flex-shrink:0}
-        .oi-badge{display:inline-flex;align-items:center;gap:7px;padding:4px 12px;border-radius:20px;margin-bottom:4px;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;animation:stepPop 0.22s ease;border:1px solid;letter-spacing:0.04em}
-        .oi-msg{font-family:'JetBrains Mono',monospace;font-size:9.5px;line-height:1.6;animation:fadeUp 0.2s ease;color:var(--text-secondary)}
-        .oi-idle{display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);letter-spacing:0.04em;padding:6px 0}
         .ctrl{display:flex;align-items:center;gap:4px;padding:6px 12px;border-top:1px solid var(--border-subtle);background:rgba(3,6,18,0.65);flex-wrap:wrap;flex-shrink:0}
         .cb{width:28px;height:26px;border-radius:7px;border:1px solid var(--border-medium);background:var(--surface-3);color:var(--text-secondary);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.14s}
         .cb:hover:not(:disabled){background:var(--cyan-dim);color:var(--cyan);border-color:rgba(96,165,250,0.45);box-shadow:0 0 12px var(--cyan-glow)}
@@ -1519,7 +1553,7 @@ export default function QueueDSPage() {
         .sb.sa{background:var(--cyan-dim);border-color:rgba(96,165,250,0.4);color:var(--cyan);box-shadow:0 0 8px rgba(96,165,250,0.2)}
         .pr{display:flex;align-items:center;gap:8px;padding:5px 14px;border-top:1px solid var(--border-subtle);flex-shrink:0}
         .pt2{flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;box-shadow:inset 0 1px 2px rgba(0,0,0,0.3)}
-        .pf{height:100%;border-radius:99px;transition:width 0.4s cubic-bezier(0.4,0,0.2,1);background:linear-gradient(90deg,#1d4ed8,#60a5fa,#a78bfa);box-shadow:0 0 8px rgba(96,165,250,0.5)}
+        .pf{height:100%;border-radius:99px;background:linear-gradient(90deg,#1d4ed8,#60a5fa,#a78bfa);transition:width 0.4s cubic-bezier(0.4,0,0.2,1);box-shadow:0 0 8px rgba(96,165,250,0.5)}
         .ptx{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-secondary);min-width:32px;text-align:right}
         .slh{padding:5px 14px 2px;font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-weight:600;border-top:1px solid var(--border-subtle);flex-shrink:0;display:flex;align-items:center;justify-content:space-between}
         .slh-count{font-size:7px;color:var(--cyan);opacity:0.7}
@@ -1535,25 +1569,12 @@ export default function QueueDSPage() {
       `}</style>
 
       <div className="pg">
-        {/* ── SIDEBAR — desktop only ── */}
-        <SidebarNav
-          activeSection={activeSection}
-          onNav={scrollToSection}
-          hasSteps={steps.length>0}
-          hasErrors={!!error||hasAiErrors}
-          termLines={termLines}
-          onRun={handleRun}
-          onReset={doReset}
-          playing={playing}
-          validating={validating}
-        />
-
         <div className="pg-body">
           <header className="hd">
             <div className="hd-logo">🔁</div>
             <div>
               <div className="hd-brand">VisuoSlayer</div>
-              <div className="hd-tagline">Queue DS Visualizer · Write · Run · Step through every operation</div>
+              <div className="hd-tagline">ARRAY QUEUE · CIRCULAR BUFFER · FIFO · WRITE · RUN · VISUALIZE</div>
             </div>
             <div className="hd-r">
               <div className="hd-ds-badge">FIFO QUEUE</div>
@@ -1629,96 +1650,95 @@ export default function QueueDSPage() {
                 <span className="dot" style={{ background:"#60a5fa", boxShadow:"0 0 6px #60a5fa" }}/>
                 <span className="dot" style={{ background:"#f472b6", boxShadow:"0 0 6px #f472b6" }}/>
                 <span className="dot" style={{ background:"#4ade80", boxShadow:"0 0 6px #4ade80" }}/>
-                <span className="ptl">Queue Visualization</span>
+                <span className="ptl">Array Queue · Circular Buffer</span>
                 {steps.length>0&&<span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(96,165,250,0.25)", padding:"2px 9px", borderRadius:20, fontWeight:700 }}>{idx+1} / {steps.length}</span>}
               </div>
 
+              <MetricsBar step={step}/>
+
               <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, overflow:"hidden" }}>
-                <QueueViz step={step} animKey={animKey} idle={idle}/>
+                <ArrayViz step={step} animKey={animKey} idle={idle}/>
+              </div>
 
-                <div className="oi">
-                  {step&&os ? (
-                    <>
-                      <div className="oi-badge" style={{ color:os.c, background:os.bg, borderColor:os.bd }}>
-                        <span>{os.icon}</span><span>{os.label}</span>
-                        {step.type==="enqueue"&&<span style={{opacity:0.55}}>({step.value})</span>}
-                        {(step.type==="dequeue"||step.type==="front")&&step.valid!==false&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
-                        {step.type==="isEmpty"&&<span style={{opacity:0.55}}>→ {String(step.result)}</span>}
-                        {step.type==="size"&&<span style={{opacity:0.55}}>→ {step.result}</span>}
-                      </div>
-                      <div className="oi-msg">{step.message}</div>
-                    </>
-                  ) : (
-                    <div className="oi-idle">
-                      <span>🔁</span>
-                      <span style={{ color:"var(--text-muted)" }}>
-                        {idle?"Write a Queue class, use it below, hit Run":hasAiErrors?"VisuoSlayer found errors — see terminal":error?"Fix errors and run again":validating?"VisuoSlayer reviewing your code…":"Waiting…"}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {steps.length>0&&(
-                  <div className="ctrl">
-                    <button className="cb" onClick={() => goTo(0)} disabled={idx<=0}>⏮</button>
-                    <button className="cb" onClick={() => goTo(idx-1)} disabled={idx<=0}>◀</button>
-                    <button className="cp" onClick={() => { if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}else{clearInterval(timerRef.current);setPlaying(p=>!p);} }}>
-                      {playing?"⏸":done?"↺":"▶"}
-                    </button>
-                    <button className="cb" onClick={() => goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
-                    <button className="cb" onClick={() => goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
-                    <div className="csep"/>
-                    <div className="spd">
-                      {[[2,"0.5×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl]) => (
-                        <button key={s} className={`sb${speed===s?" sa":""}`} onClick={() => setSpeed(s)}>{lbl}</button>
-                      ))}
-                    </div>
-                    <div className="csep"/>
-                    <button className="cb" onClick={copyQueueState} style={{ fontSize:12 }}>📋</button>
-                    <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-secondary)", marginLeft:2 }}>
-                      <span style={{ color:"var(--cyan)", fontWeight:700 }}>{idx+1}</span>
-                      <span style={{ color:"var(--text-muted)" }}>/{steps.length}</span>
-                    </span>
-                  </div>
-                )}
-
-                {steps.length>0&&(
-                  <div className="pr">
-                    <div className="pt2"><div className="pf" style={{ width:`${prog}%` }}/></div>
-                    <span className="ptx">{prog}%</span>
-                  </div>
-                )}
-
-                {steps.length>0&&(
+              <div className="oi" style={{padding:"8px 14px",borderTop:"1px solid var(--border-subtle)",background:"rgba(4,8,24,0.6)",minHeight:"54px",flexShrink:0}}>
+                {step&&os ? (
                   <>
-                    <div className="slh">
-                      <span>OPERATION LOG — click to jump</span>
-                      <span className="slh-count">{steps.length} ops</span>
+                    <div className="oi-badge" style={{ display:"inline-flex",alignItems:"center",gap:"7px",padding:"4px 12px",borderRadius:"20px",marginBottom:"4px",fontFamily:"'JetBrains Mono',monospace",fontSize:"9.5px",fontWeight:700,animation:"stepPop 0.22s ease",border:"1px solid",color:os.c,background:os.bg,borderColor:os.bd }}>
+                      <span>{os.icon}</span><span>{os.label}</span>
+                      {step.type==="enqueue"&&<span style={{opacity:0.55}}>({step.value})</span>}
+                      {(step.type==="dequeue"||step.type==="front")&&step.value!=null&&<span style={{opacity:0.55}}>→ {step.value}</span>}
+                      {step.type==="isEmpty"&&<span style={{opacity:0.55}}>→ {String(step.result)}</span>}
+                      {step.type==="size"&&<span style={{opacity:0.55}}>→ {step.result}</span>}
                     </div>
-                    <div className="sl" ref={listRef}>
-                      {steps.map((s,i) => {
-                        const sm=OP[s.type]??OP.enqueue;
-                        const past=i<idx, active=i===idx;
-                        return (
-                          <div key={i} className={`si${active?" sl-active":""}`} onClick={() => goTo(i)}>
-                            <span className="si-dot" style={{ background:past?"var(--green)":active?sm.c:"var(--text-muted)", boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none" }}/>
-                            <span style={{ color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)" }}>
-                              {sm.label}
-                              {s.type==="enqueue"&&<span className="si-v">({s.value})</span>}
-                              {s.type==="dequeue"&&s.valid!==false&&<span className="si-v"> → {s.value}</span>}
-                              {s.type==="front"&&s.valid!==false&&<span className="si-v"> = {s.value}</span>}
-                              {s.type==="isEmpty"&&<span className="si-v"> = {String(s.result)}</span>}
-                              {s.type==="size"&&<span className="si-v"> = {s.result}</span>}
-                              {(s.type==="dequeue_error"||s.type==="front_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
-                            </span>
-                            <span className="si-ln">L{s.lineNum+1}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <div className="oi-msg" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:"9.5px",lineHeight:1.6,animation:"fadeUp 0.2s ease",color:"var(--text-secondary)"}}>{step.message}</div>
                   </>
+                ) : (
+                  <div style={{display:"flex",alignItems:"center",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"var(--text-muted)",padding:"6px 0"}}>
+                    <span>🔁</span>
+                    <span>{idle?"Write a Queue, hit Run to visualize":hasAiErrors?"Errors found — check terminal":error?"Fix errors and run again":validating?"VisuoSlayer reviewing…":"Waiting…"}</span>
+                  </div>
                 )}
               </div>
+
+              {steps.length>0&&(
+                <div className="ctrl">
+                  <button className="cb" onClick={() => goTo(0)} disabled={idx<=0}>⏮</button>
+                  <button className="cb" onClick={() => goTo(idx-1)} disabled={idx<=0}>◀</button>
+                  <button className="cp" onClick={() => { if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}else{clearInterval(timerRef.current);setPlaying(p=>!p);} }}>
+                    {playing?"⏸":done?"↺":"▶"}
+                  </button>
+                  <button className="cb" onClick={() => goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
+                  <button className="cb" onClick={() => goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
+                  <div className="csep"/>
+                  <div className="spd">
+                    {[[2,"0.5×"],[1.1,"1×"],[0.55,"2×"]].map(([s,lbl]) => (
+                      <button key={s} className={`sb${speed===s?" sa":""}`} onClick={() => setSpeed(s)}>{lbl}</button>
+                    ))}
+                  </div>
+                  <div className="csep"/>
+                  <button className="cb" onClick={copyQueueState} style={{ fontSize:12 }}>📋</button>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8.5, color:"var(--text-secondary)", marginLeft:2 }}>
+                    <span style={{ color:"var(--cyan)", fontWeight:700 }}>{idx+1}</span>
+                    <span style={{ color:"var(--text-muted)" }}>/{steps.length}</span>
+                  </span>
+                </div>
+              )}
+
+              {steps.length>0&&(
+                <div className="pr">
+                  <div className="pt2"><div className="pf" style={{ width:`${prog}%` }}/></div>
+                  <span className="ptx">{prog}%</span>
+                </div>
+              )}
+
+              {steps.length>0&&(
+                <>
+                  <div className="slh">
+                    <span>OPERATION LOG — click to jump</span>
+                    <span className="slh-count">{steps.length} ops</span>
+                  </div>
+                  <div className="sl" ref={listRef}>
+                    {steps.map((s,i) => {
+                      const sm=OP[s.type]??OP.enqueue;
+                      const past=i<idx, active=i===idx;
+                      return (
+                        <div key={i} className={`si${active?" sl-active":""}`} onClick={() => goTo(i)}>
+                          <span className="si-dot" style={{ background:past?"var(--green)":active?sm.c:"var(--text-muted)", boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 5px var(--green-glow)":"none" }}/>
+                          <span style={{ color:active?sm.c:past?"var(--text-secondary)":"var(--text-muted)" }}>
+                            {sm.label}
+                            {s.type==="enqueue"&&<span className="si-v">({s.value})</span>}
+                            {(s.type==="dequeue"||s.type==="front")&&s.value!=null&&<span className="si-v"> → {s.value}</span>}
+                            {s.type==="isEmpty"&&<span className="si-v"> = {String(s.result)}</span>}
+                            {s.type==="size"&&<span className="si-v"> = {s.result}</span>}
+                            {(s.type==="dequeue_error"||s.type==="front_error"||s.type==="enqueue_error")&&<span style={{color:"#f87171",opacity:0.7}}> ⚠</span>}
+                          </span>
+                          <span className="si-ln">L{s.lineNum+1}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
             </div>
           </main>
         </div>
