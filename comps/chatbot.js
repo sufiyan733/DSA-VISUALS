@@ -1401,17 +1401,20 @@ function MessageBubble({msg,idx,speakingIdx,onSpeak,onStopSpeak,voiceSpeed,onSpe
         </div>
       )}
 
-      {/* Content container: constrain width */}
+      {/* Content container */}
       <div style={{
-        maxWidth:isUser?"min(76%,600px)":(isMobile?"calc(100% - 0px)":"min(92%,760px)"),
+        maxWidth:isUser?"min(76%,600px)":(isMobile?"100%":"min(92%,760px)"),
         width:isUser?"auto":"100%",
         display:"flex",
         flexDirection:"column",
-        alignItems:isUser?"flex-end":"flex-start",
+        alignItems:"stretch",
       }}>
-        {/* Action bar */}
-        <div style={{display:"flex",alignItems:"center",gap:"3px",marginBottom:"5px",
-          justifyContent:isUser?"flex-end":"flex-start"}}>
+        {/* Action bar — full width, buttons always on the RIGHT */}
+        <div style={{
+          display:"flex",alignItems:"center",gap:"3px",marginBottom:"5px",
+          justifyContent:"flex-end",
+          width:"100%",
+        }}>
           {isUser?(
             <>
               <button onClick={handleCopy} style={{display:"flex",alignItems:"center",gap:"3px",background:copied?"rgba(52,211,153,0.13)":"none",border:`1px solid ${copied?"rgba(52,211,153,0.28)":"transparent"}`,borderRadius:"6px",padding:"3px 7px",fontFamily:MONO,fontSize:"8px",color:copied?"#34d399":TEXT_DIM,cursor:"pointer"}}>{copied?<><IconCheck size={9}/>COPIED</>:<><IconCopy size={9}/>COPY</>}</button>
@@ -1448,8 +1451,7 @@ function MessageBubble({msg,idx,speakingIdx,onSpeak,onStopSpeak,voiceSpeed,onSpe
               :SURFACE,
           border:`1px solid ${isUser?"rgba(124,111,255,0.3)":isCodeOnlyReply?"rgba(16,185,129,0.38)":BORDER}`,
           boxShadow:isUser?"0 4px 22px rgba(124,111,255,0.18)":isCodeOnlyReply?"0 4px 20px rgba(16,185,129,0.15)":"0 2px 12px rgba(0,0,0,0.3)",
-          display:"inline-block",
-          width:isUser?"auto":"100%",
+          alignSelf:isUser?"flex-end":"stretch",
           minWidth:isUser?"60px":"auto",
         }}>
           <div style={{fontFamily:SANS,fontSize:"13.5px",lineHeight:"1.72",
