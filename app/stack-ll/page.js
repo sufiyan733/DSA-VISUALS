@@ -990,8 +990,6 @@ export default function StackDSPage(){
           @keyframes stepPop{0%{transform:scale(0.88);opacity:0}60%{transform:scale(1.04)}100%{transform:scale(1);opacity:1}}
           @keyframes metricPop{0%{transform:scale(1)}50%{transform:scale(1.1)}100%{transform:scale(1)}}
           @keyframes toastIn{0%{opacity:0;transform:translateY(8px) scale(0.94)}100%{opacity:1;transform:none}}
-          @keyframes toastOut{0%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-8px) scale(0.94)}}
-          @keyframes termSlideDown{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
           @keyframes blkDrop{0%{transform:translateY(-60px) scale(0.78);opacity:0;filter:blur(3px)}55%{transform:translateY(4px) scale(1.05);opacity:1;filter:blur(0)}75%{transform:translateY(-2px) scale(0.98)}100%{transform:none;opacity:1}}
           @keyframes flyAway{0%{transform:translateX(-50%) scale(1) rotate(0);opacity:1}35%{opacity:1}100%{transform:translateX(calc(-50% + 55px)) translateY(-100px) scale(0.5) rotate(22deg);opacity:0}}
           @keyframes pkRing{0%{transform:scale(1);opacity:0.9}100%{transform:scale(1.35);opacity:0}}
@@ -1037,7 +1035,7 @@ export default function StackDSPage(){
           .mob-lb::-webkit-scrollbar{display:none;}
           .mob-lt{padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);transition:all 0.15s;flex-shrink:0;}
           .mob-lt.la{color:#e8f4ff;background:rgba(255,255,255,0.06);}
-          .mob-editor-wrap{background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);border-radius:0;display:flex;flex-direction:column;height:510px;}
+          .mob-editor-wrap{background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);border-radius:0;display:flex;flex-direction:column;height:340px;}
           .mob-rr{padding:10px 12px;border-top:1px solid rgba(96,165,250,0.18);display:flex;align-items:center;gap:8px;flex-shrink:0;background:rgba(4,8,22,0.96);box-shadow:0 -4px 16px rgba(0,0,0,0.4);}
           .mob-btn-run{flex:1;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);border:1px solid rgba(96,165,250,0.4);color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.18s;box-shadow:0 0 24px rgba(96,165,250,0.35),0 4px 12px rgba(0,0,0,0.4);-webkit-tap-highlight-color:transparent;letter-spacing:0.03em;}
           .mob-btn-run:active{transform:scale(0.97);box-shadow:0 0 12px rgba(96,165,250,0.2);}

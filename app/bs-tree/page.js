@@ -1,10 +1,13 @@
 "use client";
+
 import { useState, useRef, useEffect, useCallback } from "react";
 
 /* ─── BST Logic ─── */
 class TreeNode {
   constructor(val) {
-    this.val = val; this.left = null; this.right = null;
+    this.val = val;
+    this.left = null;
+    this.right = null;
     this.id = Math.random().toString(36).slice(2, 9);
   }
 }
@@ -20,13 +23,19 @@ const bstDelete = (node, v) => {
   if (v > node.val) { node.right = bstDelete(node.right, v); return node; }
   if (!node.left) return node.right;
   if (!node.right) return node.left;
-  let s = node.right; while (s.left) s = s.left;
-  node.val = s.val; node.right = bstDelete(node.right, s.val); return node;
+  let s = node.right;
+  while (s.left) s = s.left;
+  node.val = s.val;
+  node.right = bstDelete(node.right, s.val);
+  return node;
 };
 const cloneTree = (n) => {
   if (!n) return null;
-  const c = new TreeNode(n.val); c.id = n.id;
-  c.left = cloneTree(n.left); c.right = cloneTree(n.right); return c;
+  const c = new TreeNode(n.val);
+  c.id = n.id;
+  c.left = cloneTree(n.left);
+  c.right = cloneTree(n.right);
+  return c;
 };
 const pathToNode = (node, val, path = []) => {
   if (!node) return null;
@@ -34,223 +43,656 @@ const pathToNode = (node, val, path = []) => {
   if (val === node.val) return path;
   return val < node.val ? pathToNode(node.left, val, path) : pathToNode(node.right, val, path);
 };
-const treeHeight = (n) => !n ? 0 : 1 + Math.max(treeHeight(n.left), treeHeight(n.right));
-const treeSize  = (n) => !n ? 0 : 1 + treeSize(n.left) + treeSize(n.right);
+const treeHeight = (n) => (!n ? 0 : 1 + Math.max(treeHeight(n.left), treeHeight(n.right)));
+const treeSize = (n) => (!n ? 0 : 1 + treeSize(n.left) + treeSize(n.right));
+const layoutTree = (root) => {
+  const pos = {};
+  let counter = 0;
+  const inorder = (n) => {
+    if (!n) return;
+    inorder(n.left);
+    pos[n.id] = { x: counter++, y: 0 };
+    inorder(n.right);
+  };
+  const depth = (n, d) => {
+    if (!n) return;
+    pos[n.id].y = d;
+    depth(n.left, d + 1);
+    depth(n.right, d + 1);
+  };
+  inorder(root);
+  depth(root, 0);
+  return pos;
+};
 
-/* ─── Parser ─── */
-function parseAndRunCode(code) {
-  const steps = [], errors = [];
-  const stripped = code.replace(/\/\/[^\n]*/g,"").replace(/\/\*[\s\S]*?\*\//g,"").replace(/#[^\n]*/g,"");
-  const lines = code.split("\n"), strippedLines = stripped.split("\n");
-  let instanceVar = null;
-  const instancePatterns = [
-    /(?:const|let|var)\s+(\w+)\s*=\s*new\s+\w*[Bb][Ss][Tt]\s*\(/,
-    /(?:const|let|var)\s+(\w+)\s*=\s*new\s+\w+\s*\(\s*\)/,
-    /(\w+)\s*=\s*(?:BST|BinarySearchTree|Tree)\s*\(\s*\)/,
-    /(\w+)\s*:=\s*&?\s*(?:BST|BinarySearchTree|Tree)\s*[({]/,
-    /(?:BST|BinarySearchTree|Tree)\s*(?:<\w+>)?\s+(\w+)\s*[=;]/,
-  ];
-  for (const pat of instancePatterns) { const m = stripped.match(pat); if (m) { instanceVar = m[1]; break; } }
-  if (!instanceVar) { const fb = stripped.match(/(\w+)\s*\.\s*(?:insert|Insert)\s*\(\s*\d+/); if (fb) instanceVar = fb[1]; }
-  if (!instanceVar) { errors.push("Could not find BST instance.\nCreate one:\n  const tree = new BST();\n  tree.insert(50);"); return { steps, errors }; }
-  const varRe = instanceVar.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
-  const callRe = new RegExp(`${varRe}\\s*\\.\\s*(insert|Insert|add|Add|search|Search|find|Find|contains|Contains|has|Has|delete|Delete|remove|Remove|delete_val)\\s*\\(\\s*(\\d+)`,"g");
-  const allOps = []; let m;
-  while ((m = callRe.exec(stripped)) !== null) {
-    const mn = m[1].toLowerCase();
-    let type = "insert";
-    if (["search","find","contains","has"].includes(mn)) type = "search";
-    else if (["delete","remove","delete_val"].includes(mn)) type = "delete";
-    allOps.push({ type, val: +m[2], charIdx: m.index });
+/* ─── C Parser ─── */
+function parseCBST(code) {
+  const steps = [];
+  let root = null;
+  const lines = code.split("\n");
+
+  const mainMatch = code.match(/int\s+main\s*\([^)]*\)\s*\{([\s\S]*)/);
+  if (!mainMatch) {
+    return { steps: [], errors: ["No main() function found. Add a main() that calls insert/search/delete."] };
   }
-  if (!allOps.length) { errors.push(`Instance '${instanceVar}' found but no calls detected.\nCall insert(N), search(N), or delete(N).`); return { steps, errors }; }
-  const getLineNum = (ci) => { let cur=0; for(let i=0;i<strippedLines.length;i++){cur+=strippedLines[i].length+1;if(cur>ci)return i;} return lines.length-1; };
+
+  let mainBody = "";
+  let depth = 0;
+  let started = false;
+  const mainStart = code.indexOf(mainMatch[0]);
+  const bodyStart = code.indexOf("{", mainStart + mainMatch[0].indexOf("main"));
+  for (let ci = bodyStart; ci < code.length; ci++) {
+    if (code[ci] === "{") { depth++; started = true; }
+    else if (code[ci] === "}") { depth--; }
+    mainBody += code[ci];
+    if (started && depth === 0) break;
+  }
+
+  const mainLines = mainBody.split("\n");
+  const mainBodyStartLine = code.slice(0, bodyStart).split("\n").length - 1;
+  const opRe = /\b(\w+)\s*\(\s*&?\w+\s*,\s*(-?\d+)\s*\)/g;
+
+  for (let li = 0; li < mainLines.length; li++) {
+    const line = mainLines[li].trim();
+    if (!line || line.startsWith("//") || line.startsWith("*") || line.startsWith("#")) continue;
+
+    let m;
+    const localRe = new RegExp(opRe.source, "g");
+    while ((m = localRe.exec(mainLines[li])) !== null) {
+      const fnName = m[1].toLowerCase();
+      const val = parseInt(m[2], 10);
+      const originalLineNum = mainBodyStartLine + li;
+      const codeLine = lines[originalLineNum] ?? mainLines[li];
+
+      let op = null;
+      if (/insert|add|push|put/.test(fnName)) op = "insert";
+      else if (/search|find|lookup|get|contain|has/.test(fnName)) op = "search";
+      else if (/delete|remove|del|erase/.test(fnName)) op = "delete";
+
+      if (!op) continue;
+      if (/^\s*return\s/.test(mainLines[li]) || /node\s*=\s*\w+\(/.test(mainLines[li])) continue;
+
+      if (op === "insert") {
+        root = bstInsert(root, val);
+        const snap = cloneTree(root);
+        steps.push({ type: "insert", value: val, tree: snap, highlight: [val], path: pathToNode(snap, val), message: `insert(${val}) → placed at correct BST position`, size: treeSize(snap), height: treeHeight(snap), lineNum: originalLineNum, codeLine });
+      } else if (op === "search") {
+        const snap = cloneTree(root);
+        const path = pathToNode(snap, val);
+        steps.push({ type: "search", value: val, tree: snap, highlight: path || [], path, found: !!path, message: path ? `search(${val}) → Found ✓  path: ${path.join(" → ")}` : `search(${val}) → Not found ✗`, size: treeSize(snap), height: treeHeight(snap), lineNum: originalLineNum, codeLine });
+      } else if (op === "delete") {
+        root = bstDelete(root, val);
+        const snap = cloneTree(root);
+        steps.push({ type: "delete", value: val, tree: snap, highlight: [], path: null, message: `delete(${val}) → removed, BST property maintained`, size: treeSize(snap), height: treeHeight(snap), lineNum: originalLineNum, codeLine });
+      }
+    }
+  }
+
+  if (!steps.length) {
+    return { steps: [], errors: ["No BST operations detected in main().\nCall insert(&tree, N), search(&tree, N), or delete(&tree, N) from main()."] };
+  }
+  return { steps, errors: [] };
+}
+
+/* ─── Generic/OOP Parser ─── */
+function parseGenericBST(code) {
+  const steps = [];
+  const errors = [];
+  const lines = code.split("\n");
+
+  // ── Step 1: Find BST instance variable via scoring ──
+  const SKIP_KEYWORDS = new Set([
+    "if","for","while","return","class","function","def","int","void","bool",
+    "string","let","const","var","new","null","true","false","this","self",
+    "node","nullptr","None","undefined","else","elif","do","switch","case",
+  ]);
+
+  const candidates = new Map();
+  const scoreLine = (varName, score) => {
+    if (!varName) return;
+    if (SKIP_KEYWORDS.has(varName)) return;
+    if (varName.length < 2) return;
+    candidates.set(varName, (candidates.get(varName) ?? 0) + score);
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i];
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("//") || trimmed.startsWith("#") || trimmed.startsWith("*")) continue;
+
+    let m = raw.match(/(?:const|let|var)\s+(\w+)\s*=\s*new\s+\w+/);
+    if (m) scoreLine(m[1], 10);
+
+    m = raw.match(/\b\w+\s+(\w+)\s*=\s*new\s+\w+\s*\(/);
+    if (m) scoreLine(m[1], 9);
+
+    m = raw.match(/\b(?:BST|BinarySearchTree|BSTTree|Tree|AVL|Bst)\s*(?:<[^>]*>)?\s+(\w+)\s*[=;{(]/);
+    if (m) scoreLine(m[1], 8);
+
+    m = raw.match(/^(\w+)\s*=\s*\w+\s*\(\s*\)\s*(?:#.*)?$/);
+    if (m) scoreLine(m[1], 8);
+
+    m = raw.match(/^(\w+)\s*:=\s*&?\w+\s*[{(]/);
+    if (m) scoreLine(m[1], 8);
+
+    const dotCallRe = /\b(\w+)\s*\.\s*\w+\s*\(\s*-?\d+/g;
+    let dm;
+    while ((dm = dotCallRe.exec(raw)) !== null) {
+      if (dm[1] === "this" || dm[1] === "self") continue;
+      if (SKIP_KEYWORDS.has(dm[1])) continue;
+      scoreLine(dm[1], 3);
+    }
+  }
+
+  let instanceVar = null;
+  let bestScore = 0;
+  for (const [name, score] of candidates) {
+    if (score > bestScore) { bestScore = score; instanceVar = name; }
+  }
+
+  if (!instanceVar) {
+    errors.push(
+      "Could not find a BST instance variable.\n\n" +
+      "Make sure you declare and use a BST object:\n" +
+      "  const tree = new BST();  tree.insert(50);  tree.search(30);\n" +
+      "  tree = BST()             tree.insert(50)   tree.delete(30)\n" +
+      "  tree := &BST{}           tree.insert(50)   tree.search(30)"
+    );
+    return { steps, errors };
+  }
+
+  const varEsc = instanceVar.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const callRe = new RegExp(`\\b${varEsc}\\s*\\.\\s*(\\w+)\\s*\\(\\s*(-?\\d+)`, "g");
+
+  const DEFINITION_PREFIX = /^\s*(?:public|private|protected|static|def\s|func\s|fn\s|void\s|bool\s|int\s|Node\s|auto\s)/;
+  const FUNCTION_DEF = /\bfunction\s+\w+\s*\(/;
+
+  const allOps = [];
+
+  for (let li = 0; li < lines.length; li++) {
+    const raw = lines[li];
+    const trimmed = raw.trim();
+
+    if (trimmed.startsWith("//") || trimmed.startsWith("#") ||
+        trimmed.startsWith("*") || trimmed.startsWith("/*")) continue;
+
+    if (DEFINITION_PREFIX.test(raw) || FUNCTION_DEF.test(raw)) continue;
+
+    callRe.lastIndex = 0;
+    let m;
+    while ((m = callRe.exec(raw)) !== null) {
+      const rawMethod = m[1];
+      const mn = rawMethod.toLowerCase();
+      const val = parseInt(m[2], 10);
+
+      let type = null;
+      if (/insert|add|push|put|enqueue|append/.test(mn)) type = "insert";
+      else if (/search|find|lookup|get|contain|has|exist|query/.test(mn)) type = "search";
+      else if (/delete|remove|del|erase|pop/.test(mn)) type = "delete";
+
+      if (type) allOps.push({ type, val, lineNum: li, method: rawMethod, codeLine: trimmed });
+    }
+  }
+
+  if (!allOps.length) {
+    errors.push(
+      `Instance '${instanceVar}' found but no BST operations detected.\n\n` +
+      `Use methods like:\n` +
+      `  insert / add / push / put\n` +
+      `  search / find / has / contains\n` +
+      `  delete / remove / erase\n\n` +
+      `With an integer argument:\n` +
+      `  ${instanceVar}.insert(50)\n` +
+      `  ${instanceVar}.search(30)\n` +
+      `  ${instanceVar}.delete(20)`
+    );
+    return { steps, errors };
+  }
+
   let root = null;
   for (const op of allOps) {
-    const lineNum = getLineNum(op.charIdx), codeLine = lines[lineNum]?.trim() ?? "";
-    if (op.type==="insert") {
+    if (op.type === "insert") {
       root = bstInsert(root, op.val);
       const snap = cloneTree(root);
-      steps.push({type:"insert",value:op.val,tree:snap,highlight:[op.val],path:pathToNode(snap,op.val),message:`insert(${op.val}) → placed at correct BST position`,size:treeSize(snap),height:treeHeight(snap),lineNum,codeLine});
-    } else if (op.type==="search") {
-      const snap = cloneTree(root), path = pathToNode(snap, op.val);
-      steps.push({type:"search",value:op.val,tree:snap,highlight:path||[],path,found:!!path,message:path?`search(${op.val}) → Found ✓  path: ${path.join(" → ")}`:`search(${op.val}) → Not found ✗`,size:treeSize(snap),height:treeHeight(snap),lineNum,codeLine});
+      steps.push({
+        type: "insert", value: op.val, tree: snap,
+        highlight: [op.val], path: pathToNode(snap, op.val),
+        message: `${op.method}(${op.val}) → placed at correct BST position`,
+        size: treeSize(snap), height: treeHeight(snap),
+        lineNum: op.lineNum, codeLine: op.codeLine,
+      });
+    } else if (op.type === "search") {
+      const snap = cloneTree(root);
+      const path = pathToNode(snap, op.val);
+      steps.push({
+        type: "search", value: op.val, tree: snap,
+        highlight: path || [], path, found: !!path,
+        message: path
+          ? `${op.method}(${op.val}) → Found ✓  path: ${path.join(" → ")}`
+          : `${op.method}(${op.val}) → Not found ✗`,
+        size: treeSize(snap), height: treeHeight(snap),
+        lineNum: op.lineNum, codeLine: op.codeLine,
+      });
     } else {
       root = bstDelete(root, op.val);
       const snap = cloneTree(root);
-      steps.push({type:"delete",value:op.val,tree:snap,highlight:[],path:null,message:`delete(${op.val}) → removed, BST property maintained`,size:treeSize(snap),height:treeHeight(snap),lineNum,codeLine});
+      steps.push({
+        type: "delete", value: op.val, tree: snap,
+        highlight: [], path: null,
+        message: `${op.method}(${op.val}) → removed, BST property maintained`,
+        size: treeSize(snap), height: treeHeight(snap),
+        lineNum: op.lineNum, codeLine: op.codeLine,
+      });
     }
   }
+
   return { steps, errors };
 }
 
-/* ─── Layout ─── */
-function layoutTree(root) {
-  const pos = {}; let counter = 0;
-  const inorder = (n) => { if(!n) return; inorder(n.left); pos[n.id]={x:counter++,y:0}; inorder(n.right); };
-  const depth   = (n,d) => { if(!n) return; pos[n.id].y=d; depth(n.left,d+1); depth(n.right,d+1); };
-  inorder(root); depth(root, 0); return pos;
+/* ─── Dispatcher ─── */
+function parseAndRunCode(code, lang) {
+  if (lang === "c") return parseCBST(code);
+  return parseGenericBST(code);
 }
 
-/* ─── Tree SVG (compact) ─── */
-function TreeViz({ tree, highlight=[], path=[], animKey, opType, idle, pointerIdx, deletedNodePos }) {
-  const W=720, NR=24;
-  if (!tree) return (
-    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12,width:"100%",minHeight:200,justifyContent:"center",border:"1px dashed rgba(96,165,250,0.1)",borderRadius:12,background:"rgba(59,130,246,0.015)"}}>
-      <div style={{fontSize:40,animation:"idleFloat 3.5s ease-in-out infinite",filter:"drop-shadow(0 0 12px rgba(96,165,250,0.25))"}}>🌲</div>
-      <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2a4060",letterSpacing:".1em",textAlign:"center",lineHeight:2,textTransform:"uppercase"}}>
-        {idle?"Write a BST · insert / search / delete · Run":"Tree will appear here"}
-      </div>
-    </div>
-  );
+/* ─── AI Validation ─── */
+async function validateWithAI(code, lang) {
+  if (code.trim().length < 10) {
+    return {
+      valid: false,
+      reason: "Code is empty.",
+      errors: [{ line: 1, message: "Write a BST implementation first." }],
+      apiError: null,
+    };
+  }
 
-  const pos = layoutTree(tree);
-  const vals = Object.values(pos);
-  const maxX = vals.length ? Math.max(...vals.map(p=>p.x)) : 0;
-  const maxY = vals.length ? Math.max(...vals.map(p=>p.y)) : 0;
-  const pad=48, vGap=72;
-  const px=(x)=>maxX===0?W/2:(x/maxX)*(W-pad*2)+pad;
-  const py=(y)=>y*vGap+48;
-  const svgH=Math.max((maxY+1)*vGap+80,180);
+  const prompt = `You are a strict code reviewer for a BST visualizer tool. Analyze the code and return a JSON verdict.
 
-  const nodes=[], edges=[];
-  const collect=(n)=>{
-    if(!n) return; nodes.push(n);
-    if(n.left) {edges.push({from:n.id,to:n.left.id,fv:n.val,tv:n.left.val}); collect(n.left);}
-    if(n.right){edges.push({from:n.id,to:n.right.id,fv:n.val,tv:n.right.val}); collect(n.right);}
-  };
-  collect(tree);
+MODE: Full implementation (${lang})
+PASS if: the code contains a real BST class/struct/impl definition with insert/search/delete logic AND has operation calls with integer arguments.
+FAIL if:
+- The code is obviously wrong (random text, syntax errors everywhere, not ${lang} at all)
+- BST comparison logic is inverted (inserts right when val < node, etc.)
+- No operation calls with integer arguments exist
+- The code is ONLY a call-site with no BST definition
+Be lenient about method names — add/find/remove/put/erase all count.
 
-  const pathSet = new Set(path||[]);
-  const isPathEdge = (fv,tv) => pathSet.has(fv) && pathSet.has(tv);
-  const currentPointerVal = (opType==="search" && path && path.length>0)
-    ? path[Math.min(pointerIdx??path.length-1, path.length-1)] : null;
-
-  return (
-    <svg key={animKey} viewBox={`0 0 ${W} ${svgH}`} width="100%" style={{overflow:"visible",maxHeight:440,display:"block"}}>
-      <defs>
-        <radialGradient id="gBase"    cx="38%" cy="30%"><stop offset="0%" stopColor="#162035"/><stop offset="100%" stopColor="#060d1e"/></radialGradient>
-        <radialGradient id="gInsert" cx="38%" cy="30%"><stop offset="0%" stopColor="#1d4ed8"/><stop offset="100%" stopColor="#1e3a8a"/></radialGradient>
-        <radialGradient id="gSearch" cx="38%" cy="30%"><stop offset="0%" stopColor="#1d4ed8"/><stop offset="100%" stopColor="#1e3a8a"/></radialGradient>
-        <radialGradient id="gPointer"cx="38%" cy="30%"><stop offset="0%" stopColor="#0ea5e9"/><stop offset="100%" stopColor="#0c4a6e"/></radialGradient>
-        <radialGradient id="gDelete" cx="38%" cy="30%"><stop offset="0%" stopColor="#b91c1c"/><stop offset="100%" stopColor="#450a0a"/></radialGradient>
-        <filter id="fGlow"  x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <filter id="fEdge"  x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-        <filter id="fShad"  x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4"/></filter>
-        <marker id="arrowPath" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
-          <path d="M0,1 L0,6 L7,3.5 z" fill="#60a5fa" opacity="0.8"/>
-        </marker>
-        <pattern id="bgGrid" width="40" height="40" patternUnits="userSpaceOnUse">
-          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(96,130,255,0.04)" strokeWidth="1"/>
-        </pattern>
-        <style>{`
-          .edgeDraw{stroke-dasharray:800;stroke-dashoffset:800;animation:edReveal .45s ease forwards}
-          @keyframes edReveal{to{stroke-dashoffset:0}}
-          .pathEdge{stroke-dasharray:9 5;animation:dashFlow .9s linear infinite}
-          @keyframes dashFlow{to{stroke-dashoffset:-28}}
-          .nodeIn{animation:nodeIn .5s cubic-bezier(.34,1.4,.64,1) both;transform-box:fill-box;transform-origin:center}
-          @keyframes nodeIn{0%{transform:scale(.08);opacity:0}65%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
-          .nodeRipple{animation:ripple .65s ease-out forwards;transform-box:fill-box;transform-origin:center}
-          @keyframes ripple{0%{transform:scale(.85);opacity:.75;stroke-width:2.5}100%{transform:scale(2.8);opacity:0;stroke-width:.5}}
-          .nodePointer{animation:pointerPulse 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
-          @keyframes pointerPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
-          .nodeFound{animation:foundBounce .5s cubic-bezier(.34,1.5,.64,1) both;transform-box:fill-box;transform-origin:center}
-          @keyframes foundBounce{0%{transform:scale(.9)}55%{transform:scale(1.15)}100%{transform:scale(1)}}
-          .pointerArrow{animation:arrowBounce .7s ease-in-out infinite}
-          @keyframes arrowBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-          .deleteExplode{animation:deleteBurst .55s ease-out forwards;transform-box:fill-box;transform-origin:center}
-          @keyframes deleteBurst{0%{transform:scale(1);opacity:1;stroke-width:2.5}100%{transform:scale(3);opacity:0;stroke-width:.5}}
-          .deleteParticle{animation:particleFly .6s ease-out forwards}
-          @keyframes particleFly{0%{transform:translate(0,0) scale(1);opacity:.9}100%{transform:translate(var(--dx,0),var(--dy,0)) scale(0);opacity:0}}
-        `}</style>
-      </defs>
-      <rect width={W} height={svgH} fill="url(#bgGrid)"/>
-
-      {/* Edges */}
-      {edges.map(e=>{
-        const fp=pos[e.from], tp=pos[e.to]; if(!fp||!tp) return null;
-        const isHL=isPathEdge(e.fv,e.tv);
-        return (
-          <g key={`e-${e.from}-${e.to}`}>
-            {isHL&&<line x1={px(fp.x)} y1={py(fp.y)} x2={px(tp.x)} y2={py(tp.y)} stroke="#3b82f6" strokeWidth="4" opacity="0.1" filter="url(#fEdge)"/>}
-            <line x1={px(fp.x)} y1={py(fp.y)} x2={px(tp.x)} y2={py(tp.y)}
-              stroke={isHL?"#60a5fa":"rgba(80,120,200,0.16)"} strokeWidth={isHL?2:1.3}
-              markerEnd={isHL?"url(#arrowPath)":undefined}
-              className={isHL?"pathEdge":"edgeDraw"}/>
-          </g>
-        );
-      })}
-
-      {/* Deleted node animation (if any) */}
-      {deletedNodePos && (
-        <g>
-          <circle cx={deletedNodePos.x} cy={deletedNodePos.y} r={NR+6}
-            fill="none" stroke="#f87171" strokeWidth="2.2" className="deleteExplode"/>
-          {[0,1,2,3,4,5].map((_,i)=>{
-            const angle = (i*60) * Math.PI/180;
-            const dx = Math.cos(angle)*20, dy = Math.sin(angle)*20;
-            return (
-              <circle key={i} cx={deletedNodePos.x} cy={deletedNodePos.y} r="2.5" fill="#ff6b6b"
-                style={{'--dx':`${dx}px`,'--dy':`${dy}px`}} className="deleteParticle"/>
-            );
-          })}
-        </g>
-      )}
-
-      {/* Nodes */}
-      {nodes.map(node=>{
-        const p=pos[node.id]; if(!p) return null;
-        const cx=px(p.x), cy=py(p.y);
-        const isHl   = highlight.includes(node.val);
-        const onPath = pathSet.has(node.val);
-        const isPtr  = node.val===currentPointerVal && opType==="search";
-        const isFound= opType==="search" && isHl && node.val===highlight[highlight.length-1];
-        const isIns  = opType==="insert" && isHl;
-        const isDel  = opType==="delete" && isHl;
-
-        let fill="url(#gBase)", stroke="rgba(80,120,200,0.18)", strokeW=1.4;
-        if (isPtr)           { fill="url(#gPointer)"; stroke="#7dd3fc"; strokeW=2.2; }
-        else if (isFound)    { fill="url(#gSearch)"; stroke="#60a5fa"; strokeW=2.2; }
-        else if (onPath && opType==="search") { fill="url(#gSearch)"; stroke="#3b82f6"; strokeW=1.8; }
-        else if (isDel)      { fill="url(#gDelete)"; stroke="#f87171"; strokeW=2.2; }
-        else if (isIns)      { fill="url(#gInsert)"; stroke="#60a5fa"; strokeW=2.2; }
-
-        const cls = isIns?"nodeIn":isFound?"nodeFound":isPtr?"nodePointer":"";
-
-        return (
-          <g key={`n-${node.id}-${animKey}`}>
-            {(isPtr||isFound||isIns)&&<circle cx={cx} cy={cy} r={NR+12} fill={isDel?"rgba(239,68,68,0.1)":"rgba(59,130,246,0.1)"} filter="url(#fGlow)"/>}
-            {isIns&&<circle cx={cx} cy={cy} r={NR} fill="none" stroke="#60a5fa" strokeWidth="2" opacity="0" className="nodeRipple"/>}
-            <circle cx={cx} cy={cy+3} r={NR} fill="rgba(0,0,0,0.4)" filter="url(#fShad)"/>
-            <circle cx={cx} cy={cy} r={NR} fill={fill} stroke={stroke} strokeWidth={strokeW} className={cls} style={{transition:"fill .28s,stroke .28s"}}/>
-            <circle cx={cx-6} cy={cy-6} r={5}   fill="rgba(255,255,255,0.08)"/>
-            <circle cx={cx-3.5} cy={cy-3.5} r={2} fill="rgba(255,255,255,0.16)"/>
-            {isPtr&&(
-              <text x={cx} y={cy-NR-12} textAnchor="middle" fill="#7dd3fc" fontSize="12"
-                fontFamily="'JetBrains Mono',monospace" className="pointerArrow">▼</text>
-            )}
-            <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
-              fill={(isHl||onPath)?"#fff":"#5a8aaa"} fontSize="12" fontWeight="700"
-              fontFamily="'JetBrains Mono',monospace">{node.val}</text>
-          </g>
-        );
-      })}
-    </svg>
-  );
+Respond with ONLY a raw JSON object — no markdown, no backticks:
+{
+  "valid": true or false,
+  "reason": "one clear sentence if invalid, empty string if valid",
+  "errors": [] or [{"line": <number or null>, "message": "<specific issue>"}]
 }
 
-/* ─── Constants ─── */
-const LANGS = {
-  javascript:{ name:"JavaScript", ext:"JS",  accent:"#fde047", bg:"rgba(253,224,71,0.12)", border:"rgba(253,224,71,0.38)" },
-  typescript:{ name:"TypeScript", ext:"TS",  accent:"#60a5fa", bg:"rgba(96,165,250,0.12)", border:"rgba(96,165,250,0.38)" },
-  python:    { name:"Python",     ext:"PY",  accent:"#4ade80", bg:"rgba(74,222,128,0.12)", border:"rgba(74,222,128,0.38)" },
-  java:      { name:"Java",       ext:"JV",  accent:"#fb923c", bg:"rgba(251,146,60,0.12)", border:"rgba(251,146,60,0.38)" },
-  cpp:       { name:"C++",        ext:"C++", accent:"#38bdf8", bg:"rgba(56,189,248,0.12)", border:"rgba(56,189,248,0.38)" },
-  csharp:    { name:"C#",         ext:"C#",  accent:"#c084fc", bg:"rgba(192,132,252,0.12)", border:"rgba(192,132,252,0.38)" },
-  go:        { name:"Go",         ext:"GO",  accent:"#34d399", bg:"rgba(52,211,153,0.12)", border:"rgba(52,211,153,0.38)" },
+Code:
+\`\`\`${lang}
+${code.slice(0, 3000)}
+\`\`\``;
+
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: [{ role: "user", content: prompt }] }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      return {
+        valid: false,
+        reason: errData.error ?? `Validation service error (HTTP ${res.status}). Check your API key.`,
+        errors: [{ line: null, message: errData.error ?? `HTTP ${res.status} from validation API` }],
+        apiError: `HTTP ${res.status}`,
+      };
+    }
+
+    const data = await res.json();
+
+    if (data.error) {
+      return {
+        valid: false,
+        reason: data.error,
+        errors: [{ line: null, message: data.error }],
+        apiError: data.error,
+      };
+    }
+
+    const raw = (data.content ?? "")
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    const parsed = JSON.parse(raw);
+
+    return {
+      valid: !!parsed.valid,
+      reason: parsed.reason ?? "",
+      errors: Array.isArray(parsed.errors) ? parsed.errors : [],
+      apiError: null,
+    };
+  } catch (e) {
+    return {
+      valid: false,
+      reason: `Could not reach validation service: ${e.message}`,
+      errors: [{ line: null, message: `Validation error: ${e.message}` }],
+      apiError: e.message,
+    };
+  }
+}
+
+/* ─── Operation styles ─── */
+const OP = {
+  insert: { label: "INSERT", icon: "↑", c: "#4cc9f0", bg: "rgba(76,201,240,0.12)", bd: "rgba(76,201,240,0.45)" },
+  search: { label: "SEARCH", icon: "◎", c: "#c77dff", bg: "rgba(199,125,255,0.1)", bd: "rgba(199,125,255,0.4)" },
+  delete: { label: "DELETE", icon: "✕", c: "#f72585", bg: "rgba(247,37,133,0.1)", bd: "rgba(247,37,133,0.45)" },
 };
+
+/* ─── Languages (order: C, C++, Java, Go, Python, JavaScript) ─── */
+const LANGS = {
+  c:          { name: "C",          ext: "C",   accent: "#a8d8ea" },
+  cpp:        { name: "C++",        ext: "C++", accent: "#00b4d8" },
+  java:       { name: "Java",       ext: "JV",  accent: "#ed8b00" },
+  go:         { name: "Go",         ext: "GO",  accent: "#00add8" },
+  python:     { name: "Python",     ext: "PY",  accent: "#4ec9b0" },
+  javascript: { name: "JavaScript", ext: "JS",  accent: "#f7df1e" },
+};
+
+/* ─── Templates ─── */
 const TPL = {
-javascript: `// Binary Search Tree — JavaScript
+  c: `// Binary Search Tree — C
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct Node {
+    int val;
+    struct Node* left;
+    struct Node* right;
+} Node;
+
+typedef struct { Node* root; } BST;
+
+Node* newNode(int val) {
+    Node* n = (Node*)malloc(sizeof(Node));
+    n->val = val; n->left = NULL; n->right = NULL;
+    return n;
+}
+
+void insert(BST* t, int val) {
+    Node* node = newNode(val);
+    if (!t->root) { t->root = node; return; }
+    Node* cur = t->root;
+    while (1) {
+        if (val < cur->val) {
+            if (!cur->left) { cur->left = node; return; }
+            cur = cur->left;
+        } else {
+            if (!cur->right) { cur->right = node; return; }
+            cur = cur->right;
+        }
+    }
+}
+
+int search(BST* t, int val) {
+    Node* cur = t->root;
+    while (cur) {
+        if (val == cur->val) return 1;
+        cur = (val < cur->val) ? cur->left : cur->right;
+    }
+    return 0;
+}
+
+Node* _deleteRec(Node* node, int val) {
+    if (!node) return NULL;
+    if (val < node->val) { node->left = _deleteRec(node->left, val); return node; }
+    if (val > node->val) { node->right = _deleteRec(node->right, val); return node; }
+    if (!node->left) return node->right;
+    if (!node->right) return node->left;
+    Node* mn = node->right;
+    while (mn->left) mn = mn->left;
+    node->val = mn->val;
+    node->right = _deleteRec(node->right, mn->val);
+    return node;
+}
+
+void delete(BST* t, int val) {
+    t->root = _deleteRec(t->root, val);
+}
+
+int main() {
+    BST tree = { NULL };
+    insert(&tree, 50);
+    insert(&tree, 30);
+    insert(&tree, 70);
+    insert(&tree, 20);
+    insert(&tree, 40);
+    insert(&tree, 60);
+    insert(&tree, 80);
+    insert(&tree, 10);
+    insert(&tree, 35);
+    search(&tree, 40);
+    search(&tree, 99);
+    delete(&tree, 30);
+    insert(&tree, 45);
+    search(&tree, 45);
+    return 0;
+}`,
+
+  cpp: `// Binary Search Tree — C++
+#include <iostream>
+using namespace std;
+
+struct Node {
+    int val; Node *left, *right;
+    Node(int v) : val(v), left(nullptr), right(nullptr) {}
+};
+
+class BST {
+public:
+    Node* root = nullptr;
+
+    void insert(int val) { root = ins(root, val); }
+    Node* ins(Node* n, int val) {
+        if (!n) return new Node(val);
+        if (val < n->val) n->left = ins(n->left, val);
+        else if (val > n->val) n->right = ins(n->right, val);
+        return n;
+    }
+
+    bool search(int val) { return srch(root, val); }
+    bool srch(Node* n, int val) {
+        if (!n) return false;
+        if (val == n->val) return true;
+        return val < n->val ? srch(n->left, val) : srch(n->right, val);
+    }
+
+    void remove(int val) { root = del(root, val); }
+    Node* del(Node* n, int val) {
+        if (!n) return nullptr;
+        if (val < n->val) n->left = del(n->left, val);
+        else if (val > n->val) n->right = del(n->right, val);
+        else {
+            if (!n->left) return n->right;
+            if (!n->right) return n->left;
+            Node* mn = n->right;
+            while (mn->left) mn = mn->left;
+            n->val = mn->val;
+            n->right = del(n->right, mn->val);
+        }
+        return n;
+    }
+};
+
+int main() {
+    BST tree;
+    tree.insert(50); tree.insert(30); tree.insert(70);
+    tree.insert(20); tree.insert(40); tree.insert(60); tree.insert(80);
+    tree.insert(10); tree.insert(35);
+    tree.search(40); tree.search(99);
+    tree.remove(30);
+    tree.insert(45); tree.search(45);
+    return 0;
+}`,
+
+  java: `// Binary Search Tree — Java
+class BST {
+    class Node {
+        int val; Node left, right;
+        Node(int val) { this.val = val; }
+    }
+    private Node root;
+
+    public void insert(int val) { root = insertRec(root, val); }
+    private Node insertRec(Node n, int val) {
+        if (n == null) return new Node(val);
+        if (val < n.val) n.left = insertRec(n.left, val);
+        else if (val > n.val) n.right = insertRec(n.right, val);
+        return n;
+    }
+
+    public boolean search(int val) { return searchRec(root, val); }
+    private boolean searchRec(Node n, int val) {
+        if (n == null) return false;
+        if (val == n.val) return true;
+        return val < n.val ? searchRec(n.left, val) : searchRec(n.right, val);
+    }
+
+    public void delete(int val) { root = deleteRec(root, val); }
+    private Node deleteRec(Node n, int val) {
+        if (n == null) return null;
+        if (val < n.val) n.left = deleteRec(n.left, val);
+        else if (val > n.val) n.right = deleteRec(n.right, val);
+        else {
+            if (n.left == null) return n.right;
+            if (n.right == null) return n.left;
+            Node mn = n.right;
+            while (mn.left != null) mn = mn.left;
+            n.val = mn.val;
+            n.right = deleteRec(n.right, mn.val);
+        }
+        return n;
+    }
+
+    public static void main(String[] args) {
+        BST tree = new BST();
+        tree.insert(50); tree.insert(30); tree.insert(70);
+        tree.insert(20); tree.insert(40); tree.insert(60); tree.insert(80);
+        tree.insert(10); tree.insert(35);
+        tree.search(40); tree.search(99);
+        tree.delete(30);
+        tree.insert(45); tree.search(45);
+    }
+}`,
+
+  go: `// Binary Search Tree — Go
+package main
+
+import "fmt"
+
+type Node struct { val int; left, right *Node }
+type BST struct { root *Node }
+
+func (b *BST) insert(val int) { b.root = insRec(b.root, val) }
+func insRec(n *Node, val int) *Node {
+    if n == nil { return &Node{val: val} }
+    if val < n.val { n.left = insRec(n.left, val) } else if val > n.val { n.right = insRec(n.right, val) }
+    return n
+}
+
+func (b *BST) search(val int) bool { return srchRec(b.root, val) }
+func srchRec(n *Node, val int) bool {
+    if n == nil { return false }
+    if val == n.val { return true }
+    if val < n.val { return srchRec(n.left, val) }
+    return srchRec(n.right, val)
+}
+
+func (b *BST) delete(val int) { b.root = delRec(b.root, val) }
+func delRec(n *Node, val int) *Node {
+    if n == nil { return nil }
+    if val < n.val { n.left = delRec(n.left, val) } else if val > n.val { n.right = delRec(n.right, val) } else {
+        if n.left == nil { return n.right }
+        if n.right == nil { return n.left }
+        mn := n.right
+        for mn.left != nil { mn = mn.left }
+        n.val = mn.val; n.right = delRec(n.right, mn.val)
+    }
+    return n
+}
+
+func main() {
+    tree := &BST{}
+    tree.insert(50); tree.insert(30); tree.insert(70)
+    tree.insert(20); tree.insert(40); tree.insert(60); tree.insert(80)
+    tree.insert(10); tree.insert(35)
+    tree.search(40); tree.search(99)
+    tree.delete(30)
+    tree.insert(45); tree.search(45)
+    fmt.Println("done")
+}`,
+
+  python: `# Binary Search Tree — Python
+class Node:
+    def __init__(self, val):
+        self.val = val
+        self.left = None
+        self.right = None
+
+class BST:
+    def __init__(self):
+        self.root = None
+
+    def insert(self, val):
+        if not self.root:
+            self.root = Node(val); return
+        cur = self.root
+        while True:
+            if val < cur.val:
+                if not cur.left: cur.left = Node(val); return
+                cur = cur.left
+            else:
+                if not cur.right: cur.right = Node(val); return
+                cur = cur.right
+
+    def search(self, val):
+        cur = self.root
+        while cur:
+            if val == cur.val: return True
+            cur = cur.left if val < cur.val else cur.right
+        return False
+
+    def delete(self, val):
+        self.root = self._del(self.root, val)
+
+    def _del(self, node, val):
+        if not node: return None
+        if val < node.val: node.left = self._del(node.left, val)
+        elif val > node.val: node.right = self._del(node.right, val)
+        else:
+            if not node.left: return node.right
+            if not node.right: return node.left
+            mn = node.right
+            while mn.left: mn = mn.left
+            node.val = mn.val
+            node.right = self._del(node.right, mn.val)
+        return node
+
+tree = BST()
+tree.insert(50)
+tree.insert(30)
+tree.insert(70)
+tree.insert(20)
+tree.insert(40)
+tree.insert(60)
+tree.insert(80)
+tree.insert(10)
+tree.insert(35)
+tree.search(40)
+tree.search(99)
+tree.delete(30)
+tree.insert(45)
+tree.search(45)`,
+
+  javascript: `// Binary Search Tree — JavaScript
 class BST {
   constructor() { this.root = null; }
 
@@ -282,8 +724,8 @@ class BST {
 
   _del(node, val) {
     if (!node) return null;
-    if (val < node.val) { node.left = this._del(node.left, val); }
-    else if (val > node.val) { node.right = this._del(node.right, val); }
+    if (val < node.val) node.left = this._del(node.left, val);
+    else if (val > node.val) node.right = this._del(node.right, val);
     else {
       if (!node.left) return node.right;
       if (!node.right) return node.left;
@@ -311,528 +753,298 @@ tree.search(99);
 tree.delete(30);
 tree.insert(45);
 tree.search(45);`,
-
-typescript: `// Binary Search Tree — TypeScript
-interface TNode { val: number; left: TNode | null; right: TNode | null; }
-class BST {
-  root: TNode | null = null;
-  insert(val: number): void {
-    const node: TNode = { val, left: null, right: null };
-    if (!this.root) { this.root = node; return; }
-    let cur = this.root;
-    while (true) {
-      if (val < cur.val) { if (!cur.left) { cur.left = node; return; } cur = cur.left; }
-      else { if (!cur.right) { cur.right = node; return; } cur = cur.right; }
-    }
-  }
-  search(val: number): boolean {
-    let cur = this.root;
-    while (cur) { if (val === cur.val) return true; cur = val < cur.val ? cur.left : cur.right; }
-    return false;
-  }
-  delete(val: number): void { this.root = this._del(this.root, val); }
-  private _del(n: TNode | null, val: number): TNode | null {
-    if (!n) return null;
-    if (val < n.val) n.left = this._del(n.left, val);
-    else if (val > n.val) n.right = this._del(n.right, val);
-    else {
-      if (!n.left) return n.right; if (!n.right) return n.left;
-      let min = n.right; while (min.left) min = min.left;
-      n.val = min.val; n.right = this._del(n.right, min.val);
-    }
-    return n;
-  }
-}
-const tree = new BST();
-tree.insert(50); tree.insert(30); tree.insert(70);
-tree.insert(20); tree.insert(40); tree.insert(60); tree.insert(80);
-tree.search(40); tree.search(99); tree.delete(30);
-tree.insert(45); tree.search(45);`,
-
-python: `# Binary Search Tree — Python
-class TreeNode:
-    def __init__(self, val):
-        self.val = val
-        self.left = None
-        self.right = None
-
-class BST:
-    def __init__(self):
-        self.root = None
-
-    def insert(self, val):
-        if not self.root:
-            self.root = TreeNode(val)
-            return
-        cur = self.root
-        while True:
-            if val < cur.val:
-                if not cur.left:
-                    cur.left = TreeNode(val)
-                    return
-                cur = cur.left
-            else:
-                if not cur.right:
-                    cur.right = TreeNode(val)
-                    return
-                cur = cur.right
-
-    def search(self, val):
-        cur = self.root
-        while cur:
-            if val == cur.val:
-                return True
-            cur = cur.left if val < cur.val else cur.right
-        return False
-
-    def delete(self, val):
-        self.root = self._del(self.root, val)
-
-    def _del(self, node, val):
-        if not node:
-            return None
-        if val < node.val:
-            node.left = self._del(node.left, val)
-        elif val > node.val:
-            node.right = self._del(node.right, val)
-        else:
-            if not node.left:
-                return node.right
-            if not node.right:
-                return node.left
-            mn = node.right
-            while mn.left:
-                mn = mn.left
-            node.val = mn.val
-            node.right = self._del(node.right, mn.val)
-        return node
-
-tree = BST()
-tree.insert(50)
-tree.insert(30)
-tree.insert(70)
-tree.insert(20)
-tree.insert(40)
-tree.insert(60)
-tree.insert(80)
-tree.insert(10)
-tree.insert(35)
-tree.search(40)
-tree.search(99)
-tree.delete(30)
-tree.insert(45)
-tree.search(45)`,
-
-java: `// Binary Search Tree — Java
-class BST {
-    class Node {
-        int val;
-        Node left, right;
-        Node(int val) { this.val = val; }
-    }
-
-    private Node root;
-
-    public void insert(int val) {
-        root = insertRec(root, val);
-    }
-
-    private Node insertRec(Node node, int val) {
-        if (node == null) return new Node(val);
-        if (val < node.val) node.left = insertRec(node.left, val);
-        else if (val > node.val) node.right = insertRec(node.right, val);
-        return node;
-    }
-
-    public boolean search(int val) {
-        return searchRec(root, val);
-    }
-
-    private boolean searchRec(Node node, int val) {
-        if (node == null) return false;
-        if (val == node.val) return true;
-        return val < node.val ? searchRec(node.left, val) : searchRec(node.right, val);
-    }
-
-    public void delete(int val) {
-        root = deleteRec(root, val);
-    }
-
-    private Node deleteRec(Node node, int val) {
-        if (node == null) return null;
-        if (val < node.val) node.left = deleteRec(node.left, val);
-        else if (val > node.val) node.right = deleteRec(node.right, val);
-        else {
-            if (node.left == null) return node.right;
-            if (node.right == null) return node.left;
-            Node min = node.right;
-            while (min.left != null) min = min.left;
-            node.val = min.val;
-            node.right = deleteRec(node.right, min.val);
-        }
-        return node;
-    }
-
-    public static void main(String[] args) {
-        BST tree = new BST();
-        tree.insert(50);
-        tree.insert(30);
-        tree.insert(70);
-        tree.insert(20);
-        tree.insert(40);
-        tree.insert(60);
-        tree.insert(80);
-        tree.insert(10);
-        tree.insert(35);
-        tree.search(40);
-        tree.search(99);
-        tree.delete(30);
-        tree.insert(45);
-        tree.search(45);
-    }
-}`,
-
-cpp: `// Binary Search Tree — C++
-#include <iostream>
-using namespace std;
-
-struct Node {
-    int val;
-    Node *left, *right;
-    Node(int v) : val(v), left(nullptr), right(nullptr) {}
 };
 
-class BST {
-public:
-    Node* root = nullptr;
-
-    void insert(int val) {
-        root = insertRec(root, val);
-    }
-
-    Node* insertRec(Node* node, int val) {
-        if (!node) return new Node(val);
-        if (val < node->val) node->left = insertRec(node->left, val);
-        else if (val > node->val) node->right = insertRec(node->right, val);
-        return node;
-    }
-
-    bool search(int val) {
-        return searchRec(root, val);
-    }
-
-    bool searchRec(Node* node, int val) {
-        if (!node) return false;
-        if (val == node->val) return true;
-        return val < node->val ? searchRec(node->left, val) : searchRec(node->right, val);
-    }
-
-    void deleteVal(int val) {
-        root = deleteRec(root, val);
-    }
-
-    Node* deleteRec(Node* node, int val) {
-        if (!node) return nullptr;
-        if (val < node->val) node->left = deleteRec(node->left, val);
-        else if (val > node->val) node->right = deleteRec(node->right, val);
-        else {
-            if (!node->left) return node->right;
-            if (!node->right) return node->left;
-            Node* min = node->right;
-            while (min->left) min = min->left;
-            node->val = min->val;
-            node->right = deleteRec(node->right, min->val);
-        }
-        return node;
-    }
-};
-
-int main() {
-    BST tree;
-    tree.insert(50);
-    tree.insert(30);
-    tree.insert(70);
-    tree.insert(20);
-    tree.insert(40);
-    tree.insert(60);
-    tree.insert(80);
-    tree.insert(10);
-    tree.insert(35);
-    tree.search(40);
-    tree.search(99);
-    tree.deleteVal(30);
-    tree.insert(45);
-    tree.search(45);
-    return 0;
-}`,
-
-csharp: `// Binary Search Tree — C#
-using System;
-
-class BST {
-    class Node {
-        public int val;
-        public Node left, right;
-        public Node(int val) { this.val = val; }
-    }
-
-    private Node root;
-
-    public void Insert(int val) {
-        root = InsertRec(root, val);
-    }
-
-    private Node InsertRec(Node node, int val) {
-        if (node == null) return new Node(val);
-        if (val < node.val) node.left = InsertRec(node.left, val);
-        else if (val > node.val) node.right = InsertRec(node.right, val);
-        return node;
-    }
-
-    public bool Search(int val) {
-        return SearchRec(root, val);
-    }
-
-    private bool SearchRec(Node node, int val) {
-        if (node == null) return false;
-        if (val == node.val) return true;
-        return val < node.val ? SearchRec(node.left, val) : SearchRec(node.right, val);
-    }
-
-    public void Delete(int val) {
-        root = DeleteRec(root, val);
-    }
-
-    private Node DeleteRec(Node node, int val) {
-        if (node == null) return null;
-        if (val < node.val) node.left = DeleteRec(node.left, val);
-        else if (val > node.val) node.right = DeleteRec(node.right, val);
-        else {
-            if (node.left == null) return node.right;
-            if (node.right == null) return node.left;
-            Node min = node.right;
-            while (min.left != null) min = min.left;
-            node.val = min.val;
-            node.right = DeleteRec(node.right, min.val);
-        }
-        return node;
-    }
-
-    static void Main() {
-        BST tree = new BST();
-        tree.Insert(50);
-        tree.Insert(30);
-        tree.Insert(70);
-        tree.Insert(20);
-        tree.Insert(40);
-        tree.Insert(60);
-        tree.Insert(80);
-        tree.Insert(10);
-        tree.Insert(35);
-        tree.Search(40);
-        tree.Search(99);
-        tree.Delete(30);
-        tree.Insert(45);
-        tree.Search(45);
-    }
-}`,
-
-go: `// Binary Search Tree — Go
-package main
-
-import "fmt"
-
-type Node struct {
-    val   int
-    left  *Node
-    right *Node
-}
-
-type BST struct {
-    root *Node
-}
-
-func (b *BST) insert(val int) {
-    b.root = insertRec(b.root, val)
-}
-
-func insertRec(node *Node, val int) *Node {
-    if node == nil {
-        return &Node{val: val}
-    }
-    if val < node.val {
-        node.left = insertRec(node.left, val)
-    } else if val > node.val {
-        node.right = insertRec(node.right, val)
-    }
-    return node
-}
-
-func (b *BST) search(val int) bool {
-    return searchRec(b.root, val)
-}
-
-func searchRec(node *Node, val int) bool {
-    if node == nil {
-        return false
-    }
-    if val == node.val {
-        return true
-    }
-    if val < node.val {
-        return searchRec(node.left, val)
-    }
-    return searchRec(node.right, val)
-}
-
-func (b *BST) delete(val int) {
-    b.root = deleteRec(b.root, val)
-}
-
-func deleteRec(node *Node, val int) *Node {
-    if node == nil {
-        return nil
-    }
-    if val < node.val {
-        node.left = deleteRec(node.left, val)
-    } else if val > node.val {
-        node.right = deleteRec(node.right, val)
-    } else {
-        if node.left == nil {
-            return node.right
-        }
-        if node.right == nil {
-            return node.left
-        }
-        min := node.right
-        for min.left != nil {
-            min = min.left
-        }
-        node.val = min.val
-        node.right = deleteRec(node.right, min.val)
-    }
-    return node
-}
-
-func main() {
-    tree := &BST{}
-    tree.insert(50)
-    tree.insert(30)
-    tree.insert(70)
-    tree.insert(20)
-    tree.insert(40)
-    tree.insert(60)
-    tree.insert(80)
-    tree.insert(10)
-    tree.insert(35)
-    tree.search(40)
-    tree.search(99)
-    tree.delete(30)
-    tree.insert(45)
-    tree.search(45)
-    fmt.Println("done")
-}`,
-};
-const OP = {
-  insert:{ label:"INSERT", icon:"↑", c:"#60a5fa", bg:"rgba(59,130,246,0.12)", bd:"rgba(96,165,250,0.45)" },
-  search:{ label:"SEARCH", icon:"◎", c:"#93c5fd", bg:"rgba(59,130,246,0.1)",  bd:"rgba(147,197,253,0.4)" },
-  delete:{ label:"DELETE", icon:"✕", c:"#f87171", bg:"rgba(239,68,68,0.1)",   bd:"rgba(248,113,113,0.45)"},
-};
-const LINE_H = 18;
-
-async function validateWithAI(code, lang) {
-  const prompt = `BST code reviewer. Check: BST class, logic bugs, syntax.
-Return ONLY JSON, no markdown:
-{"valid":true,"reason":"","errors":[]} OR {"valid":false,"reason":"short","errors":[{"line":1,"message":"issue"}]}
-Code:\n\`\`\`${lang}\n${code.slice(0,3000)}\n\`\`\``;
-  try {
-    const res  = await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({messages:[{role:"user",content:prompt}]})});
-    const data = await res.json();
-    if (data.error) return {valid:true,reason:"",errors:[],apiError:data.error};
-    const raw  = (data.content??"").replace(/```json|```/gi,"").trim();
-    const parsed = JSON.parse(raw);
-    return {valid:!!parsed.valid,reason:parsed.reason??"",errors:Array.isArray(parsed.errors)?parsed.errors:[],apiError:null};
-  } catch(e) { return {valid:true,reason:"",errors:[],apiError:e.message}; }
-}
-
-/* ─── Code Editor ─── */
-function CodeEditor({ code, setCode, step, errorLineSet, onKeyDown, taRef }) {
-  const lines  = code.split("\n");
-  const lnRef  = useRef(null);
-  const sync = useCallback(()=>{ if(taRef.current&&lnRef.current) lnRef.current.scrollTop=taRef.current.scrollTop; },[taRef]);
-  useEffect(()=>{ const ta=taRef.current; if(!ta) return; ta.addEventListener("scroll",sync,{passive:true}); return()=>ta.removeEventListener("scroll",sync); },[sync]);
-  return (
-    <div style={{flex:1,display:"flex",minHeight:0,overflow:"hidden",position:"relative"}}>
-      <div ref={lnRef} style={{width:36,flexShrink:0,background:"rgba(2,5,16,0.92)",borderRight:"1px solid rgba(255,255,255,0.06)",overflowY:"hidden",paddingTop:12,paddingBottom:12,display:"flex",flexDirection:"column",userSelect:"none",pointerEvents:"none",scrollbarWidth:"none"}}>
-        {lines.map((_,i)=>{
-          const isAct=step?.lineNum===i, isErr=errorLineSet.has(i);
-          return <div key={i} style={{height:LINE_H,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:6,fontFamily:"'JetBrains Mono',monospace",fontSize:9,lineHeight:1,color:isErr?"#f87171":isAct?"#93c5fd":"#2a4060",background:isErr?"rgba(239,68,68,0.07)":isAct?"rgba(59,130,246,0.07)":"transparent",transition:"color .12s,background .12s"}}>{i+1}</div>;
-        })}
+/* ─── Tree Visualization ─── */
+function TreeViz({ tree, highlight = [], path = [], animKey, opType, idle, pointerIdx, deletedNodePos }) {
+  const W = 720, NR = 22;
+  if (!tree) return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:12, width:"100%", minHeight:180, justifyContent:"center", border:"1px dashed rgba(76,201,240,0.1)", borderRadius:12, background:"rgba(76,201,240,0.015)" }}>
+      <div style={{ fontSize:38, animation:"idleFloat 3.5s ease-in-out infinite", filter:"drop-shadow(0 0 12px rgba(76,201,240,0.25))" }}>🌲</div>
+      <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"#2a4060", letterSpacing:".1em", textAlign:"center", lineHeight:2, textTransform:"uppercase" }}>
+        {idle ? "Write a BST · insert / search / delete · Run" : "Tree will appear here"}
       </div>
-      {step&&<div style={{position:"absolute",left:36,right:0,height:LINE_H,top:12+step.lineNum*LINE_H,background:"rgba(59,130,246,0.05)",borderLeft:"2px solid rgba(96,165,250,0.45)",pointerEvents:"none",zIndex:1,transition:"top .17s cubic-bezier(.4,0,.2,1)"}}/>}
-      {[...errorLineSet].map(i=><div key={`e${i}`} style={{position:"absolute",left:36,right:0,height:LINE_H,top:12+i*LINE_H,background:"rgba(239,68,68,0.05)",borderLeft:"2px solid rgba(248,113,113,0.45)",pointerEvents:"none",zIndex:1}}/>)}
-      <textarea ref={taRef} style={{flex:1,padding:"12px 12px 12px 8px",background:"transparent",border:"none",outline:"none",color:"#cfe2ff",fontFamily:"'JetBrains Mono',monospace",fontSize:11,lineHeight:`${LINE_H}px`,resize:"none",caretColor:"#60a5fa",tabSize:2,whiteSpace:"pre",overflowY:"auto",overflowX:"auto",scrollbarWidth:"thin",scrollbarColor:"rgba(96,165,250,0.18) transparent",position:"relative",zIndex:2}}
-        value={code} onChange={e=>setCode(e.target.value)} onKeyDown={onKeyDown} spellCheck={false} placeholder="// Write your BST here…"/>
     </div>
+  );
+
+  const pos = layoutTree(tree);
+  const vals = Object.values(pos);
+  const maxX = vals.length ? Math.max(...vals.map(p => p.x)) : 0;
+  const maxY = vals.length ? Math.max(...vals.map(p => p.y)) : 0;
+  const pad = 44, vGap = 68;
+  const px = x => maxX === 0 ? W / 2 : (x / maxX) * (W - pad * 2) + pad;
+  const py = y => y * vGap + 44;
+  const svgH = Math.max((maxY + 1) * vGap + 70, 160);
+
+  const nodes = [], edges = [];
+  const collect = n => {
+    if (!n) return;
+    nodes.push(n);
+    if (n.left) { edges.push({ from: n.id, to: n.left.id, fv: n.val, tv: n.left.val }); collect(n.left); }
+    if (n.right) { edges.push({ from: n.id, to: n.right.id, fv: n.val, tv: n.right.val }); collect(n.right); }
+  };
+  collect(tree);
+
+  const pathSet = new Set(path || []);
+  const isPathEdge = (fv, tv) => pathSet.has(fv) && pathSet.has(tv);
+  const currentPointerVal = opType === "search" && path?.length > 0
+    ? path[Math.min(pointerIdx ?? path.length - 1, path.length - 1)]
+    : null;
+
+  return (
+    <svg key={animKey} viewBox={`0 0 ${W} ${svgH}`} width="100%"
+      style={{ overflow:"visible", maxHeight:420, display:"block" }}>
+      <defs>
+        <radialGradient id="gBase" cx="38%" cy="30%">
+          <stop offset="0%" stopColor="#162035"/><stop offset="100%" stopColor="#060d1e"/>
+        </radialGradient>
+        <radialGradient id="gInsert" cx="38%" cy="30%">
+          <stop offset="0%" stopColor="#1d4ed8"/><stop offset="100%" stopColor="#1e3a8a"/>
+        </radialGradient>
+        <radialGradient id="gSearch" cx="38%" cy="30%">
+          <stop offset="0%" stopColor="#1d4ed8"/><stop offset="100%" stopColor="#1e3a8a"/>
+        </radialGradient>
+        <radialGradient id="gPointer" cx="38%" cy="30%">
+          <stop offset="0%" stopColor="#0ea5e9"/><stop offset="100%" stopColor="#0c4a6e"/>
+        </radialGradient>
+        <radialGradient id="gDelete" cx="38%" cy="30%">
+          <stop offset="0%" stopColor="#b91c1c"/><stop offset="100%" stopColor="#450a0a"/>
+        </radialGradient>
+        <filter id="fGlow" x="-80%" y="-80%" width="260%" height="260%">
+          <feGaussianBlur stdDeviation="6" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="fEdge" x="-40%" y="-40%" width="180%" height="180%">
+          <feGaussianBlur stdDeviation="2.5" result="b"/>
+          <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+        <filter id="fShad" x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="4"/>
+        </filter>
+        <marker id="arrowPath" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+          <path d="M0,1 L0,6 L7,3.5 z" fill="#60a5fa" opacity="0.8"/>
+        </marker>
+        <pattern id="bgGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="rgba(96,130,255,0.04)" strokeWidth="1"/>
+        </pattern>
+        <style>{`
+          .edgeDraw{stroke-dasharray:800;stroke-dashoffset:800;animation:edReveal .45s ease forwards}
+          @keyframes edReveal{to{stroke-dashoffset:0}}
+          .pathEdge{stroke-dasharray:9 5;animation:dashFlow .9s linear infinite}
+          @keyframes dashFlow{to{stroke-dashoffset:-28}}
+          .nodeIn{animation:nodeIn2 0.5s cubic-bezier(.34,1.4,.64,1) both;transform-box:fill-box;transform-origin:center}
+          @keyframes nodeIn2{0%{transform:scale(.08);opacity:0}65%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+          .nodeRipple{animation:ripple .65s ease-out forwards;transform-box:fill-box;transform-origin:center}
+          @keyframes ripple{0%{transform:scale(.85);opacity:.75}100%{transform:scale(2.8);opacity:0}}
+          .nodePointer{animation:pointerPulse 1.2s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+          @keyframes pointerPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.08)}}
+          .nodeFound{animation:foundBounce .5s cubic-bezier(.34,1.5,.64,1) both;transform-box:fill-box;transform-origin:center}
+          @keyframes foundBounce{0%{transform:scale(.9)}55%{transform:scale(1.15)}100%{transform:scale(1)}}
+          .pointerArrow{animation:arrowBounce .7s ease-in-out infinite}
+          @keyframes arrowBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+          .deleteExplode{animation:deleteBurst .55s ease-out forwards;transform-box:fill-box;transform-origin:center}
+          @keyframes deleteBurst{0%{transform:scale(1);opacity:1}100%{transform:scale(3);opacity:0}}
+          .deleteParticle{animation:particleFly .6s ease-out forwards}
+          @keyframes particleFly{0%{transform:translate(0,0) scale(1);opacity:.9}100%{transform:translate(var(--dx,0),var(--dy,0)) scale(0);opacity:0}}
+        `}</style>
+      </defs>
+      <rect width={W} height={svgH} fill="url(#bgGrid)"/>
+
+      {edges.map(e => {
+        const fp = pos[e.from], tp = pos[e.to];
+        if (!fp || !tp) return null;
+        const isHL = isPathEdge(e.fv, e.tv);
+        return (
+          <g key={`e-${e.from}-${e.to}`}>
+            {isHL && <line x1={px(fp.x)} y1={py(fp.y)} x2={px(tp.x)} y2={py(tp.y)} stroke="#3b82f6" strokeWidth="4" opacity="0.1" filter="url(#fEdge)"/>}
+            <line x1={px(fp.x)} y1={py(fp.y)} x2={px(tp.x)} y2={py(tp.y)}
+              stroke={isHL ? "#60a5fa" : "rgba(80,120,200,0.16)"}
+              strokeWidth={isHL ? 2 : 1.3}
+              markerEnd={isHL ? "url(#arrowPath)" : undefined}
+              className={isHL ? "pathEdge" : "edgeDraw"}/>
+          </g>
+        );
+      })}
+
+      {deletedNodePos && (
+        <g>
+          <circle cx={deletedNodePos.x} cy={deletedNodePos.y} r={NR+6} fill="none" stroke="#f87171" strokeWidth="2.2" className="deleteExplode"/>
+          {[0,1,2,3,4,5].map((_,i) => {
+            const angle = i*60*Math.PI/180;
+            const dx = Math.cos(angle)*20, dy = Math.sin(angle)*20;
+            return <circle key={i} cx={deletedNodePos.x} cy={deletedNodePos.y} r="2.5" fill="#ff6b6b"
+              style={{"--dx":`${dx}px`,"--dy":`${dy}px`}} className="deleteParticle"/>;
+          })}
+        </g>
+      )}
+
+      {nodes.map(node => {
+        const p = pos[node.id]; if (!p) return null;
+        const cx = px(p.x), cy = py(p.y);
+        const isHl = highlight.includes(node.val);
+        const onPath = pathSet.has(node.val);
+        const isPtr = node.val === currentPointerVal && opType === "search";
+        const isFound = opType === "search" && isHl && node.val === highlight[highlight.length - 1];
+        const isIns = opType === "insert" && isHl;
+
+        let fill = "url(#gBase)", stroke = "rgba(80,120,200,0.18)", strokeW = 1.4;
+        if (isPtr) { fill = "url(#gPointer)"; stroke = "#7dd3fc"; strokeW = 2.2; }
+        else if (isFound) { fill = "url(#gSearch)"; stroke = "#60a5fa"; strokeW = 2.2; }
+        else if (onPath && opType === "search") { fill = "url(#gSearch)"; stroke = "#3b82f6"; strokeW = 1.8; }
+        else if (opType === "delete" && isHl) { fill = "url(#gDelete)"; stroke = "#f87171"; strokeW = 2.2; }
+        else if (isIns) { fill = "url(#gInsert)"; stroke = "#60a5fa"; strokeW = 2.2; }
+
+        const cls = isIns ? "nodeIn" : isFound ? "nodeFound" : isPtr ? "nodePointer" : "";
+
+        return (
+          <g key={`n-${node.id}-${animKey}`}>
+            {(isPtr||isFound||isIns) && <circle cx={cx} cy={cy} r={NR+12} fill="rgba(59,130,246,0.1)" filter="url(#fGlow)"/>}
+            {isIns && <circle cx={cx} cy={cy} r={NR} fill="none" stroke="#60a5fa" strokeWidth="2" opacity="0" className="nodeRipple"/>}
+            <circle cx={cx} cy={cy+3} r={NR} fill="rgba(0,0,0,0.4)" filter="url(#fShad)"/>
+            <circle cx={cx} cy={cy} r={NR} fill={fill} stroke={stroke} strokeWidth={strokeW} className={cls} style={{transition:"fill .28s,stroke .28s"}}/>
+            <circle cx={cx-5} cy={cy-5} r={4} fill="rgba(255,255,255,0.08)"/>
+            {isPtr && <text x={cx} y={cy-NR-10} textAnchor="middle" fill="#7dd3fc" fontSize="11" fontFamily="'JetBrains Mono',monospace" className="pointerArrow">▼</text>}
+            <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+              fill={isHl||onPath ? "#fff" : "#5a8aaa"} fontSize="11" fontWeight="700"
+              fontFamily="'JetBrains Mono',monospace">{node.val}</text>
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 
 /* ─── Terminal ─── */
-function Terminal({ lines, validating }) {
-  const ref = useRef(null);
-  useEffect(()=>{ if(ref.current) ref.current.scrollTop=ref.current.scrollHeight; },[lines,validating]);
-  return (
-    <div style={{flex:1,display:"flex",flexDirection:"column",background:"#020509",minHeight:0,fontFamily:"'JetBrains Mono',monospace",fontSize:"10px"}}>
-      <div ref={ref} style={{flex:1,overflowY:"auto",padding:"6px 0",scrollbarWidth:"thin",scrollbarColor:"rgba(96,165,250,0.14) transparent"}}>
-        {lines.length===0&&!validating&&<div style={{padding:"3px 14px",display:"flex",alignItems:"center",gap:6}}><span style={{color:"#4ade80",userSelect:"none"}}>$</span><span style={{animation:"blink 1.1s step-end infinite",color:"#050d0a",marginLeft:4}}>_</span></div>}
-        {lines.map((line,i)=><TLine key={i} line={line} isLast={i===lines.length-1&&!validating}/>)}
-        {validating&&<div style={{padding:"3px 14px",display:"flex",alignItems:"center",gap:8}}><span style={{display:"inline-block",width:8,height:8,borderRadius:"50%",border:"1.5px solid rgba(96,165,250,0.18)",borderTopColor:"#60a5fa",animation:"spin .65s linear infinite",flexShrink:0}}/><span style={{color:"#2a4060",fontSize:9}}>AI reviewing BST…</span></div>}
-      </div>
-    </div>
-  );
-}
-function TLine({ line, isLast }) {
-  const [vis,setVis]=useState(false);
-  useEffect(()=>{const t=setTimeout(()=>setVis(true),12);return()=>clearTimeout(t);},[]);
-  if(line.type==="separator") return <div style={{margin:"3px 14px",borderTop:"1px solid rgba(255,255,255,0.05)",opacity:vis?1:0}}/>;
-  if(line.type==="blank")     return <div style={{height:4}}/>;
-  if(line.type==="prompt")    return <div style={{padding:"1.5px 14px",display:"flex",alignItems:"center",gap:6,opacity:vis?1:0}}><span style={{color:"#4ade80",userSelect:"none"}}>$</span><span style={{color:"#3a5878"}}>{line.text}</span></div>;
-  const cm={insert:"#93c5fd",search:"#7dd3fc",delete:"#f87171",error:"#f87171",stderr:"#f87171",success:"#4ade80",warn:"#fbbf24",info:"#60a5fa",output:"#3a5878"};
-  const pm={insert:"↑",search:"◎",delete:"✕",error:"✗",stderr:"✗",success:"✓",warn:"⚠",info:"·"};
-  const c=cm[line.type]??"#3a5878";
-  return <div style={{padding:"1px 14px",display:"flex",alignItems:"flex-start",opacity:vis?1:0,transition:"opacity .08s"}}><span style={{color:c,width:16,flexShrink:0,fontSize:8,paddingTop:2}}>{pm[line.type]??""}</span><span style={{color:c,wordBreak:"break-word",lineHeight:1.6,flex:1}}>{line.text}{isLast&&<span style={{animation:"blink 1.1s step-end infinite",color:"#040a09"}}> _</span>}</span>{line.lineNum&&<span style={{marginLeft:8,color:"#1e3a50",fontSize:7.5,flexShrink:0,paddingTop:2}}>:{line.lineNum}</span>}</div>;
-}
+function Terminal({ lines, validating, currentStepIndex }) {
+  const bodyRef = useRef(null);
+  const lineRefs = useRef({});
+  useEffect(() => {
+    if (currentStepIndex === undefined || currentStepIndex === -1) return;
+    lineRefs.current[currentStepIndex]?.scrollIntoView({ block:"nearest", behavior:"smooth" });
+  }, [currentStepIndex]);
+  useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = bodyRef.current.scrollHeight; }, [lines, validating]);
 
-/* ─── Complexity Panel (compact) ─── */
-function ComplexityPanel({ visible, onClose }) {
-  if (!visible) return null;
   return (
-    <div style={{position:"absolute",top:38,right:6,zIndex:100,background:"rgba(5,10,28,0.97)",border:"1px solid rgba(96,165,250,0.22)",borderRadius:10,padding:"12px 14px",minWidth:220,boxShadow:"0 16px 40px rgba(0,0,0,0.65)",backdropFilter:"blur(20px)",animation:"panelFade .18s ease"}}>
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#93c5fd",letterSpacing:".12em",textTransform:"uppercase",fontWeight:700}}>Time Complexity</span>
-        <button onClick={onClose} style={{background:"none",border:"none",color:"#3a5878",cursor:"pointer",fontSize:14,lineHeight:1,padding:"0 2px"}}>×</button>
-      </div>
-      <table style={{borderCollapse:"collapse",width:"100%",fontFamily:"'JetBrains Mono',monospace"}}>
-        {[["Operation","Average","Worst"],["Search","O(log n)","O(n)"],["Insert","O(log n)","O(n)"],["Delete","O(log n)","O(n)"],["Space","O(n)","O(n)"]].map((row,ri)=>(
-          <tr key={ri} style={{borderBottom:ri<4?"1px solid rgba(255,255,255,0.05)":"none"}}>
-            {row.map((cell,ci)=>(
-              <td key={ci} style={{padding:"5px 6px",fontSize:ri===0?7:10,fontWeight:ci===0||ri===0?700:500,color:ri===0?"#2a4060":ci===0?"#c8dff5":ci===1?"#4ade80":"#fbbf24",textAlign:ci===0?"left":"center"}}>{cell}</td>
-            ))}
-          </tr>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", background:"#06080f", minHeight:0, fontFamily:"'JetBrains Mono',monospace" }}>
+      <div ref={bodyRef} style={{ flex:1, overflowY:"auto", padding:"10px 0", scrollbarWidth:"thin", scrollbarColor:"#151e2e transparent" }}>
+        {lines.length === 0 && !validating && (
+          <div style={{ padding:"3px 18px", display:"flex", alignItems:"center", gap:6 }}>
+            <span style={{ color:"#39d98a" }}>$</span>
+            <span style={{ animation:"cur 1.1s step-end infinite", color:"#1e3a22", marginLeft:4 }}>_</span>
+          </div>
+        )}
+        {lines.map((line, i) => (
+          <TermLine key={i} line={line} isLast={i===lines.length-1&&!validating}
+            stepIndex={line.stepIndex} currentStepIndex={currentStepIndex}
+            lineRef={el => lineRefs.current[line.stepIndex] = el}/>
         ))}
-      </table>
-      <div style={{marginTop:8,padding:"6px 8px",background:"rgba(59,130,246,0.07)",borderRadius:6,border:"1px solid rgba(96,165,250,0.1)"}}>
-        <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,color:"#60a5fa",lineHeight:1.65}}>💡 Worst case O(n) occurs on skewed trees (sorted input). Use AVL/Red-Black for guaranteed O(log n).</div>
+        {validating && (
+          <div style={{ padding:"3px 18px", display:"flex", alignItems:"center", gap:9 }}>
+            <span style={{ display:"inline-block", width:11, height:11, borderRadius:"50%", border:"1.5px solid rgba(76,201,240,0.18)", borderTopColor:"#4cc9f0", animation:"spin 0.7s linear infinite", flexShrink:0 }}/>
+            <span style={{ color:"#2d3f5a", fontSize:11 }}>VisuoSlayer reviewing your code…</span>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-/* ─── useIsMobile ────────────────────────────────────────────────────────────── */
+function TermLine({ line, isLast, stepIndex, currentStepIndex, lineRef }) {
+  const [vis, setVis] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setVis(true), 15); return () => clearTimeout(t); }, []);
+  const isActive = stepIndex !== undefined && stepIndex === currentStepIndex && currentStepIndex !== -1;
+
+  if (line.type === "separator") return <div style={{ margin:"5px 18px", borderTop:"1px solid rgba(255,255,255,0.04)", opacity:vis?1:0, transition:"opacity 0.12s" }}/>;
+  if (line.type === "blank") return <div style={{ height:7 }}/>;
+  if (line.type === "prompt") return (
+    <div style={{ padding:"2px 18px", display:"flex", alignItems:"center", gap:7, opacity:vis?1:0, transition:"opacity 0.1s" }}>
+      <span style={{ color:"#39d98a" }}>$</span>
+      <span style={{ color:"#3d6e9a", fontSize:10 }}>{line.text}</span>
+    </div>
+  );
+
+  const cm = { insert:"#4cc9f0", search:"#c77dff", delete:"#f72585", error:"#f87171", stderr:"#f87171", success:"#39d98a", warn:"#fbbf24", info:"#60a5fa", output:"#4a5e7a", stdout:"#4a6080" };
+  const pm = { insert:"↑", search:"◎", delete:"✕", error:"✗", stderr:"✗", success:"✓", warn:"⚠", info:"·", output:"", stdout:"" };
+  const c = cm[line.type] ?? "#3a4a62";
+  const pfx = pm[line.type] ?? "";
+
+  return (
+    <div ref={lineRef} style={{ padding:"1.5px 18px", display:"flex", alignItems:"flex-start", opacity:vis?1:0, transition:"opacity 0.09s", background:isActive?"rgba(76,201,240,0.08)":"transparent", borderLeft:isActive?"2px solid #4cc9f0":"2px solid transparent" }}>
+      <span style={{ color:c, width:20, flexShrink:0, fontSize:10, paddingTop:2 }}>{pfx}</span>
+      <span style={{ color:c, wordBreak:"break-word", lineHeight:1.65, flex:1, fontSize:10.5 }}>
+        {line.text}
+        {isLast && <span style={{ animation:"cur 1.1s step-end infinite", color:"#1e2535" }}> _</span>}
+      </span>
+      {line.lineNum && <span style={{ marginLeft:10, color:"#141c28", fontSize:9, flexShrink:0, paddingTop:3 }}>:{line.lineNum}</span>}
+    </div>
+  );
+}
+
+/* ─── Code Editor ─── */
+const LINE_H = 21;
+function CodeEditor({ code, setCode, step, errorLineSet, onKeyDown, taRef }) {
+  const lnRef = useRef(null);
+  const lines = code.split("\n");
+  const syncScroll = useCallback(() => {
+    if (taRef.current && lnRef.current) lnRef.current.scrollTop = taRef.current.scrollTop;
+  }, [taRef]);
+  useEffect(() => {
+    const ta = taRef.current; if (!ta) return;
+    ta.addEventListener("scroll", syncScroll, { passive:true });
+    return () => ta.removeEventListener("scroll", syncScroll);
+  }, [syncScroll]);
+
+  return (
+    <div style={{ flex:1, display:"flex", minHeight:0, overflow:"hidden", position:"relative" }}>
+      <div ref={lnRef} style={{ width:42, flexShrink:0, background:"rgba(4,7,18,0.7)", borderRight:"1px solid rgba(255,255,255,0.04)", overflowY:"hidden", overflowX:"hidden", paddingTop:16, paddingBottom:16, display:"flex", flexDirection:"column", userSelect:"none", pointerEvents:"none", scrollbarWidth:"none" }}>
+        {lines.map((_, i) => {
+          const isAct = step?.lineNum === i, isErr = errorLineSet.has(i);
+          return (
+            <div key={i} style={{ height:LINE_H, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"flex-end", paddingRight:8, fontFamily:"'JetBrains Mono',monospace", fontSize:10.5, lineHeight:1, color:isErr?"#ef4444":isAct?"#4cc9f0":"#1c2738", background:isErr?"rgba(239,68,68,0.07)":isAct?"rgba(76,201,240,0.07)":"transparent", transition:"color 0.12s,background 0.12s" }}>
+              {i+1}
+            </div>
+          );
+        })}
+      </div>
+      {step && <div style={{ position:"absolute", left:42, right:0, height:LINE_H, top:16+step.lineNum*LINE_H, background:"rgba(76,201,240,0.04)", borderLeft:"2px solid rgba(76,201,240,0.4)", pointerEvents:"none", transition:"top 0.18s ease", zIndex:1 }}/>}
+      {[...errorLineSet].map(i => <div key={`e${i}`} style={{ position:"absolute", left:42, right:0, height:LINE_H, top:16+i*LINE_H, background:"rgba(239,68,68,0.05)", borderLeft:"2px solid rgba(239,68,68,0.4)", pointerEvents:"none", zIndex:1 }}/>)}
+      <textarea ref={taRef} style={{ flex:1, padding:"16px 16px 16px 12px", background:"transparent", border:"none", outline:"none", color:"#7ecfff", fontFamily:"'JetBrains Mono',monospace", fontSize:11.5, lineHeight:`${LINE_H}px`, resize:"none", caretColor:"#4cc9f0", tabSize:2, whiteSpace:"pre", overflowY:"auto", overflowX:"auto", scrollbarWidth:"thin", scrollbarColor:"#151e2e transparent", position:"relative", zIndex:2, WebkitUserSelect:"text", touchAction:"manipulation" }}
+        value={code} onChange={e => setCode(e.target.value)} onKeyDown={onKeyDown}
+        spellCheck={false} placeholder="// Write your BST here…"
+        autoCorrect="off" autoCapitalize="none" autoComplete="off"/>
+    </div>
+  );
+}
+
+/* ─── Mobile Nav ─── */
+function MobileStickyNav({ activeSection, onNav, hasSteps, hasErrors, termLines }) {
+  const hasErr = termLines.some(l => l.type==="error"||l.type==="stderr");
+  const hasOk = termLines.some(l => l.type==="success");
+  const items = [
+    { id:"code", icon:"⌨", label:"Code", dot:null },
+    { id:"terminal", icon:"⬛", label:"Term", dot:hasErr?"#f87171":hasOk?"#39d98a":null },
+    { id:"viz", icon:"🌲", label:"Tree", dot:hasSteps?"#4cc9f0":hasErrors?"#f87171":null },
+  ];
+  return (
+    <div style={{ position:"fixed", right:0, top:"50%", transform:"translateY(-50%)", zIndex:9000, display:"flex", flexDirection:"column", background:"rgba(5,8,26,0.96)", border:"1px solid rgba(76,201,240,0.2)", borderRight:"none", borderRadius:"14px 0 0 14px", overflow:"hidden", boxShadow:"-4px 0 28px rgba(0,0,0,0.7)", backdropFilter:"blur(24px)" }}>
+      {items.map((item, i) => {
+        const isActive = activeSection === item.id;
+        return (
+          <button key={item.id} onClick={() => onNav(item.id)} style={{ position:"relative", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4, width:50, padding:"13px 4px", border:"none", background:isActive?"linear-gradient(180deg,rgba(76,201,240,0.2),rgba(199,125,255,0.12))":"transparent", cursor:"pointer", borderBottom:i<items.length-1?"1px solid rgba(255,255,255,0.06)":"none", WebkitTapHighlightColor:"transparent", transition:"background 0.18s", borderLeft:isActive?"2.5px solid #4cc9f0":"2.5px solid transparent" }}>
+            {item.dot && <span style={{ position:"absolute", top:7, right:8, width:6, height:6, borderRadius:"50%", background:item.dot, boxShadow:`0 0 8px ${item.dot}` }}/>}
+            <span style={{ fontSize:17, opacity:isActive?1:0.38, transition:"opacity 0.15s,transform 0.15s", transform:isActive?"scale(1.12)":"scale(1)", lineHeight:1 }}>{item.icon}</span>
+            <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:6.5, fontWeight:700, letterSpacing:"0.06em", textTransform:"uppercase", color:isActive?"#4cc9f0":"rgba(255,255,255,0.2)", transition:"color 0.15s" }}>{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth < 768);
+    const check = () => setIsMobile(window.innerWidth < 900);
     check();
     window.addEventListener("resize", check);
     return () => window.removeEventListener("resize", check);
@@ -840,652 +1052,547 @@ function useIsMobile() {
   return isMobile;
 }
 
-/* ─── Sticky Navigation for Mobile ────────────────────────────────────────── */
-function MobileStickyNav({ activeSection, onNav, hasSteps, hasErrors, termLines }) {
-  const hasTermErr = termLines.some(l=>l.type==="error"||l.type==="stderr");
-  const hasTermOk  = termLines.some(l=>l.type==="success");
-
-  const items = [
-    { id:"code", icon:"⌨", label:"Code", dot: null },
-    { id:"terminal", icon:"⬛", label:"Term", dot: hasTermErr ? "#f87171" : hasTermOk ? "#4ade80" : null },
-    { id:"viz", icon:"🌲", label:"Tree", dot: hasSteps ? "#60a5fa" : hasErrors ? "#f87171" : null },
-  ];
-
-  return (
-    <div style={{
-      position:"fixed", right:0, top:"50%", transform:"translateY(-50%)", zIndex:9000,
-      display:"flex", flexDirection:"column", gap:0,
-      background:"rgba(5,8,26,0.94)", border:"1px solid rgba(96,165,250,0.18)", borderRight:"none",
-      borderRadius:"12px 0 0 12px", overflow:"hidden", boxShadow:"-4px 0 32px rgba(0,0,0,0.7), -1px 0 0 rgba(96,165,250,0.08)",
-      backdropFilter:"blur(20px)"
-    }}>
-      <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,#60a5fa,#a78bfa,transparent)",opacity:0.6}}/>
-      {items.map((item, i) => {
-        const isActive = activeSection === item.id;
-        return (
-          <button key={item.id} onClick={() => onNav(item.id)} style={{
-            position:"relative", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:4,
-            width:48, padding:"12px 4px", border:"none",
-            background: isActive ? "linear-gradient(180deg,rgba(96,165,250,0.18),rgba(167,139,250,0.12))" : "transparent",
-            cursor:"pointer", borderBottom: i < items.length-1 ? "1px solid rgba(255,255,255,0.06)" : "none",
-            WebkitTapHighlightColor:"transparent", transition:"background 0.18s",
-            borderLeft: isActive ? "2px solid #60a5fa" : "2px solid transparent",
-          }}>
-            {item.dot && (
-              <span style={{position:"absolute",top:7,right:9,width:5,height:5,borderRadius:"50%",background:item.dot,boxShadow:`0 0 6px ${item.dot}`}}/>
-            )}
-            {isActive && <span style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,rgba(96,165,250,0.08),transparent 70%)",pointerEvents:"none"}}/>}
-            <span style={{fontSize:16, opacity: isActive ? 1 : 0.4, transition:"opacity 0.15s, transform 0.15s", transform: isActive ? "scale(1.1)" : "scale(1)", lineHeight:1}}>{item.icon}</span>
-            <span style={{fontFamily:"'JetBrains Mono',monospace", fontSize:7, fontWeight:700, letterSpacing:"0.05em", textTransform:"uppercase", color: isActive ? "#60a5fa" : "rgba(255,255,255,0.22)", transition:"color 0.15s"}}>{item.label}</span>
-          </button>
-        );
-      })}
-      <div style={{position:"absolute",bottom:0,left:0,right:0,height:2,background:"linear-gradient(90deg,transparent,#f472b6,#60a5fa,transparent)",opacity:0.4}}/>
-    </div>
-  );
-}
-
-/* ─── Main Page ─── */
-export default function TreeDSPage() {
-  const [lang,setLang]           = useState("javascript");
-  const [code,setCode]           = useState(TPL.javascript);
-  const [steps,setSteps]         = useState([]);
-  const [idx,setIdx]             = useState(-1);
-  const [error,setError]         = useState("");
-  const [playing,setPlaying]     = useState(false);
-  const [speed,setSpeed]         = useState(1.4);
-  const [animKey,setAnimKey]     = useState(0);
-  const [done,setDone]           = useState(false);
-  const [validating,setValidating]=useState(false);
-  const [aiErrors,setAiErrors]   = useState([]);
-  const [termLines,setTermLines] = useState([]);
-  const [sessionId]              = useState(()=>Math.random().toString(36).slice(2,8).toUpperCase());
-  const [toast,setToast]         = useState(null);
-  const [termOpen,setTermOpen]   = useState(true);
-  const [showOh,setShowOh]       = useState(false);
-  const [pointerIdx,setPointerIdx]= useState(null);
-  const [deletedNodePos, setDeletedNodePos] = useState(null);
+/* ─── Main Component ─── */
+export default function BSTPage() {
+  const [lang, setLang] = useState("c");
+  const [code, setCode] = useState(TPL.c);
+  const [steps, setSteps] = useState([]);
+  const [idx, setIdx] = useState(-1);
+  const [error, setError] = useState("");
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(1.1);
+  const [animKey, setAnimKey] = useState(0);
+  const [done, setDone] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [aiErrors, setAiErrors] = useState([]);
+  const [termLines, setTermLines] = useState([]);
+  const [sessionId] = useState(() => Math.random().toString(36).slice(2,8).toUpperCase());
+  const [toast, setToast] = useState(null);
+  const [termOpen, setTermOpen] = useState(true);
   const [activeSection, setActiveSection] = useState("code");
-  const isMobile = useIsMobile();
+  const [pointerIdx, setPointerIdx] = useState(null);
+  const [deletedNodePos, setDeletedNodePos] = useState(null);
 
-  const timerRef=useRef(null), ptrTimerRef=useRef(null), taRef=useRef(null), listRef=useRef(null);
+  const isMobile = useIsMobile();
+  const timerRef = useRef(null);
+  const ptrTimerRef = useRef(null);
+  const taRef = useRef(null);
+  const listRef = useRef(null);
   const sectionCodeRef = useRef(null);
   const sectionTermRef = useRef(null);
-  const sectionVizRef  = useRef(null);
+  const sectionVizRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
-  const bump=()=>setAnimKey(k=>k+1);
-  const showToast=(msg)=>{setToast(msg);setTimeout(()=>setToast(null),2100);};
+  const bump = () => setAnimKey(k => k+1);
+  const showToast = msg => { setToast(msg); setTimeout(() => setToast(null), 2400); };
 
-  const doReset=useCallback(()=>{
+  const doReset = useCallback(() => {
     clearInterval(timerRef.current); clearInterval(ptrTimerRef.current);
     setSteps([]); setIdx(-1); setError(""); setPlaying(false); setDone(false);
     setAiErrors([]); setTermLines([]); setPointerIdx(null); setDeletedNodePos(null);
-  },[]);
+  }, []);
 
-  const handleChangeLang=(l)=>{setLang(l);setCode(TPL[l]??"");doReset();};
+  const handleChangeLang = l => { setLang(l); setCode(TPL[l] ?? ""); doReset(); };
 
-  const buildTerm=(stps,errs,aiErrs,aiReason)=>{
-    const ls=[]; const ts=new Date().toTimeString().slice(0,8);
-    ls.push({type:"output",text:`VisuoSlayer v3.2  ·  BST  ·  ${ts}  ·  pid:${sessionId}`});
-    ls.push({type:"separator"});
-    if(aiErrs.length>0){
-      ls.push({type:"prompt",text:`validate --lang=${lang} --ds=bst`}); ls.push({type:"blank"});
-      if(aiReason) ls.push({type:"stderr",text:aiReason});
-      aiErrs.forEach(e=>ls.push({type:"error",text:`  L${e.line??"?"}  ${e.message}`,lineNum:e.line}));
-      ls.push({type:"blank"}); ls.push({type:"error",text:"Process exited with code 1"}); return ls;
+  const buildTerm = (stps, errs, aiErrs, aiReason) => {
+    const ls = [];
+    const ts = new Date().toTimeString().slice(0, 8);
+    const langLabel = LANGS[lang]?.name ?? lang;
+    ls.push({ type:"output", text:`VisuoSlayer v2.3  ·  BST  ·  ${ts}  ·  pid:${sessionId}` });
+    ls.push({ type:"separator" });
+    if (aiErrs.length > 0) {
+      ls.push({ type:"prompt", text:`visualoslayer validate --lang=${langLabel} --ds=bst` });
+      ls.push({ type:"blank" });
+      if (aiReason) ls.push({ type:"stderr", text:aiReason });
+      aiErrs.forEach(e => ls.push({ type:"error", text:`  L${e.line??"?"}  ${e.message}`, lineNum:e.line }));
+      ls.push({ type:"blank" }); ls.push({ type:"error", text:"Process exited with code 1" });
+      return ls;
     }
-    if(errs.length>0){
-      ls.push({type:"prompt",text:`run --lang=${lang}`}); ls.push({type:"blank"});
-      errs.forEach(e=>ls.push({type:"stderr",text:e}));
-      ls.push({type:"blank"}); ls.push({type:"error",text:"Process exited with code 1"}); return ls;
+    if (errs.length > 0) {
+      ls.push({ type:"prompt", text:`visualoslayer run --lang=${langLabel}` });
+      ls.push({ type:"blank" });
+      errs.forEach(e => ls.push({ type:"stderr", text:e }));
+      ls.push({ type:"blank" }); ls.push({ type:"error", text:"Process exited with code 1" });
+      return ls;
     }
-    ls.push({type:"prompt",text:`run --lang=${lang} --ds=bst`}); ls.push({type:"blank"});
-    stps.forEach(s=>{
-      let out="";
-      if(s.type==="insert") out=`insert(${s.value})  →  size:${s.size}  height:${s.height}`;
-      if(s.type==="search") out=`search(${s.value})  →  ${s.found?`✓ found  path:${(s.path||[]).join("→")}`:"✗ not found"}`;
-      if(s.type==="delete") out=`delete(${s.value})  →  size:${s.size}  height:${s.height}`;
-      ls.push({type:s.type,text:out,lineNum:s.lineNum+1});
-    });
-    ls.push({type:"blank"}); ls.push({type:"success",text:`${stps.length} op${stps.length!==1?"s":""} completed  ·  exit 0`});
+    if (stps.length > 0) {
+      ls.push({ type:"prompt", text:`visualoslayer run --lang=${langLabel} --ds=bst` });
+      ls.push({ type:"blank" });
+      stps.forEach((s, si) => {
+        let out = "";
+        if (s.type==="insert") out = `insert(${s.value})  →  size:${s.size}  height:${s.height}`;
+        if (s.type==="search") out = `search(${s.value})  →  ${s.found?`✓ found  path:${(s.path||[]).join("→")}`:  "✗ not found"}`;
+        if (s.type==="delete") out = `delete(${s.value})  →  size:${s.size}  height:${s.height}`;
+        ls.push({ type:s.type, text:out, lineNum:s.lineNum+1, stepIndex:si });
+      });
+      ls.push({ type:"blank" });
+      ls.push({ type:"success", text:`${stps.length} op${stps.length!==1?"s":""} completed  ·  exit 0` });
+    }
     return ls;
   };
 
-  const handleRun=async()=>{
-    doReset(); setValidating(true);
-    const v=await validateWithAI(code,lang);
+  const handleRun = async () => {
+    doReset();
+    setValidating(true);
+    const v = await validateWithAI(code, lang);
     setValidating(false);
-    if(!v.valid){setAiErrors(v.errors??[]);setTermLines(buildTerm([],[],v.errors??[],v.reason??"")); if(isMobile) scrollToSection("terminal"); return;}
-    const{steps:s,errors}=parseAndRunCode(code);
-    if(errors.length){setError(errors.join("\n"));setTermLines(buildTerm([],errors,[],"")); if(isMobile) scrollToSection("terminal"); return;}
-    setSteps(s); setIdx(0); bump(); setPlaying(true); setTermLines(buildTerm(s,[],[],""));
-
-    if(s[0]?.type==="delete" && s[0]?.value) { setDeletedNodePos(null); }
+    if (!v.valid) {
+      setAiErrors(v.errors ?? []);
+      setTermLines(buildTerm([], [], v.errors ?? [], v.reason ?? ""));
+      if (isMobile) scrollToSection("terminal");
+      return;
+    }
+    const { steps: s, errors } = parseAndRunCode(code, lang);
+    if (errors.length) {
+      setError(errors.join("\n"));
+      setTermLines(buildTerm([], errors, [], ""));
+      if (isMobile) scrollToSection("terminal");
+      return;
+    }
+    setSteps(s); setIdx(0); bump(); setPlaying(true);
+    setTermLines(buildTerm(s, [], [], ""));
+    if (isMobile) scrollToSection("viz");
   };
 
-  const animatePointer=useCallback((path)=>{
-    if(!path||path.length===0){setPointerIdx(null);return;}
-    setPointerIdx(0);
-    let i=0;
+  const animatePointer = useCallback((path) => {
+    if (!path?.length) { setPointerIdx(null); return; }
+    setPointerIdx(0); let i = 0;
     clearInterval(ptrTimerRef.current);
-    ptrTimerRef.current=setInterval(()=>{
-      i++;
-      if(i>=path.length){clearInterval(ptrTimerRef.current);return;}
+    ptrTimerRef.current = setInterval(() => {
+      i++; if (i >= path.length) { clearInterval(ptrTimerRef.current); return; }
       setPointerIdx(i);
-    },400);
-  },[]);
+    }, 400);
+  }, []);
 
-  const goTo=useCallback((i)=>{
-    clearInterval(timerRef.current); clearInterval(ptrTimerRef.current);
-    setPlaying(false);
-    const ni=Math.max(0,Math.min(i,steps.length-1));
+  const goTo = useCallback((i) => {
+    clearInterval(timerRef.current); clearInterval(ptrTimerRef.current); setPlaying(false);
+    const ni = Math.max(0, Math.min(i, steps.length - 1));
     setIdx(ni); bump();
 
     const currentStep = steps[ni];
     if (currentStep?.type === "delete" && currentStep.value !== undefined && ni > 0) {
       const prevTree = steps[ni-1]?.tree;
       if (prevTree) {
-        const findNodePos = (node, val, layout) => {
-          if (!node) return null;
-          if (node.val === val) {
-            const pos = layout[node.id];
-            if (pos) {
-              const maxX = Math.max(...Object.values(layout).map(p=>p.x), 0);
-              const maxY = Math.max(...Object.values(layout).map(p=>p.y), 0);
-              const pad=48, vGap=72;
-              const px = (x) => maxX===0 ? 360 : (x/maxX)*(720-pad*2)+pad;
-              const py = (y) => y*vGap+48;
-              return { x: px(pos.x), y: py(pos.y) };
-            }
-            return null;
-          }
-          return findNodePos(node.left, val, layout) || findNodePos(node.right, val, layout);
-        };
         const layoutPrev = layoutTree(prevTree);
-        const pos = findNodePos(prevTree, currentStep.value, layoutPrev);
-        if (pos) setDeletedNodePos(pos);
-        else setDeletedNodePos(null);
+        const allVals = Object.values(layoutPrev);
+        const maxX = allVals.length ? Math.max(...allVals.map(p=>p.x),0) : 0;
+        const pad = 44, vGap = 68;
+        const px2 = x => maxX===0?360:(x/maxX)*(720-pad*2)+pad;
+        const py2 = y => y*vGap+44;
+        const findPos = (node, val) => {
+          if (!node) return null;
+          if (node.val === val) { const p=layoutPrev[node.id]; return p?{x:px2(p.x),y:py2(p.y)}:null; }
+          return findPos(node.left,val)||findPos(node.right,val);
+        };
+        const pos = findPos(prevTree, currentStep.value);
+        setDeletedNodePos(pos ?? null);
       } else setDeletedNodePos(null);
-    } else {
-      setDeletedNodePos(null);
-    }
+    } else setDeletedNodePos(null);
 
-    const s=steps[ni];
-    if(s?.type==="search"&&s.path?.length) animatePointer(s.path);
+    const s = steps[ni];
+    if (s?.type==="search"&&s.path?.length) animatePointer(s.path);
     else setPointerIdx(null);
-  },[steps,animatePointer]);
+  }, [steps, animatePointer]);
 
-  useEffect(()=>{
-    const h=(e)=>{if((e.ctrlKey||e.metaKey)&&e.key==="Enter"){e.preventDefault();handleRun();}};
-    window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
-  },[code,lang]);
+  useEffect(() => {
+    const h = e => { if ((e.ctrlKey||e.metaKey)&&e.key==="Enter") { e.preventDefault(); handleRun(); } };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [code, lang]);
 
-  useEffect(()=>{
-    if(!playing||!steps.length) return;
-    timerRef.current=setInterval(()=>{
-      setIdx(p=>{
-        if(p>=steps.length-1){clearInterval(timerRef.current);setPlaying(false);setDone(true);return p;}
-        const next=p+1; bump();
-        const s=steps[next];
-        if(s?.type==="search"&&s.path?.length) animatePointer(s.path);
-        else setPointerIdx(null);
+  useEffect(() => {
+    if (!playing || !steps.length) return;
+    timerRef.current = setInterval(() => {
+      setIdx(p => {
+        if (p >= steps.length - 1) { clearInterval(timerRef.current); setPlaying(false); setDone(true); return p; }
+        const next = p + 1; bump();
+        const s = steps[next];
+        if (s?.type==="search"&&s.path?.length) animatePointer(s.path); else setPointerIdx(null);
         return next;
       });
-    },speed*1000);
-    return()=>clearInterval(timerRef.current);
-  },[playing,steps,speed,animatePointer]);
+    }, speed * 1000);
+    return () => clearInterval(timerRef.current);
+  }, [playing, steps, speed, animatePointer]);
 
-  useEffect(()=>{listRef.current?.querySelector(".sla")?.scrollIntoView({block:"nearest",behavior:"smooth"});},[idx]);
+  useEffect(() => {
+    listRef.current?.querySelector(".sl-active")?.scrollIntoView({ block:"nearest", behavior:"smooth" });
+  }, [idx]);
 
-  const onKeyDown=(e)=>{
-    if(e.key!=="Tab") return; e.preventDefault();
-    const s=e.target.selectionStart,en=e.target.selectionEnd;
-    const nv=code.slice(0,s)+"  "+code.slice(en); setCode(nv);
-    requestAnimationFrame(()=>{if(taRef.current){taRef.current.selectionStart=s+2;taRef.current.selectionEnd=s+2;}});
+  const onKeyDown = e => {
+    if (e.key !== "Tab") return;
+    e.preventDefault();
+    const s = e.target.selectionStart, en = e.target.selectionEnd;
+    const nv = code.slice(0,s)+"  "+code.slice(en);
+    setCode(nv);
+    requestAnimationFrame(() => { if (taRef.current) { taRef.current.selectionStart=s+2; taRef.current.selectionEnd=s+2; } });
   };
 
-  const step=steps[idx]??null, os=step?(OP[step.type]??OP.insert):null;
-  const prog=steps.length?Math.round(((idx+1)/steps.length)*100):0;
-  const hasAiErr=aiErrors.length>0, idle=steps.length===0&&!error&&!hasAiErr;
-  const lm=LANGS[lang]??LANGS.javascript;
-  const errLineSet=new Set(aiErrors.map(e=>(e.line??1)-1));
-  const metrics=[
-    {lbl:"SIZE",   val:step?.size??0,                           c:"#93c5fd"},
-    {lbl:"HEIGHT", val:step?.height??0,                         c:"#fbbf24"},
-    {lbl:"OP",     val:step?.type?.toUpperCase()??"—",          c:step?(OP[step.type]?.c??"#60a5fa"):"#1e3a50"},
-    {lbl:"STEP",   val:steps.length?(idx+1)+"/"+steps.length:"—",c:"#a78bfa"},
-  ];
+  const step = steps[idx] ?? null;
+  const os = step ? OP[step.type] ?? OP.insert : null;
+  const prog = steps.length ? Math.round(((idx+1)/steps.length)*100) : 0;
+  const hasAiErrors = aiErrors.length > 0;
+  const idle = steps.length===0&&!error&&!hasAiErrors;
+  const lm = LANGS[lang];
+  const errorLineSet = new Set(aiErrors.map(e => (e.line??1)-1));
 
-  // Scroll to section (mobile)
-  const scrollToSection = useCallback((id) => {
-    const map = { code: sectionCodeRef, terminal: sectionTermRef, viz: sectionVizRef };
+  const scrollToSection = useCallback(id => {
+    const map = { code:sectionCodeRef, terminal:sectionTermRef, viz:sectionVizRef };
     map[id]?.current?.scrollIntoView({ behavior:"smooth", block:"start" });
     setActiveSection(id);
   }, []);
 
-  // Intersection observer for mobile nav highlight
   useEffect(() => {
     if (!isMobile) return;
-    const refs = [
-      { id:"code",     ref: sectionCodeRef },
-      { id:"terminal", ref: sectionTermRef },
-      { id:"viz",      ref: sectionVizRef  },
-    ];
-    const obs = new IntersectionObserver(
-      (entries) => {
-        let best = null, bestRatio = 0;
-        entries.forEach(e => {
-          if (e.isIntersecting && e.intersectionRatio > bestRatio) {
-            bestRatio = e.intersectionRatio;
-            best = e.target.dataset.section;
-          }
-        });
-        if (best) setActiveSection(best);
-      },
-      { root: scrollContainerRef.current, threshold: [0.3, 0.6] }
-    );
-    refs.forEach(r => { if (r.ref.current) { r.ref.current.dataset.section = r.id; obs.observe(r.ref.current); }});
+    const refs = [{ id:"code", ref:sectionCodeRef },{ id:"terminal", ref:sectionTermRef },{ id:"viz", ref:sectionVizRef }];
+    const obs = new IntersectionObserver(entries => {
+      let best=null, bestR=0;
+      entries.forEach(e => { if (e.isIntersecting&&e.intersectionRatio>bestR) { bestR=e.intersectionRatio; best=e.target.dataset.section; } });
+      if (best) setActiveSection(best);
+    }, { root:scrollContainerRef.current, threshold:[0.3,0.6] });
+    refs.forEach(r => { if (r.ref.current) { r.ref.current.dataset.section=r.id; obs.observe(r.ref.current); } });
     return () => obs.disconnect();
   }, [isMobile]);
 
-  /* ═══ MOBILE LAYOUT ───────────────────────────────────────────────────── */
+  /* ─── Renders ─── */
+  const renderLangTabs = (mob=false) => (
+    <div className={mob?"mob-lb":"lb"}>
+      {Object.entries(LANGS).map(([k,m]) => {
+        const isActive = lang===k;
+        return (
+          <button key={k} className={`${mob?"mob-lt":"lt"}${isActive?" la":""}`}
+            onClick={() => handleChangeLang(k)}
+            style={isActive ? { borderColor:`${m.accent}40`, color:m.accent, background:`${m.accent}0f` } : {}}>
+            {mob ? m.name : m.ext}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  /* ─── CSS ─── */
+  const SHARED_CSS = `
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@600;700;800;900&family=DM+Sans:wght@400;500;600&display=swap');
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    html,body{height:100%;-webkit-text-size-adjust:100%;}
+    body{background:#050818;color:#c8d8f0;font-family:'DM Sans',sans-serif;}
+    :root{
+      --cyan:#4cc9f0;--cyan-dim:rgba(76,201,240,0.15);--cyan-glow:rgba(76,201,240,0.5);
+      --pink:#f72585;--green:#39d98a;--green-dim:rgba(57,217,138,0.15);--green-glow:rgba(57,217,138,0.45);
+      --purple:#c77dff;
+      --text-primary:#d4e4f7;--text-secondary:#6b8aaa;--text-muted:#3d5470;
+      --border-subtle:rgba(255,255,255,0.07);--border-medium:rgba(255,255,255,0.13);
+      --surface-0:#050818;--surface-1:rgba(8,14,36,0.95);--surface-2:rgba(12,20,48,0.8);--surface-3:rgba(16,26,58,0.7);
+    }
+    @keyframes cur{0%,100%{opacity:1}50%{opacity:0}}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
+    @keyframes rPulse{0%,100%{box-shadow:0 0 18px rgba(76,201,240,0.45)}50%{box-shadow:0 0 42px rgba(76,201,240,0.75),0 0 80px rgba(76,201,240,0.25)}}
+    @keyframes stepPop{0%{transform:scale(0.85);opacity:0}55%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+    @keyframes toastIn{0%{opacity:0;transform:translateY(10px) scale(0.92)}100%{opacity:1;transform:none}}
+    @keyframes toastOut{0%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
+    @keyframes gridScroll{0%{background-position:0 0}100%{background-position:38px 38px}}
+    @keyframes scanline{0%{top:-10%}100%{top:110%}}
+    @keyframes blobFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(22px,-16px) scale(1.06)}66%{transform:translate(-14px,20px) scale(0.95)}}
+    @keyframes blob2{0%,100%{transform:translate(0,0) scale(1)}40%{transform:translate(-26px,14px) scale(1.09)}70%{transform:translate(18px,-22px) scale(0.93)}}
+    @keyframes idleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-track{background:transparent}
+    ::-webkit-scrollbar-thumb{background:rgba(76,201,240,0.2);border-radius:4px}
+    ::-webkit-scrollbar-thumb:hover{background:rgba(76,201,240,0.4)}
+    textarea::-webkit-scrollbar{width:4px}
+  `;
+
+  /* ─── MOBILE ─── */
   if (isMobile) {
     return (
       <>
-        <style>{`
-          @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
-          *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-          html,body{height:100%;-webkit-text-size-adjust:100%;}
-          body{background:#03060f;color:#c8dff5;font-family:'DM Sans',sans-serif;}
-
-          :root{
-            --cyan:#60a5fa; --cyan-dim:rgba(96,165,250,0.15); --cyan-glow:rgba(96,165,250,0.45);
-            --green:#4ade80; --green-dim:rgba(74,222,128,0.15);
-            --purple:#a78bfa; --yellow:#fbbf24;
-            --text-muted:#3d5470; --border-subtle:rgba(255,255,255,0.07);
-            --surface-0:#03060f; --surface-1:rgba(5,8,22,0.95);
-          }
-
-          @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-          @keyframes spin{to{transform:rotate(360deg)}}
-          @keyframes idleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-          @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
-          @keyframes logoBreathe{0%,100%{box-shadow:0 0 14px rgba(59,130,246,0.38)}50%{box-shadow:0 0 28px rgba(59,130,246,0.7)}}
-          @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-          @keyframes pop{0%{transform:scale(.82);opacity:0}65%{transform:scale(1.07)}100%{transform:scale(1);opacity:1}}
-          @keyframes panelFade{0%{opacity:0;transform:translateY(-5px) scale(.98)}100%{opacity:1;transform:none}}
-          @keyframes toastIn{0%{opacity:0;transform:translateY(10px) scale(.94)}100%{opacity:1;transform:none}}
-          @keyframes toastOut{0%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
-
-          .mob-pg{height:100vh;height:100dvh;display:flex;flex-direction:column;background:#03060f;padding-top:env(safe-area-inset-top,0);}
-          .mob-hd{flex-shrink:0;display:flex;align-items:center;gap:10px;padding:10px 16px;background:rgba(5,8,22,0.98);backdrop-filter:blur(20px);border-bottom:1px solid rgba(96,165,250,0.12);z-index:100;position:sticky;top:0;}
-          .mob-logo{width:30px;height:30px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#1d4ed8,#3b82f6 50%,#a78bfa);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 16px rgba(96,165,250,0.5);animation:logoBreathe 3s ease-in-out infinite;}
-          .mob-brand{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;background:linear-gradient(90deg,#93c5fd 0%,#a78bfa 50%,#f472b6 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;}
-          .mob-sub{font-size:9px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;}
-          .mob-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding-right:52px;padding-bottom:env(safe-area-inset-bottom,16px);}
-          .mob-scroll::-webkit-scrollbar{width:3px;}
-          .mob-scroll::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.18);border-radius:4px;}
+        <style>{SHARED_CSS + `
+          html,body{overflow:hidden;}
+          .mob-pg{height:100vh;height:100dvh;display:flex;flex-direction:column;background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(76,201,240,0.1) 0%,transparent 60%),#050818;padding-top:env(safe-area-inset-top,0);}
+          .mob-hd{flex-shrink:0;display:flex;align-items:center;gap:9px;padding:8px 14px;background:rgba(5,8,22,0.98);backdrop-filter:blur(24px);border-bottom:1px solid rgba(76,201,240,0.14);z-index:100;position:sticky;top:0;}
+          .mob-logo{width:29px;height:29px;border-radius:8px;flex-shrink:0;background:linear-gradient(135deg,#0369a1,#4cc9f0 45%,#7209b7);display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 0 14px rgba(76,201,240,0.55);animation:rPulse 3s ease-in-out infinite;}
+          .mob-brand{font-family:'Space Grotesk',sans-serif;font-size:13.5px;font-weight:900;background:linear-gradient(90deg,#4cc9f0 0%,#c77dff 50%,#f72585 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;}
+          .mob-sub{font-size:8px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;}
+          .mob-scroll{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:rgba(76,201,240,0.15) transparent;padding-right:52px;padding-bottom:env(safe-area-inset-bottom,16px);}
+          .mob-scroll::-webkit-scrollbar{width:2px;}
           .mob-sec{display:flex;flex-direction:column;}
-          .mob-sec-label{display:flex;align-items:center;gap:8px;padding:12px 14px 6px;font-family:'JetBrains Mono',monospace;font-size:7px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);}
-          .mob-sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(96,165,250,0.2),transparent);}
-          .mob-editor-wrap, .mob-term-wrap, .mob-viz-wrap{background:rgba(5,8,22,0.95);border:1px solid var(--border-subtle);border-radius:0;display:flex;flex-direction:column;overflow:hidden;}
-          .mob-editor-wrap{height:360px;}
-          .mob-term-wrap{height:220px;}
-          .mob-viz-wrap{min-height:400px;}
-          .mob-ph{padding:8px 14px;border-bottom:1px solid var(--border-subtle);background:rgba(8,14,38,0.9);display:flex;align-items:center;gap:7px;flex-shrink:0;}
-          .dot{width:8px;height:8px;border-radius:50%;}
-          .ptl{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-left:6px;font-weight:600;}
-          .mob-lb{display:flex;gap:4px;padding:8px 12px;overflow-x:auto;border-bottom:1px solid var(--border-subtle);background:rgba(6,11,30,0.8);flex-shrink:0;scrollbar-width:none;}
+          .mob-sec-label{display:flex;align-items:center;gap:7px;padding:9px 13px 5px;font-family:'JetBrains Mono',monospace;font-size:6.5px;font-weight:800;letter-spacing:0.18em;text-transform:uppercase;color:var(--text-muted);}
+          .mob-sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(76,201,240,0.22),transparent);}
+          .mob-ph{padding:6px 12px;border-bottom:1px solid var(--border-subtle);background:rgba(8,14,38,0.92);display:flex;align-items:center;gap:6px;flex-shrink:0;}
+          .dot{width:7px;height:7px;border-radius:50%;}
+          .ptl{font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.2px;margin-left:5px;font-weight:600;}
+          .mob-lb{display:flex;gap:3px;padding:6px 10px;overflow-x:auto;border-bottom:1px solid var(--border-subtle);background:rgba(6,11,30,0.85);flex-shrink:0;scrollbar-width:none;-webkit-overflow-scrolling:touch;}
           .mob-lb::-webkit-scrollbar{display:none;}
-          .mob-lt{padding:5px 12px;border-radius:6px;cursor:pointer;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);transition:all 0.15s;flex-shrink:0;}
+          .mob-lt{padding:4px 10px;border-radius:5px;cursor:pointer;white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);transition:all 0.15s;flex-shrink:0;}
           .mob-lt.la{color:#e8f4ff;background:rgba(255,255,255,0.06);}
-          .mob-rr{padding:10px 12px;border-top:1px solid rgba(96,165,250,0.18);display:flex;align-items:center;gap:8px;flex-shrink:0;background:rgba(4,8,22,0.96);}
-          .mob-btn-run{flex:1;padding:12px 16px;border-radius:12px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);border:1px solid rgba(96,165,250,0.4);color:#fff;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.18s;box-shadow:0 0 24px rgba(96,165,250,0.35),0 4px 12px rgba(0,0,0,0.4);-webkit-tap-highlight-color:transparent;letter-spacing:0.03em;}
+          .mob-editor-wrap{background:rgba(5,8,22,0.97);border:1px solid var(--border-subtle);display:flex;flex-direction:column;height:300px;}
+          .mob-rr{padding:9px 11px;border-top:1px solid rgba(76,201,240,0.2);display:flex;align-items:center;gap:7px;flex-shrink:0;background:rgba(4,8,22,0.97);}
+          .mob-btn-run{flex:1;padding:10px 14px;border-radius:11px;background:linear-gradient(135deg,#0369a1,#0ea5e9,#4cc9f0);border:1px solid rgba(76,201,240,0.45);color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:800;cursor:pointer;transition:all 0.18s;box-shadow:0 0 22px rgba(76,201,240,0.35);-webkit-tap-highlight-color:transparent;}
           .mob-btn-run:active{transform:scale(0.97);}
-          .mob-btn-run.running{animation:runPulse 1.2s ease-in-out infinite;}
+          .mob-btn-run.running{animation:rPulse 1.2s ease-in-out infinite;}
           .mob-btn-run:disabled{opacity:0.4;cursor:not-allowed;}
-          .mob-btn-rst{padding:12px 14px;border-radius:12px;background:transparent;border:1px solid rgba(248,113,113,0.3);color:#f87171;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;}
-          .mob-btn-rst:active{background:rgba(248,113,113,0.12);}
-          .mob-alb{display:flex;align-items:center;gap:7px;padding:6px 14px;border-left:2px solid;min-height:30px;border-top:1px solid var(--border-subtle);flex-shrink:0;animation:fadeUp 0.18s ease;}
-          .mob-alb-ln{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:700;white-space:nowrap;}
-          .mob-alb-code{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
-          .mob-metrics{display:flex;border-bottom:1px solid var(--border-subtle);background:rgba(4,8,26,0.75);flex-shrink:0;}
-          .mob-metric{flex:1;padding:6px 4px;text-align:center;border-right:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:2px;}
-          .mob-metric:last-child{border-right:none;}
-          .mob-metric .ml{font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--text-muted);letter-spacing:0.15em;text-transform:uppercase;font-weight:600;}
-          .mob-metric .mv{font-family:'JetBrains Mono',monospace;font-weight:700;line-height:1.1;}
-          .mob-ctrl{display:flex;align-items:center;gap:4px;padding:8px 12px;border-top:1px solid var(--border-subtle);background:rgba(3,6,18,0.7);flex-shrink:0;}
-          .mob-cb{width:34px;height:34px;border-radius:8px;border:1px solid rgba(255,255,255,0.13);background:rgba(16,26,58,0.7);color:#7a9cb8;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
-          .mob-cp{height:34px;padding:0 14px;border-radius:8px;background:linear-gradient(135deg,#1d4ed8,#3b82f6,#60a5fa);border:1px solid rgba(96,165,250,0.35);color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 0 16px rgba(96,165,250,0.35);}
-          .mob-csep{width:1px;height:14px;background:rgba(255,255,255,0.09);margin:0 2px;}
+          .mob-btn-rst{padding:10px 12px;border-radius:11px;background:transparent;border:1px solid rgba(248,113,113,0.32);color:#f87171;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;white-space:nowrap;}
+          .mob-alb{display:flex;align-items:center;gap:6px;padding:5px 12px;border-left:2px solid;min-height:26px;border-top:1px solid var(--border-subtle);flex-shrink:0;animation:fadeIn 0.18s ease;}
+          .mob-alb-ln{font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;white-space:nowrap;}
+          .mob-alb-code{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+          .mob-term-wrap{background:rgba(5,8,22,0.97);border:1px solid var(--border-subtle);display:flex;flex-direction:column;height:200px;}
+          .mob-viz-wrap{background:rgba(5,8,22,0.97);border:1px solid var(--border-subtle);display:flex;flex-direction:column;min-height:320px;align-items:center;justify-content:center;}
+          .mob-ctrl{display:flex;align-items:center;gap:3px;padding:7px 10px;border-top:1px solid var(--border-subtle);background:rgba(3,6,18,0.75);flex-shrink:0;flex-wrap:wrap;}
+          .mob-cb{width:30px;height:30px;border-radius:7px;border:1px solid var(--border-medium);background:var(--surface-3);color:var(--text-secondary);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;-webkit-tap-highlight-color:transparent;flex-shrink:0;}
+          .mob-cb:active:not(:disabled){transform:scale(0.9);background:var(--cyan-dim);}
+          .mob-cb:disabled{opacity:0.22;cursor:not-allowed;}
+          .mob-cp{height:30px;padding:0 12px;border-radius:7px;background:linear-gradient(135deg,#0369a1,#0ea5e9,#4cc9f0);border:1px solid rgba(76,201,240,0.38);color:#fff;font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 0 16px rgba(76,201,240,0.35);-webkit-tap-highlight-color:transparent;flex-shrink:0;}
+          .mob-cp:active{transform:scale(0.94);}
+          .mob-cp:disabled{opacity:0.25;cursor:not-allowed;}
+          .mob-csep{width:1px;height:13px;background:var(--border-subtle);margin:0 1px;flex-shrink:0;}
           .mob-spd{display:flex;gap:2px;}
-          .mob-sb{padding:4px 7px;border-radius:5px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:700;border:1px solid rgba(255,255,255,0.13);background:transparent;color:#7a9cb8;}
-          .mob-sb.sa{background:rgba(96,165,250,0.16);border-color:rgba(96,165,250,0.4);color:#60a5fa;}
-          .mob-pr{display:flex;align-items:center;gap:7px;padding:5px 14px;border-top:1px solid var(--border-subtle);flex-shrink:0;}
-          .mob-pt2{flex:1;height:4px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;}
-          .mob-pf{height:100%;border-radius:99px;transition:width 0.4s cubic-bezier(0.4,0,0.2,1);background:linear-gradient(90deg,#1d4ed8,#60a5fa,#a78bfa);}
-          .mob-ptx{font-family:'JetBrains Mono',monospace;font-size:8px;color:#4a6a88;min-width:28px;text-align:right;}
-          .mob-slh{padding:5px 14px 2px;font-family:'JetBrains Mono',monospace;font-size:7px;color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-weight:600;border-top:1px solid var(--border-subtle);flex-shrink:0;display:flex;justify-content:space-between;}
-          .mob-sl{overflow-y:auto;padding:3px 8px 8px;display:flex;flex-direction:column;gap:2px;max-height:110px;flex-shrink:0;}
-          .mob-si{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:5px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:9px;color:#7a9cb8;border:1px solid transparent;}
-          .mob-si.sl-active{background:rgba(96,165,250,0.09)!important;border-color:rgba(96,165,250,0.22)!important;color:#60a5fa!important;box-shadow:inset 3px 0 0 #60a5fa;}
-          .mob-si-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
-          .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);padding:9px 18px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;white-space:nowrap;background:rgba(10,20,50,0.97);border:1px solid rgba(96,165,250,0.22);color:#4ade80;z-index:9999;animation:toastIn 0.25s ease;}
-          ::-webkit-scrollbar{width:3px;}
+          .mob-sb{padding:3px 6px;border-radius:5px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:7.5px;font-weight:700;border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);-webkit-tap-highlight-color:transparent;}
+          .mob-sb.sa{background:var(--cyan-dim);border-color:rgba(76,201,240,0.42);color:var(--cyan);}
+          .mob-pr{display:flex;align-items:center;gap:7px;padding:5px 12px;border-top:1px solid var(--border-subtle);flex-shrink:0;}
+          .mob-pt2{flex:1;height:3px;background:rgba(255,255,255,0.05);border-radius:99px;overflow:hidden;}
+          .mob-pf{height:100%;border-radius:99px;transition:width 0.4s cubic-bezier(0.4,0,0.2,1);background:linear-gradient(90deg,#0369a1,#4cc9f0,#c77dff);box-shadow:0 0 7px rgba(76,201,240,0.5);}
+          .mob-ptx{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text-secondary);min-width:26px;text-align:right;}
+          .mob-slh{padding:4px 12px 2px;font-family:'JetBrains Mono',monospace;font-size:6px;color:var(--text-muted);letter-spacing:0.18em;text-transform:uppercase;font-weight:700;border-top:1px solid var(--border-subtle);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;}
+          .mob-sl{overflow-y:auto;padding:2px 6px 8px;display:flex;flex-direction:column;gap:1px;max-height:110px;flex-shrink:0;scrollbar-width:thin;}
+          .mob-si{display:flex;align-items:center;gap:5px;padding:3px 7px;border-radius:5px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--text-muted);transition:all 0.12s;border:1px solid transparent;-webkit-tap-highlight-color:transparent;}
+          .mob-si:active{background:var(--cyan-dim);}
+          .sl-active{background:rgba(76,201,240,0.1)!important;border-color:rgba(76,201,240,0.25)!important;color:var(--cyan)!important;box-shadow:inset 2.5px 0 0 var(--cyan);}
+          .mob-si-dot{width:5.5px;height:5.5px;border-radius:50%;flex-shrink:0;transition:all 0.12s;}
+          .mob-si-v{opacity:0.55;margin-left:1px;}
+          .mob-si-ln{margin-left:auto;font-size:6.5px;color:var(--text-muted);opacity:0.7;}
+          .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);padding:8px 16px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;white-space:nowrap;background:rgba(10,20,50,0.98);border:1px solid var(--border-medium);color:var(--green);box-shadow:0 8px 24px rgba(0,0,0,0.6);z-index:9999;animation:toastIn 0.22s ease;}
         `}</style>
 
         <div className="mob-pg">
           <header className="mob-hd">
             <div className="mob-logo">🌲</div>
-            <div style={{flex:1,minWidth:0}}>
+            <div style={{ flex:1, minWidth:0 }}>
               <div className="mob-brand">VisuoSlayer</div>
               <div className="mob-sub">BST · Write · Run · Visualize</div>
             </div>
-            <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:lm.accent,background:lm.bg,border:`1px solid ${lm.border}`,padding:"2px 8px",borderRadius:20,fontWeight:700}}>{lm.ext}</span>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,color:"#4a6a88",padding:"2px 7px",borderRadius:16,border:"1px solid rgba(255,255,255,0.13)",background:"rgba(255,255,255,0.03)"}}>{sessionId}</span>
-              <button onClick={()=>setShowOh(v=>!v)} style={{padding:"2px 8px",borderRadius:16,fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,fontWeight:700,border:`1.5px solid ${showOh?"rgba(167,139,250,0.5)":"rgba(167,139,250,0.28)"}`,background:showOh?"rgba(167,139,250,0.18)":"rgba(167,139,250,0.06)",color:"#a78bfa"}}>O(·)</button>
+            <div style={{ display:"flex", alignItems:"center", gap:5, flexShrink:0 }}>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:lm.accent, background:`${lm.accent}14`, border:`1px solid ${lm.accent}30`, padding:"1px 7px", borderRadius:16, fontWeight:800 }}>{lm.ext}</span>
+              <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:6.5, color:"var(--text-muted)", padding:"1px 5px", borderRadius:12, border:"1px solid var(--border-subtle)", background:"var(--surface-2)" }}>{sessionId}</span>
             </div>
           </header>
 
           <div className="mob-scroll" ref={scrollContainerRef}>
-            {/* CODE SECTION */}
+            {/* CODE */}
             <div ref={sectionCodeRef} className="mob-sec">
               <div className="mob-sec-label"><span>⌨</span><span>01 · Code Editor</span></div>
               <div className="mob-editor-wrap">
                 <div className="mob-ph">
-                  <span className="dot" style={{background:"#ff5f57"}}/><span className="dot" style={{background:"#ffbd2e"}}/><span className="dot" style={{background:"#28c840"}}/>
+                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }}/>
+                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }}/>
+                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }}/>
                   <span className="ptl">Code Editor</span>
-                  <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:lm.accent,background:lm.bg,border:`1px solid ${lm.border}`,padding:"2px 8px",borderRadius:16,fontWeight:700}}>{lm.name}</span>
+                  <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:lm.accent, background:`${lm.accent}12`, border:`1px solid ${lm.accent}28`, padding:"1px 7px", borderRadius:14, fontWeight:800 }}>{lm.name}</span>
                 </div>
-                <div className="mob-lb">
-                  {Object.entries(LANGS).map(([k,m])=>(
-                    <button key={k} className={`mob-lt${lang===k?" la":""}`} onClick={()=>handleChangeLang(k)} style={lang===k?{borderColor:`${m.accent}35`,color:m.accent,background:`${m.accent}0e`}:{}}>{m.name}</button>
-                  ))}
-                </div>
-                <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0,position:"relative"}}>
-                  <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
-                  {step&&os&&(
-                    <div className="mob-alb" style={{borderColor:os.bd,background:os.bg}}>
-                      <span style={{color:os.c,fontSize:10}}>{os.icon}</span>
-                      <span className="mob-alb-ln" style={{color:os.c}}>L{step.lineNum+1}</span>
-                      <code className="mob-alb-code">{step.codeLine}</code>
-                    </div>
-                  )}
+                {renderLangTabs(true)}
+                <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, position:"relative" }}>
+                  <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
+                  {step&&os&&<div className="mob-alb" style={{ borderColor:os.bd, background:os.bg }}>
+                    <span style={{ color:os.c, fontSize:9 }}>{os.icon}</span>
+                    <span className="mob-alb-ln" style={{ color:os.c }}>L{step.lineNum+1}</span>
+                    <code className="mob-alb-code">{step.codeLine}</code>
+                  </div>}
                 </div>
               </div>
               <div className="mob-rr">
                 <button className={`mob-btn-run${playing||validating?" running":""}`} onClick={handleRun} disabled={playing||validating}>
-                  {validating?"⟳ Reviewing…":playing?"▶ Running…":"▶  Run & Visualize"}
+                  {validating?"⟳ Validating…":playing?"▶ Running…":"▶  Run & Visualize"}
                 </button>
-                {(steps.length>0||error||hasAiErr)&&<button className="mob-btn-rst" onClick={doReset}>↺ Reset</button>}
+                {(steps.length>0||error||hasAiErrors) && <button className="mob-btn-rst" onClick={doReset}>↺ Reset</button>}
+                <span className="rr-hint">CTRL+ENTER</span>
               </div>
             </div>
 
-            {/* TERMINAL SECTION */}
-            <div ref={sectionTermRef} className="mob-sec" style={{marginTop:2}}>
+            {/* TERMINAL */}
+            <div ref={sectionTermRef} className="mob-sec" style={{ marginTop:2 }}>
               <div className="mob-sec-label"><span>⬛</span><span>02 · Terminal</span></div>
               <div className="mob-term-wrap">
                 <div className="mob-ph">
-                  <span className="dot" style={{background:"#ff5f57"}}/><span className="dot" style={{background:"#ffbd2e"}}/><span className="dot" style={{background:"#28c840"}}/>
+                  <span className="dot" style={{ background:"#ff5f57" }}/><span className="dot" style={{ background:"#ffbd2e" }}/><span className="dot" style={{ background:"#28c840" }}/>
                   <span className="ptl">visualoslayer — bash</span>
-                  <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#4a6a88"}}>pid:{sessionId}</span>
+                  <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:7, color:"var(--text-muted)" }}>pid:{sessionId}</span>
                 </div>
-                <Terminal lines={termLines} validating={validating}/>
+                <Terminal lines={termLines} validating={validating} currentStepIndex={idx}/>
               </div>
             </div>
 
-            {/* VISUALIZATION SECTION */}
-            <div ref={sectionVizRef} className="mob-sec" style={{marginTop:2}}>
+            {/* VIZ */}
+            <div ref={sectionVizRef} className="mob-sec" style={{ marginTop:2 }}>
               <div className="mob-sec-label"><span>🌲</span><span>03 · BST Visualization</span></div>
               <div className="mob-viz-wrap">
                 <div className="mob-ph">
-                  <span className="dot" style={{background:"#60a5fa"}}/><span className="dot" style={{background:"#f87171"}}/><span className="dot" style={{background:"#fbbf24"}}/>
+                  <span className="dot" style={{ background:"#4cc9f0", boxShadow:"0 0 5px #4cc9f0" }}/>
+                  <span className="dot" style={{ background:"#f72585", boxShadow:"0 0 5px #f72585" }}/>
+                  <span className="dot" style={{ background:"#ffd60a", boxShadow:"0 0 5px #ffd60a" }}/>
                   <span className="ptl">Binary Search Tree</span>
-                  {steps.length>0&&<span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#60a5fa",background:"rgba(96,165,250,0.12)",border:"1px solid rgba(96,165,250,0.25)",padding:"2px 8px",borderRadius:16,fontWeight:700}}>{idx+1}/{steps.length}</span>}
+                  {steps.length>0&&<span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(76,201,240,0.28)", padding:"1px 7px", borderRadius:12, fontWeight:800 }}>{idx+1}/{steps.length}</span>}
                 </div>
-
-                {/* Metrics (compact) */}
-                <div className="mob-metrics">
-                  {metrics.map((m,mi)=>(
-                    <div key={m.lbl} className="mob-metric">
-                      <span className="ml">{m.lbl}</span>
-                      <span className="mv" style={{color:m.c,fontSize:12}}>{String(m.val)}</span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Tree canvas */}
-                <div style={{flex:1,minHeight:280,display:"flex",alignItems:"center",justifyContent:"center",padding:"8px"}}>
+                <div style={{ flex:1, minHeight:280, display:"flex", alignItems:"center", justifyContent:"center", padding:"8px" }}>
                   <TreeViz tree={step?.tree??null} highlight={step?.highlight??[]} path={step?.path??[]} animKey={animKey} opType={step?.type} idle={idle} pointerIdx={pointerIdx} deletedNodePos={deletedNodePos}/>
                 </div>
-
-                {/* Operation message */}
-                <div className="mob-oi" style={{padding:"8px 14px",borderTop:"1px solid rgba(255,255,255,0.07)",background:"rgba(4,8,24,0.6)"}}>
-                  {step&&os?(
-                    <>
-                      <div style={{display:"inline-flex",alignItems:"center",gap:6,padding:"3px 10px",borderRadius:16,marginBottom:4,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,animation:"pop 0.18s ease",border:`1.5px solid ${os.bd}`,color:os.c,background:os.bg}}>
-                        <span>{os.icon}</span><span>{os.label}</span><span style={{opacity:.6}}>({step.value})</span>
-                        {step.type==="search"&&<span style={{color:step.found?"#4ade80":"#f87171"}}>{step.found?"✓":"✗"}</span>}
-                      </div>
-                      <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,lineHeight:1.6,color:"#7a9cb8",wordBreak:"break-word"}}>{step.message}</div>
-                    </>
-                  ):(
-                    <div style={{display:"flex",alignItems:"center",gap:8,fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#2a4060",padding:"4px 0"}}>
-                      <span>🌲</span>
-                      <span>{idle?"Write a BST, hit Run to visualize":hasAiErr?"Errors found — check Terminal":error?"Fix errors and run again":validating?"Reviewing…":"Waiting…"}</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Controls */}
-                {steps.length>0&&(
-                  <div className="mob-ctrl">
-                    <button className="mob-cb" onClick={()=>goTo(0)} disabled={idx<=0}>⏮</button>
-                    <button className="mob-cb" onClick={()=>goTo(idx-1)} disabled={idx<=0}>◀</button>
-                    <button className="mob-cp" onClick={()=>{if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}else{clearInterval(timerRef.current);setPlaying(p=>!p);}}}>{playing?"⏸":done?"↺":"▶"}</button>
-                    <button className="mob-cb" onClick={()=>goTo(idx+1)} disabled={idx>=steps.length-1}>▶</button>
-                    <button className="mob-cb" onClick={()=>goTo(steps.length-1)} disabled={idx>=steps.length-1}>⏭</button>
-                    <div className="mob-csep"/>
-                    <div className="mob-spd">
-                      {[[2,"½×"],[1.4,"1×"],[0.7,"2×"]].map(([s,lbl])=>(
-                        <button key={s} className={`mob-sb${speed===s?" sa":""}`} onClick={()=>setSpeed(s)}>{lbl}</button>
-                      ))}
-                    </div>
-                    <div className="mob-csep"/>
-                    <button className="mob-cb" onClick={()=>{if(!step)return;navigator.clipboard?.writeText(`BST size:${step.size} h:${step.height} | ${step.type}(${step.value})`).then(()=>showToast("Copied!"));}} style={{fontSize:12}}>📋</button>
-                  </div>
-                )}
-
-                {/* Progress */}
-                {steps.length>0&&(
-                  <div className="mob-pr">
-                    <div className="mob-pt2"><div className="mob-pf" style={{width:`${prog}%`}}/></div>
-                    <span className="mob-ptx">{prog}%</span>
-                  </div>
-                )}
-
-                {/* Operation log pills */}
-                {steps.length>0&&(
-                  <>
-                    <div className="mob-slh">
-                      <span>OPERATION LOG</span>
-                      <span style={{color:"#60a5fa",fontSize:7}}>{steps.length} ops</span>
-                    </div>
-                    <div className="mob-sl" ref={listRef}>
-                      {steps.map((s,i)=>{
-                        const sm=OP[s.type]??OP.insert;
-                        const past=i<idx,active=i===idx;
-                        return(
-                          <div key={i} className={`mob-si${active?" sl-active":""}`} onClick={()=>goTo(i)}>
-                            <span className="mob-si-dot" style={{background:past?"#4ade80":active?sm.c:"#2a4060",boxShadow:active?`0 0 6px ${sm.c}`:past?"0 0 3px rgba(74,222,128,0.5)":"none"}}/>
-                            <span style={{color:active?sm.c:past?"#7a9cb8":"#2a4060"}}>{sm.label.toLowerCase()}<span style={{opacity:.5}}>({s.value})</span>{s.type==="search"&&<span style={{color:s.found?"#4ade80":"#f87171"}}>{s.found?" ✓":" ✗"}</span>}</span>
-                            <span className="mob-si-ln">L{s.lineNum+1}</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-                <div style={{height:16}}/>
               </div>
             </div>
-            <div style={{height:24}}/>
+            <div style={{ height:24 }}/>
           </div>
 
-          <MobileStickyNav activeSection={activeSection} onNav={scrollToSection} hasSteps={steps.length>0} hasErrors={!!error||hasAiErr} termLines={termLines}/>
+          <MobileStickyNav activeSection={activeSection} onNav={scrollToSection} hasSteps={steps.length>0} hasErrors={!!error||hasAiErrors} termLines={termLines}/>
         </div>
-        {showOh && <ComplexityPanel visible={showOh} onClose={()=>setShowOh(false)}/>}
         {toast&&<div className="toast">{toast}</div>}
       </>
     );
   }
 
-  /* ═══ DESKTOP LAYOUT (unchanged) ═══ */
-  const panel={background:"rgba(4,8,22,0.98)",border:"1px solid rgba(255,255,255,0.08)",borderRadius:12,display:"flex",flexDirection:"column",overflow:"hidden",minHeight:0,boxShadow:"0 14px 44px rgba(0,0,0,0.5),inset 0 1px 0 rgba(255,255,255,0.04)"};
-  const titlebar={padding:"6px 10px",borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(3,7,20,0.95)",display:"flex",alignItems:"center",gap:6,flexShrink:0};
-  const dot=(c)=>({width:8,height:8,borderRadius:"50%",background:c,display:"inline-block"});
+  /* ─── DESKTOP ─── */
+  return (
+    <>
+      <style>{SHARED_CSS + `
+        html,body{overflow:hidden;}
+        .pg{height:100vh;display:flex;flex-direction:column;overflow:hidden;
+          background:radial-gradient(ellipse 65% 45% at 5% 0%,rgba(76,201,240,0.1) 0%,transparent 55%),radial-gradient(ellipse 55% 40% at 95% 100%,rgba(247,37,133,0.09) 0%,transparent 52%),#050818;}
+        .hd{flex-shrink:0;display:flex;align-items:center;gap:13px;padding:8px 20px;background:rgba(5,8,22,0.99);backdrop-filter:blur(24px);border-bottom:1px solid rgba(76,201,240,0.14);box-shadow:0 1px 0 rgba(76,201,240,0.07),0 4px 28px rgba(0,0,0,0.5);}
+        .hd-logo{width:34px;height:34px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,#0369a1,#4cc9f0 45%,#7209b7);display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 0 22px rgba(76,201,240,0.55);animation:rPulse 3s ease-in-out infinite;}
+        .hd-brand{font-family:'Space Grotesk',sans-serif;font-size:16px;font-weight:900;letter-spacing:-0.5px;background:linear-gradient(90deg,#4cc9f0 0%,#c77dff 50%,#f72585 100%);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:shimmer 4s linear infinite;}
+        .hd-tagline{font-size:8.5px;color:var(--text-muted);font-family:'JetBrains Mono',monospace;margin-top:1px;letter-spacing:0.05em;}
+        .hd-r{margin-left:auto;display:flex;align-items:center;gap:8px;flex-shrink:0;}
+        .hd-pill{font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 10px;border-radius:20px;letter-spacing:0.08em;white-space:nowrap;font-weight:800;}
+        .hd-pid{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text-muted);padding:2px 9px;border-radius:20px;border:1px solid var(--border-subtle);background:var(--surface-2);}
+        .hd-ds-badge{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--cyan);padding:2px 9px;border-radius:20px;border:1px solid rgba(76,201,240,0.28);background:rgba(76,201,240,0.08);letter-spacing:0.1em;}
+        .main{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:8px 16px;min-height:0;overflow:hidden;}
+        @media(max-width:1200px){.main{padding:6px 12px;gap:6px;}}
+        @media(max-width:960px){.main{grid-template-columns:1fr;overflow-y:auto;overflow-x:hidden;}}
+        .panel{background:var(--surface-1);border:1px solid var(--border-subtle);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.55),inset 0 1px 0 rgba(255,255,255,0.04);min-height:0;}
+        @media(max-width:960px){.panel{min-height:480px;}}
+        .ph{padding:8px 13px;border-bottom:1px solid var(--border-subtle);background:rgba(8,14,38,0.88);display:flex;align-items:center;gap:7px;flex-shrink:0;}
+        .dot{width:8px;height:8px;border-radius:50%;transition:box-shadow 0.3s;}
+        .ptl{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1.5px;margin-left:7px;font-weight:700;}
+        .left{display:flex;flex-direction:column;min-height:0;}
+        .lb{display:flex;gap:3px;flex-wrap:wrap;padding:6px 10px;border-bottom:1px solid var(--border-subtle);background:rgba(6,11,30,0.85);flex-shrink:0;}
+        .lt{padding:3px 9px;border-radius:5px;cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:8px;font-weight:800;border:1px solid var(--border-subtle);background:transparent;color:var(--text-muted);transition:all 0.15s;letter-spacing:0.06em;}
+        .lt:hover{color:var(--text-secondary);border-color:var(--border-medium);background:rgba(255,255,255,0.04);}
+        .lt.la{color:#e8f4ff;background:rgba(255,255,255,0.07);box-shadow:inset 0 1px 0 rgba(255,255,255,0.12);}
+        .alb{display:flex;align-items:center;gap:8px;padding:4px 13px;border-left:2px solid;min-height:25px;border-top:1px solid var(--border-subtle);flex-shrink:0;animation:fadeIn 0.18s ease;}
+        .alb-ln{font-family:'JetBrains Mono',monospace;font-size:8.5px;font-weight:800;white-space:nowrap;}
+        .alb-code{font-family:'JetBrains Mono',monospace;font-size:8.5px;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+        .rr{padding:8px 12px;border-top:1px solid var(--border-subtle);display:flex;align-items:center;gap:7px;flex-shrink:0;background:rgba(4,8,22,0.65);flex-wrap:wrap;}
+        .btn-run{padding:6px 18px;border-radius:8px;background:linear-gradient(135deg,#0369a1,#0ea5e9,#4cc9f0);border:1px solid rgba(76,201,240,0.32);color:#fff;font-family:'JetBrains Mono',monospace;font-size:10.5px;font-weight:800;cursor:pointer;transition:all 0.18s;box-shadow:0 0 22px rgba(76,201,240,0.32),0 3px 10px rgba(0,0,0,0.45);letter-spacing:0.05em;position:relative;overflow:hidden;white-space:nowrap;}
+        .btn-run::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,0.16) 0%,transparent 60%);border-radius:inherit;pointer-events:none;}
+        .btn-run:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 0 38px rgba(76,201,240,0.58),0 6px 22px rgba(0,0,0,0.55);}
+        .btn-run:active:not(:disabled){transform:translateY(0);}
+        .btn-run.running{animation:rPulse 1.2s ease-in-out infinite;}
+        .btn-run:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}
+        .btn-rst{padding:6px 12px;border-radius:8px;background:transparent;border:1px solid rgba(248,113,113,0.28);color:#f87171;font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;cursor:pointer;transition:all 0.16s;white-space:nowrap;}
+        .btn-rst:hover{background:rgba(248,113,113,0.1);border-color:rgba(248,113,113,0.52);}
+        .rr-hint{font-family:'JetBrains Mono',monospace;font-size:7.5px;color:var(--text-muted);letter-spacing:0.07em;padding:2px 6px;border-radius:4px;border:1px solid var(--border-subtle);background:var(--surface-2);white-space:nowrap;}
+        .term-bar{display:flex;align-items:center;gap:6px;padding:6px 13px;background:rgba(4,7,18,0.97);border-bottom:1px solid var(--border-subtle);border-top:1px solid var(--border-subtle);flex-shrink:0;}
+        .term-toggle{display:flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;border:1px solid var(--border-medium);background:rgba(255,255,255,0.04);cursor:pointer;flex-shrink:0;color:var(--text-secondary);font-size:8px;font-weight:700;transition:all 0.15s;margin-left:auto;font-family:'JetBrains Mono',monospace;line-height:1;user-select:none;}
+        .term-toggle:hover{background:var(--cyan-dim);color:var(--cyan);border-color:rgba(76,201,240,0.42);}
+        .tm-wrap{display:flex;flex-direction:column;min-height:0;transition:flex-basis 0.32s cubic-bezier(0.4,0,0.2,1),opacity 0.25s;overflow:hidden;}
+        .tm-wrap.tm-open{flex:1;min-height:100px;}
+        .tm-wrap.tm-closed{flex:0 0 0px;min-height:0;opacity:0;pointer-events:none;}
+        .term-body-wrap{flex:1;display:flex;flex-direction:column;min-height:0;animation:fadeUp 0.28s ease;}
+        .term-bar-closed{display:flex;align-items:center;gap:6px;padding:6px 13px;background:rgba(4,7,18,0.97);border-top:1px solid var(--border-subtle);flex-shrink:0;cursor:pointer;transition:background 0.15s;}
+        .term-bar-closed:hover{background:rgba(8,14,32,0.97);}
+        .toast{position:fixed;bottom:20px;right:20px;padding:8px 16px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;background:rgba(10,20,50,0.98);border:1px solid var(--border-medium);color:var(--green);box-shadow:0 8px 28px rgba(0,0,0,0.6);z-index:9999;animation:toastIn 0.25s ease,toastOut 0.3s ease 1.9s forwards;}
+      `}</style>
 
-  return (<>
-    <style>{`
-      @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&display=swap');
-      *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-      html,body{height:100%;overflow:hidden}
-      body{background:#03060f;color:#c8dff5;font-family:'DM Sans',sans-serif;}
-      @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-      @keyframes spin{to{transform:rotate(360deg)}}
-      @keyframes idleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
-      @keyframes shimmer{0%{background-position:-200% center}100%{background-position:200% center}}
-      @keyframes logoBreathe{0%,100%{box-shadow:0 0 14px rgba(59,130,246,0.38)}50%{box-shadow:0 0 28px rgba(59,130,246,0.7),0 0 44px rgba(59,130,246,0.14)}}
-      @keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
-      @keyframes pop{0%{transform:scale(.82);opacity:0}65%{transform:scale(1.07)}100%{transform:scale(1);opacity:1}}
-      @keyframes progressGlow{0%,100%{box-shadow:0 0 4px rgba(96,165,250,0.45)}50%{box-shadow:0 0 12px rgba(96,165,250,0.85)}}
-      @keyframes pillActive{0%,100%{box-shadow:0 0 0 rgba(96,165,250,0)}50%{box-shadow:0 0 8px rgba(96,165,250,0.3)}}
-      @keyframes panelFade{0%{opacity:0;transform:translateY(-5px) scale(.98)}100%{opacity:1;transform:none}}
-      @keyframes toastIn{0%{opacity:0;transform:translateY(10px) scale(.94)}100%{opacity:1;transform:none}}
-      @keyframes toastOut{0%{opacity:1}100%{opacity:0;transform:translateY(-6px)}}
-      @keyframes runPulse{0%,100%{box-shadow:0 0 16px rgba(59,130,246,0.4)}50%{box-shadow:0 0 28px rgba(59,130,246,0.65)}}
-      button:hover{filter:brightness(1.14)}
-      ::-webkit-scrollbar{width:3px;height:3px}
-      ::-webkit-scrollbar-track{background:transparent}
-      ::-webkit-scrollbar-thumb{background:rgba(96,165,250,0.18);border-radius:4px}
-    `}</style>
-
-    <div style={{height:"100vh",display:"flex",flexDirection:"column",overflow:"hidden",background:"radial-gradient(ellipse 60% 44% at 7% 0%,rgba(29,78,216,0.07) 0%,transparent 55%),radial-gradient(ellipse 46% 38% at 93% 100%,rgba(124,58,237,0.05) 0%,transparent 52%),#03060f"}}>
-
-      <header style={{flexShrink:0,display:"flex",alignItems:"center",gap:10,padding:"6px 18px",background:"rgba(2,5,16,0.99)",backdropFilter:"blur(24px)",borderBottom:"1px solid rgba(255,255,255,0.08)",boxShadow:"0 1px 0 rgba(59,130,246,0.06),0 4px 20px rgba(0,0,0,0.55)",zIndex:20}}>
-        <div style={{width:28,height:28,borderRadius:7,flexShrink:0,background:"linear-gradient(135deg,#1e3a8a,#2563eb 52%,#7c3aed)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,animation:"logoBreathe 3.5s ease-in-out infinite"}}>🌲</div>
-        <div><div style={{fontFamily:"'Syne',sans-serif",fontSize:14,fontWeight:800,letterSpacing:"-.1px",background:"linear-gradient(90deg,#60a5fa,#a78bfa 50%,#60a5fa)",backgroundSize:"200% auto",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent",animation:"shimmer 5s linear infinite"}}>VisuoSlayer</div><div style={{fontSize:7,color:"#2a4060",fontFamily:"'JetBrains Mono',monospace",marginTop:1,letterSpacing:".08em",textTransform:"uppercase"}}>Binary Search Tree Visualizer</div></div>
-        <div style={{marginLeft:"auto",display:"flex",alignItems:"center",gap:6}}>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,color:"#93c5fd",padding:"2px 9px",borderRadius:18,border:"1px solid rgba(96,165,250,0.32)",background:"rgba(59,130,246,0.1)",letterSpacing:".08em",fontWeight:700}}>BST</div>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,padding:"2px 9px",borderRadius:18,fontWeight:800,color:lm.accent,background:lm.bg,border:`1px solid ${lm.border}`}}>{lm.name}</div>
-          <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"#3a5878",padding:"2px 8px",borderRadius:18,border:"1px solid rgba(255,255,255,0.09)",background:"rgba(255,255,255,0.025)"}}>pid:{sessionId}</div>
-          <button onClick={()=>setShowOh(v=>!v)} style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,fontWeight:800,border:`1.5px solid ${showOh?"rgba(167,139,250,0.5)":"rgba(167,139,250,0.28)"}`,background:showOh?"rgba(167,139,250,0.18)":"rgba(167,139,250,0.06)",color:"#a78bfa",padding:"2px 8px",borderRadius:18,cursor:"pointer"}}>O(·)</button>
-        </div>
-      </header>
-
-      <main style={{flex:1,display:"grid",gridTemplateColumns:"0.9fr 1.1fr",gap:6,padding:"6px 18px 8px",minHeight:0,overflow:"hidden"}}>
-
-        {/* LEFT PANEL */}
-        <div style={panel}>
-          <div style={titlebar}>{["#ff5f57","#ffbd2e","#28c840"].map((c,i)=><span key={i} style={dot(c)}/>)}<span style={{marginLeft:6,fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#4a6a88",textTransform:"uppercase",letterSpacing:"1.2px",fontWeight:700}}>Code Editor</span><span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,fontWeight:800,color:lm.accent,background:lm.bg,border:`1px solid ${lm.border}`,padding:"1px 8px",borderRadius:18}}>{lm.name}</span></div>
-          <div style={{flex:termOpen?"0 0 58%":"1",display:"flex",flexDirection:"column",minHeight:0,borderBottom:"1px solid rgba(255,255,255,0.07)"}}>
-            <div style={{display:"flex",gap:4,flexWrap:"wrap",padding:"6px 10px",borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(3,6,18,0.96)",flexShrink:0}}>
-              {Object.entries(LANGS).map(([k,m])=>(
-                <button key={k} onClick={()=>handleChangeLang(k)} style={{padding:"4px 10px",borderRadius:6,cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,fontWeight:800,letterSpacing:".04em",border:`1.5px solid ${lang===k?m.border:"rgba(255,255,255,0.18)"}`,background:lang===k?m.bg:"rgba(255,255,255,0.06)",color:lang===k?m.accent:"#8aaccc",transition:"all .12s",outline:"none"}}>{m.ext}</button>
-              ))}
-            </div>
-            <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
-            {step&&os&&(<div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",borderLeft:`2px solid ${os.bd}`,minHeight:24,borderTop:"1px solid rgba(255,255,255,0.07)",flexShrink:0,animation:"fadeUp .14s ease",background:os.bg}}><span style={{color:os.c,fontSize:9,fontWeight:700}}>{os.icon}</span><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,color:os.c}}>L{step.lineNum+1}</span><code style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#4a6a88",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{step.codeLine}</code></div>)}
-            <div style={{padding:"6px 10px",borderTop:"1px solid rgba(255,255,255,0.07)",display:"flex",alignItems:"center",gap:6,flexShrink:0,background:"rgba(2,5,15,0.78)"}}>
-              <button onClick={handleRun} disabled={playing||validating} style={{padding:"5px 16px",borderRadius:6,background:playing||validating?"linear-gradient(135deg,#1e3a6e,#1d4ed8)":"linear-gradient(135deg,#1e40af,#2563eb,#3b82f6)",border:`1.5px solid rgba(96,165,250,${playing||validating?.18:.48})`,color:"#fff",fontFamily:"'JetBrains Mono',monospace",fontSize:9.5,fontWeight:800,cursor:playing||validating?"not-allowed":"pointer",letterSpacing:".05em",boxShadow:playing||validating?"none":"0 0 16px rgba(59,130,246,0.42),0 2px 6px rgba(0,0,0,0.4)",animation:playing||validating?"runPulse 1s ease-in-out infinite":"none",opacity:playing||validating?.58:1}}>{validating?"⟳  AI Review…":playing?"▶  Running…":"▶  Run & Visualize"}</button>
-              {(steps.length>0||error||hasAiErr)&&<button onClick={doReset} style={{padding:"5px 11px",borderRadius:6,background:"transparent",border:"1.5px solid rgba(248,113,113,0.4)",color:"#f87171",fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,cursor:"pointer"}}>↺ Reset</button>}
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#4a6a88",padding:"2px 7px",borderRadius:5,border:"1px solid rgba(255,255,255,0.11)",background:"rgba(255,255,255,0.03)"}}>⌘↵</span>
-            </div>
+      <div className="pg">
+        <header className="hd">
+          <div className="hd-logo">🌲</div>
+          <div>
+            <div className="hd-brand">VisuoSlayer</div>
+            <div className="hd-tagline">BST Visualizer · Write · Run · Step · AI-validated</div>
           </div>
+          <div className="hd-r">
+            <div className="hd-ds-badge">BST</div>
+            <div className="hd-pill" style={{ color:lm.accent, background:`${lm.accent}14`, border:`1px solid ${lm.accent}30` }}>{lm.name}</div>
+            <div className="hd-pid">pid:{sessionId}</div>
+          </div>
+        </header>
 
-          {/* Terminal (desktop) */}
-          <div style={{display:"flex",flexDirection:"column",minHeight:0,overflow:"hidden",flex:termOpen?"1":"0 0 0px",opacity:termOpen?1:0,pointerEvents:termOpen?"auto":"none",transition:"flex .28s cubic-bezier(.4,0,.2,1),opacity .2s ease"}}>
-            <div style={{flex:1,display:"flex",flexDirection:"column",minHeight:0}}>
-              <div style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",background:"rgba(2,4,12,0.99)",borderBottom:"1px solid rgba(255,255,255,0.07)",borderTop:"1px solid rgba(255,255,255,0.07)",flexShrink:0}}>
-                {["#ff5f57","#ffbd2e","#28c840"].map((c,i)=><span key={i} style={{width:7,height:7,borderRadius:"50%",background:c}}/>)}
-                <span style={{marginLeft:6,fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#4a6a88",textTransform:"uppercase",letterSpacing:"1px"}}>terminal</span>
-                <button onClick={()=>setTermOpen(false)} style={{display:"flex",alignItems:"center",justifyContent:"center",width:16,height:16,borderRadius:4,border:"1px solid rgba(255,255,255,0.14)",background:"rgba(255,255,255,0.05)",cursor:"pointer",color:"#4a6a88",fontSize:8,fontWeight:800,marginLeft:"auto"}}>▾</button>
-              </div>
-              <Terminal lines={termLines} validating={validating}/>
+        <main className="main">
+          {/* LEFT */}
+          <div className="panel left">
+            <div className="ph">
+              <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 6px #ff5f57" }}/>
+              <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 6px #ffbd2e" }}/>
+              <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 6px #28c840" }}/>
+              <span className="ptl">Code Editor</span>
+              <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:lm.accent, background:`${lm.accent}14`, border:`1px solid ${lm.accent}30`, padding:"2px 8px", borderRadius:18, fontWeight:800 }}>{lm.name}</span>
             </div>
-          </div>
-          {!termOpen&&(
-            <div onClick={()=>setTermOpen(true)} style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",background:"rgba(2,4,12,0.99)",borderTop:"1px solid rgba(255,255,255,0.07)",flexShrink:0,cursor:"pointer"}}>
-              {["#ff5f57","#ffbd2e","#28c840"].map((c,i)=><span key={i} style={{width:7,height:7,borderRadius:"50%",background:c}}/>)}
-              <span style={{marginLeft:6,fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#4a6a88",textTransform:"uppercase",letterSpacing:"1px"}}>terminal</span>
-              {termLines.some(l=>l.type==="error"||l.type==="stderr")&&<span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"#f87171",background:"rgba(239,68,68,0.12)",border:"1px solid rgba(248,113,113,0.26)",padding:"0px 6px",borderRadius:8,marginLeft:5}}>errors</span>}
-              {termLines.some(l=>l.type==="success")&&<span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"#4ade80",background:"rgba(74,222,128,0.1)",border:"1px solid rgba(74,222,128,0.26)",padding:"0px 6px",borderRadius:8,marginLeft:5}}>ok</span>}
-              <span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#60a5fa",fontWeight:700}}>▴</span>
-            </div>
-          )}
-        </div>
 
-        {/* RIGHT PANEL */}
-        <div style={{...panel,position:"relative"}}>
-          <div style={titlebar}>{["#60a5fa","#f87171","#fbbf24"].map((c,i)=><span key={i} style={dot(c)}/>)}<span style={{marginLeft:6,fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#4a6a88",textTransform:"uppercase",letterSpacing:"1.2px",fontWeight:700}}>Visualization</span>{steps.length>0&&<span style={{marginLeft:"auto",fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,color:"#93c5fd",background:"rgba(59,130,246,0.14)",border:"1px solid rgba(96,165,250,0.32)",padding:"1px 7px",borderRadius:18,fontWeight:800,animation:"pop .18s ease"}}>{idx+1}/{steps.length}</span>}<button onClick={()=>setShowOh(v=>!v)} style={{marginLeft:steps.length>0?5:"auto",padding:"1px 8px",borderRadius:16,cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,fontWeight:700,border:`1.5px solid ${showOh?"rgba(167,139,250,0.5)":"rgba(167,139,250,0.28)"}`,background:showOh?"rgba(167,139,250,0.18)":"rgba(167,139,250,0.06)",color:"#a78bfa"}}>O(·)</button></div>
-
-          <ComplexityPanel visible={showOh} onClose={()=>setShowOh(false)}/>
-
-          <div style={{display:"flex",borderBottom:"1px solid rgba(255,255,255,0.07)",background:"rgba(2,5,18,0.92)",flexShrink:0}}>
-            {metrics.map((m,mi)=>(<div key={m.lbl} style={{flex:1,padding:"6px",textAlign:"center",borderRight:mi<3?"1px solid rgba(255,255,255,0.07)":"none",display:"flex",flexDirection:"column",gap:2}}><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6,color:"#2a4060",letterSpacing:".2em",textTransform:"uppercase",fontWeight:700}}>{m.lbl}</span><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:14,fontWeight:800,lineHeight:1.1,color:m.c}}>{String(m.val)}</span></div>))}
-          </div>
-
-          <div style={{flex:1,position:"relative",overflow:"auto",display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"10px 8px 6px",minHeight:0}}>
-            <div style={{position:"absolute",inset:0,pointerEvents:"none",backgroundImage:"linear-gradient(rgba(59,130,246,0.028) 1px,transparent 1px),linear-gradient(90deg,rgba(59,130,246,0.028) 1px,transparent 1px)",backgroundSize:"40px 40px",zIndex:0}}/>
-            <div style={{position:"relative",zIndex:2,width:"100%"}}><TreeViz tree={step?.tree??null} highlight={step?.highlight??[]} path={step?.path??[]} animKey={animKey} opType={step?.type} idle={idle} pointerIdx={pointerIdx} deletedNodePos={deletedNodePos}/></div>
-          </div>
-
-          {step?.type==="search"&&step.path&&step.path.length>0&&(
-            <div style={{padding:"5px 12px",borderTop:"1px solid rgba(59,130,246,0.14)",background:"rgba(29,78,216,0.06)",flexShrink:0,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"#60a5fa",letterSpacing:".1em",textTransform:"uppercase",fontWeight:700}}>Pointer</span>
-              <div style={{display:"flex",alignItems:"center",gap:2,flexWrap:"wrap"}}>
-                {step.path.map((v,pi)=>{const curPi=pointerIdx??step.path.length-1;const isCur=pi===curPi,isPast=pi<curPi;return(<span key={pi} style={{display:"inline-flex",alignItems:"center",gap:2,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700}}>{pi>0&&<span style={{color:"rgba(96,165,250,0.3)",fontSize:7}}>→</span>}<span style={{padding:"1px 6px",borderRadius:5,background:isCur?"rgba(59,130,246,0.22)":isPast?"rgba(59,130,246,0.07)":"transparent",border:isCur?"1.5px solid rgba(96,165,250,0.5)":"1.5px solid transparent",color:isCur?"#93c5fd":isPast?"#60a5fa":"#2a4060"}}>{v}</span></span>);})}
-                <span style={{marginLeft:3,fontFamily:"'JetBrains Mono',monospace",fontSize:8,fontWeight:700,color:step.found?"#4ade80":"#f87171"}}>{step.found?"✓ found":"✗ not found"}</span>
+            <div style={{ flex:termOpen?"0 0 58%":"1", display:"flex", flexDirection:"column", minHeight:0, borderBottom:"1px solid var(--border-subtle)" }}>
+              {renderLangTabs(false)}
+              <CodeEditor code={code} setCode={setCode} step={step} errorLineSet={errorLineSet} onKeyDown={onKeyDown} taRef={taRef}/>
+              {step&&os&&<div className="alb" style={{ borderColor:os.bd, background:os.bg }}>
+                <span style={{ color:os.c, fontSize:9.5 }}>{os.icon}</span>
+                <span className="alb-ln" style={{ color:os.c }}>L{step.lineNum+1}</span>
+                <code className="alb-code">{step.codeLine}</code>
+              </div>}
+              <div className="rr">
+                <button className={`btn-run${playing||validating?" running":""}`} onClick={handleRun} disabled={playing||validating}>
+                  {validating?"⟳ Validating…":playing?"▶ Running…":"▶  Run & Visualize"}
+                </button>
+                {(steps.length>0||error||hasAiErrors) && <button className="btn-rst" onClick={doReset}>↺ Reset</button>}
+                <span className="rr-hint">CTRL+ENTER</span>
               </div>
             </div>
-          )}
 
-          <div style={{padding:"5px 12px",borderTop:"1px solid rgba(255,255,255,0.07)",background:"rgba(2,5,16,0.72)",minHeight:40,flexShrink:0,display:"flex",alignItems:"center",gap:6}}>
-            {step&&os?(<><div style={{display:"inline-flex",alignItems:"center",gap:5,padding:"3px 10px",borderRadius:18,fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,fontWeight:800,animation:"pop .18s ease",border:`1.5px solid ${os.bd}`,color:os.c,background:os.bg}}><span>{os.icon}</span><span>{os.label}</span><span style={{opacity:.6}}>({step.value})</span>{step.type==="search"&&<span style={{color:step.found?"#4ade80":"#f87171"}}>{step.found?"✓":"✗"}</span>}</div><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8.5,color:"#4a6a88",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",animation:"fadeUp .16s ease"}}>{step.message}</span></>):(<span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"#2a4060"}}>{idle?"🌲  Write a BST · insert / search / delete · Run":hasAiErr?"⚠  Errors found — see terminal":error?"✗  Fix errors and run again":validating?"⟳  Reviewing…":"⏸  Ready"}</span>)}
-          </div>
-
-          {steps.length>0&&(
-            <div style={{display:"flex",alignItems:"center",gap:4,padding:"5px 10px",borderTop:"1px solid rgba(255,255,255,0.07)",background:"rgba(2,4,14,0.82)",flexShrink:0}}>
-              <button onClick={()=>goTo(0)} disabled={idx<=0} style={{width:24,height:24,borderRadius:6,border:"1.5px solid rgba(255,255,255,0.14)",background:"rgba(10,18,44,0.82)",color:idx<=0?"#1e3a50":"#7a9cb8",fontSize:10,cursor:idx<=0?"not-allowed":"pointer"}}>⏮</button>
-              <button onClick={()=>goTo(idx-1)} disabled={idx<=0} style={{width:24,height:24,borderRadius:6,border:"1.5px solid rgba(255,255,255,0.14)",background:"rgba(10,18,44,0.82)",color:idx<=0?"#1e3a50":"#7a9cb8",fontSize:10,cursor:idx<=0?"not-allowed":"pointer"}}>◀</button>
-              <button onClick={()=>{if(done||idx>=steps.length-1){setIdx(0);bump();setDone(false);setPlaying(true);}else{clearInterval(timerRef.current);setPlaying(p=>!p);}}} style={{height:24,padding:"0 12px",borderRadius:6,background:"linear-gradient(135deg,#1e40af,#2563eb,#3b82f6)",border:"1.5px solid rgba(96,165,250,0.45)",color:"#fff",fontSize:10,fontWeight:800,cursor:"pointer",boxShadow:"0 0 12px rgba(59,130,246,0.4)"}}>{playing?"⏸":done?"↺":"▶"}</button>
-              <button onClick={()=>goTo(idx+1)} disabled={idx>=steps.length-1} style={{width:24,height:24,borderRadius:6,border:"1.5px solid rgba(255,255,255,0.14)",background:"rgba(10,18,44,0.82)",color:idx>=steps.length-1?"#1e3a50":"#7a9cb8",fontSize:10,cursor:idx>=steps.length-1?"not-allowed":"pointer"}}>▶</button>
-              <button onClick={()=>goTo(steps.length-1)} disabled={idx>=steps.length-1} style={{width:24,height:24,borderRadius:6,border:"1.5px solid rgba(255,255,255,0.14)",background:"rgba(10,18,44,0.82)",color:idx>=steps.length-1?"#1e3a50":"#7a9cb8",fontSize:10,cursor:idx>=steps.length-1?"not-allowed":"pointer"}}>⏭</button>
-              <div style={{width:1,height:14,background:"rgba(255,255,255,0.09)",margin:"0 2px"}}/>
-              <div style={{display:"flex",gap:2}}>{[[2,"½×"],[1.4,"1×"],[0.7,"2×"]].map(([s,lbl])=>(<button key={s} onClick={()=>setSpeed(s)} style={{padding:"2px 7px",borderRadius:5,cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,fontWeight:800,border:`1.5px solid ${speed===s?"rgba(96,165,250,0.48)":"rgba(255,255,255,0.13)"}`,background:speed===s?"rgba(59,130,246,0.16)":"rgba(255,255,255,0.03)",color:speed===s?"#93c5fd":"#6a8eaa"}}>{lbl}</button>))}</div>
-              <div style={{width:1,height:14,background:"rgba(255,255,255,0.09)",margin:"0 2px"}}/>
-              <button onClick={()=>{if(!step)return;navigator.clipboard?.writeText(`BST size:${step.size} h:${step.height} | ${step.type}(${step.value})`).then(()=>showToast("Copied!"));}} style={{width:24,height:24,borderRadius:6,border:"1.5px solid rgba(255,255,255,0.14)",background:"rgba(10,18,44,0.82)",color:"#6a8eaa",fontSize:11,cursor:"pointer"}}>📋</button>
-              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,marginLeft:"auto"}}><span style={{color:"#93c5fd",fontWeight:800}}>{idx+1}</span><span style={{color:"#2a4060"}}>/{steps.length}</span></span>
-            </div>
-          )}
-
-          {steps.length>0&&(
-            <div style={{display:"flex",alignItems:"center",gap:6,padding:"4px 12px",borderTop:"1px solid rgba(255,255,255,0.07)",flexShrink:0}}><div style={{flex:1,height:2,background:"rgba(255,255,255,0.05)",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",borderRadius:99,width:`${prog}%`,transition:"width .36s cubic-bezier(.4,0,.2,1)",background:"linear-gradient(90deg,#1e40af,#3b82f6,#93c5fd)",animation:"progressGlow 2.4s ease-in-out infinite"}}/></div><span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,color:"#2a4060",minWidth:26,textAlign:"right",fontWeight:700}}>{prog}%</span></div>
-          )}
-
-          {steps.length>0&&(
-            <div style={{flexShrink:0,borderTop:"1px solid rgba(255,255,255,0.07)",background:"rgba(2,4,14,0.9)"}}>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"3px 12px 2px",fontFamily:"'JetBrains Mono',monospace",fontSize:6,color:"#2a4060",letterSpacing:".16em",textTransform:"uppercase",fontWeight:700}}><span>Operation Log</span><span style={{color:"#60a5fa"}}>{steps.length} ops</span></div>
-              <div ref={listRef} style={{overflowX:"auto",overflowY:"hidden",padding:"2px 8px 6px",display:"flex",gap:3,alignItems:"center"}}>
-                {steps.map((s,i)=>{const sm=OP[s.type]??OP.insert, past=i<idx, active=i===idx;return(<div key={i} className={active?"sla":""} onClick={()=>goTo(i)} style={{display:"inline-flex",alignItems:"center",gap:3,padding:"2px 8px",borderRadius:16,cursor:"pointer",fontFamily:"'JetBrains Mono',monospace",fontSize:7.5,fontWeight:700,flexShrink:0,color:active?sm.c:past?"#6a8eaa":"#2a4060",border:`1.5px solid ${active?sm.bd:past?"rgba(255,255,255,0.12)":"rgba(255,255,255,0.05)"}`,background:active?sm.bg:past?"rgba(255,255,255,0.03)":"transparent",boxShadow:active?"0 0 8px rgba(96,165,250,0.22)":"none",animation:active?"pillActive 1.5s ease-in-out infinite":"none"}}><span style={{width:4,height:4,borderRadius:"50%",flexShrink:0,background:past?"#4ade80":active?sm.c:"#1e3a50",boxShadow:active?`0 0 4px ${sm.c}`:past?"0 0 3px rgba(74,222,128,0.5)":"none"}}/><span>{sm.label.toLowerCase()}<span style={{opacity:.5}}>({s.value})</span>{s.type==="search"&&<span style={{color:s.found?"#4ade80":"#f87171"}}>{s.found?" ✓":" ✗"}</span>}</span></div>);})}
+            <div className={`tm-wrap${termOpen?" tm-open":" tm-closed"}`}>
+              <div className="term-body-wrap" key={termOpen?"open":"closed"}>
+                <div className="term-bar">
+                  <span className="dot" style={{ background:"#ff5f57", boxShadow:"0 0 5px #ff5f57" }}/>
+                  <span className="dot" style={{ background:"#ffbd2e", boxShadow:"0 0 5px #ffbd2e" }}/>
+                  <span className="dot" style={{ background:"#28c840", boxShadow:"0 0 5px #28c840" }}/>
+                  <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px", userSelect:"none" }}>visualoslayer — bash</span>
+                  <span style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:"var(--text-muted)", marginLeft:8 }}>pid:{sessionId}</span>
+                  <button className="term-toggle" onClick={() => setTermOpen(false)}>▾</button>
+                </div>
+                <Terminal lines={termLines} validating={validating} currentStepIndex={idx}/>
               </div>
             </div>
-          )}
-        </div>
-      </main>
-    </div>
-    {toast&&<div style={{position:"fixed",bottom:16,right:16,padding:"6px 14px",borderRadius:8,fontFamily:"'JetBrains Mono',monospace",fontSize:9,fontWeight:700,background:"rgba(4,10,28,0.98)",border:"1px solid rgba(96,165,250,0.22)",color:"#4ade80",boxShadow:"0 6px 22px rgba(0,0,0,0.6)",zIndex:9999,animation:"toastIn .2s ease, toastOut .24s ease 1.9s forwards",backdropFilter:"blur(16px)"}}>{toast}</div>}
-  </>);
+
+            {!termOpen&&(
+              <div className="term-bar-closed" onClick={() => setTermOpen(true)}>
+                <span className="dot" style={{ background:"#ff5f57" }}/><span className="dot" style={{ background:"#ffbd2e" }}/><span className="dot" style={{ background:"#28c840" }}/>
+                <span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--text-muted)", textTransform:"uppercase", letterSpacing:"1.2px" }}>visualoslayer — bash</span>
+                {termLines.some(l=>l.type==="error"||l.type==="stderr")&&<span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:"#f87171", background:"rgba(248,113,113,0.1)", border:"1px solid rgba(248,113,113,0.28)", padding:"1px 6px", borderRadius:8 }}>errors</span>}
+                {termLines.some(l=>l.type==="success")&&<span style={{ marginLeft:8, fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:"var(--green)", background:"var(--green-dim)", border:"1px solid rgba(57,217,138,0.28)", padding:"1px 6px", borderRadius:8 }}>ok</span>}
+                <span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:8, color:"var(--cyan)", fontWeight:800 }}>▴ open</span>
+              </div>
+            )}
+          </div>
+
+          {/* RIGHT */}
+          <div className="panel">
+            <div className="ph">
+              <span className="dot" style={{ background:"#4cc9f0", boxShadow:"0 0 6px #4cc9f0" }}/>
+              <span className="dot" style={{ background:"#f72585", boxShadow:"0 0 6px #f72585" }}/>
+              <span className="dot" style={{ background:"#ffd60a", boxShadow:"0 0 6px #ffd60a" }}/>
+              <span className="ptl">Visualization</span>
+              {steps.length>0&&<span style={{ marginLeft:"auto", fontFamily:"'JetBrains Mono',monospace", fontSize:7.5, color:"var(--cyan)", background:"var(--cyan-dim)", border:"1px solid rgba(76,201,240,0.28)", padding:"2px 9px", borderRadius:18, fontWeight:800 }}>{idx+1}/{steps.length}</span>}
+            </div>
+
+            <div style={{ flex:1, display:"flex", flexDirection:"column", minHeight:0, overflow:"hidden", justifyContent:"center", alignItems:"center" }}>
+              <div style={{ position:"relative", width:"100%", height:"100%", display:"flex", alignItems:"center", justifyContent:"center", padding:"24px 20px 16px" }}>
+                <div style={{ position:"absolute", inset:0, pointerEvents:"none", backgroundImage:`linear-gradient(rgba(76,201,240,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(76,201,240,0.06) 1px,transparent 1px)`, backgroundSize:"38px 38px", animation:"gridScroll 10s linear infinite" }}/>
+                <div style={{ position:"absolute", left:0, right:0, height:70, pointerEvents:"none", zIndex:1, background:"linear-gradient(to bottom,transparent,rgba(76,201,240,0.04),transparent)", animation:"scanline 6s ease-in-out infinite" }}/>
+                <div style={{ position:"absolute", width:200, height:200, top:-50, left:20, background:"radial-gradient(circle,rgba(76,201,240,0.12),transparent 65%)", filter:"blur(70px)", pointerEvents:"none", animation:"blobFloat 14s ease-in-out infinite", borderRadius:"50%", mixBlendMode:"screen" }}/>
+                <div style={{ position:"absolute", width:160, height:160, bottom:20, right:30, background:"radial-gradient(circle,rgba(247,37,133,0.1),transparent 65%)", filter:"blur(60px)", pointerEvents:"none", animation:"blob2 11s ease-in-out infinite", borderRadius:"50%", mixBlendMode:"screen" }}/>
+                <div style={{ position:"relative", zIndex:2, width:"100%" }}>
+                  <TreeViz tree={step?.tree??null} highlight={step?.highlight??[]} path={step?.path??[]} animKey={animKey} opType={step?.type} idle={idle} pointerIdx={pointerIdx} deletedNodePos={deletedNodePos}/>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+      {toast&&<div className="toast">{toast}</div>}
+    </>
+  );
 }

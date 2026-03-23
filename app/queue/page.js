@@ -165,8 +165,8 @@ function RightSidebar({ active, speaking, speed, setSpeed, onRestart, seenCount,
   }, []);
 
   // Replace with actual implementation pages if you have them
-  const goToArray = () => { window.location.href = "/queue-vis"; };
-  const goToLL = () => { window.location.href = "/queue-vis"; };
+  const goToArray = () => { window.location.href = "/queue-array"; };
+  const goToLL = () => { window.location.href = "/queue-ll"; };
 
   if (!open) {
     const btnSize = isMobile ? 36 : 40;
