@@ -177,7 +177,7 @@ function wireAnimations(gsap,ScrollTrigger){
 
   tl.fromTo(".hero-badge",
       {y:50,opacity:0,scale:.75,rotationX:40},
-      {y:0,opacity:1,scale:1,rotationX:0,duration:1.1,ease:"expo.out",transformPerspective:800})
+      {y:0,opacity:1,scale:1,rotationX:0,duration:0,ease:"expo.out",transformPerspective:800})
     .fromTo(".hero-eyebrow",
       {opacity:0,y:22,letterSpacing:"1.2em"},
       {opacity:1,y:0,letterSpacing:".22em",duration:1,ease:"power3.out"},"-=.5")
