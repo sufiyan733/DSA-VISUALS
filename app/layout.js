@@ -1,18 +1,11 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { SidebarProvider } from "@/comps/sbc";
-import LayoutWithSidebar from "@/comps/lwsidebar";
-import ChatBot from "@/comps/chatbot";  // ← add this
+import { ClerkProvider } from "@clerk/nextjs";
+import ConditionalLayout from "@/comps/ConditionalLayout";
+import ChatBot from "@/comps/chatbot";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata = {
   title: "VisuoSlayer",
@@ -21,15 +14,13 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <SidebarProvider>
-          <LayoutWithSidebar>{children}</LayoutWithSidebar>
-        </SidebarProvider>
-        <ChatBot />  {/* ← add this — outside SidebarProvider so it floats globally */}
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+          <ConditionalLayout>{children}</ConditionalLayout>
+          <ChatBot />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
