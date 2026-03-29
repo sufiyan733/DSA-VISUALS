@@ -736,6 +736,7 @@ export default function LandingPage(){
     {num:40,suffix:"+",label:"Topics covered",accent:"#818cf8"},
     {num:12,suffix:"+",label:"Sorting algorithms",accent:"#22d3ee"},
     {num:8,suffix:"+",label:"Graph algorithms",accent:"#34d399"},
+      {num:1000,suffix:"+",label:"Lines of code",accent:"#a78bfa"},
   ];
   const navScrolled=scrollY>40;
   // Nav hides on scroll down past 100px, reveals on scroll up
